@@ -40,15 +40,19 @@ Features:
 * If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
 注意 如果某个文件传输到一半，你要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
 
+
 Language: Python 3.7   
 by James Huang  
+  
+## Architecture 架构图  
 1. Local upload to S3
-![Architect](./img/img01.png)
+![Architecture](./img/img01.png)
 2. Between AWS Global S3 and China S3
-![Architect](./img/img02.png)
+![Architecture](./img/img02.png)
 3. From AliCloud OSS to S3
-![Architect](./img/img03.png)
-## AWS Auth 认证配置  
+![Architecture](./img/img03.png)
+  
+## AWS Auth profile 认证配置  
 
 Create file `"credentials"` in ~/.aws/ and save below content:  
 创建文件名为 `"credentials"` 于 ~/.aws/ 目录(`C:\Users\USER_NAME\.aws\` for Windows users) 并保存以下内容:
@@ -96,15 +100,18 @@ JobType = 'LOCAL_TO_S3' or 'S3_TO_S3' or 'ALIOSS_TO_S3'
 python3 s3_upload.py
 ```
 ## Requirements
-
-该工具需要先安装 `boto3`, the AWS SDK for Python，可以用 pip 安装
-
+1. SDK
+We need to install aws python sdk boto3. If you need to copy from AliCloud OSS, you need to install oss2 package. 
+该工具需要先安装 `boto3`, the AWS SDK for Python，如果需要从阿里云OSS拷贝，则还需要安装 `oss2`。可以用 pip 安装
+```bash
     pip install boto3 --user
-
+    pip install oss2 --user
+```
 详见 [boto3](https://github.com/boto/boto3) github page
 for more information on getting your keys. For more information on configuring `boto3`,
 check out the Quickstart section in the [developer guide](https://boto3.readthedocs.org/en/latest/guide/quickstart.html).
 
+2. Credential
 You need to make sure the credentials you're using have the correct permissions to access the Amazon S3
 service. If you run into 'Access Denied' errors while running this sample, please follow the steps below.
 
@@ -114,7 +121,7 @@ service. If you run into 'Access Denied' errors while running this sample, pleas
 4. Under the 'Permissions' section, attach the policy called 'AmazonS3FullAccess'
 5. Re-run the application. Now your user should have the right permissions to run the sample.
 
-Please be aware of the [restrictions for bucket names](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) when you start creating your own buckets.
+If you need to copy from AliCloud OSS, you need AliCloud credentials to setup in s3_upload_config.py  
 
 ## License
 
