@@ -64,7 +64,7 @@ Install aws python sdk boto3. If you need to copy from AliCloud OSS, you need to
     pip install -r requirements.txt --user
 ```
 
-2. AWS Credential  
+3. AWS Credential  
 You need to make sure the credentials you're using have the correct permissions to access the Amazon S3
 service. If you run into 'Access Denied' errors while running this sample, please follow the steps below.  
 确认你的 IAM user 有权限访问对应的S3.  
@@ -97,26 +97,26 @@ aws_secret_access_key=XXXXXXXXXXXXXXXXXXXXXX
 ```
 See the [Security Credentials](http://aws.amazon.com/security-credentials) page for more detail
 
-* If you need to copy from AliCloud OSS, you need AliCloud credentials to setup in s3_upload_config.py  
+4. If you need to copy from AliCloud OSS, you need AliCloud credentials to setup in s3_upload_config.py  
 ```
-ali_SrcBucket = "img-process"  # 阿里云OSS 源Bucket，LOCAL_TO_S3/S3_TO_S3则本字段无效
+ali_SrcBucket = "your bucket name"  # 阿里云OSS 源Bucket，对于 LOCAL_TO_S3/S3_TO_S3 则本字段无效
 ali_access_key_id = "xxxxxxxxxxx"  # 阿里云 RAM 用户访问密钥
 ali_access_key_secret = "xxxxxxxxxxxx"
-ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS endpoint，在OSS控制台界面可以找到
+ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS 区域 endpoint，在OSS控制台界面可以找到
 ```
 
 ## Application Configure - 应用配置
 
-Edit `s3_upload_config.py`
+Config `s3_upload_config.py`
 * 上面配置的 profile name 填入对应源和目的 profile name 项，例如：  
 ```python
 SrcProfileName = 'beijing'
 DesProfileName = 'oregon'
 ```
 * Setup source type  
-设置上传方式：   
+'LOCAL_TO_S3' or 'S3_TO_S3' or 'ALIOSS_TO_S3'   
 ```python
-JobType = 'LOCAL_TO_S3' or 'S3_TO_S3' or 'ALIOSS_TO_S3'
+JobType = 'LOCAL_TO_S3'
 ```
 * Setup address  
 设置源文件路径和上传的目的地址，以及其他可选配置
@@ -134,9 +134,7 @@ If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Base
 BBR is `NOT` enabled by default. You can enable it on your EC2 Instance via:：
 ```
 $ sudo modprobe tcp_bbr
-
 $ sudo modprobe sch_fq
-
 $ sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
 ```
 Persistent configuration should look like:
