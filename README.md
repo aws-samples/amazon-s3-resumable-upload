@@ -1,9 +1,10 @@
-# AWS S3 MultiThread Resume Upload Tool v1.1  (S3多线程断点续传)   
-Muliti-thread S3 upload tool, breaking-point resume supported, suitable for large files  
-适合批量的大文件断点续传到 AWS S3  
+# Amazon S3 MultiThread Resume Upload Tool v1.1  (Amazon S3多线程断点续传)   
 
-Upload from local disk, copy files between Global AWS and China AWS S3, or migrate from AliCloud OSS to AWS S3  
-从本地硬盘上传，或海外与中国区 AWS S3 之间互相拷贝，或从阿里云 OSS 迁移到 AWS S3。  
+Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable for large files  
+适合批量的大文件断点续传到 Amazon S3  
+
+Upload from local disk, copy files between Global AWS and China AWS S3, or migrate from AliCloud OSS to Amazon S3  
+从本地硬盘上传，或海外与中国区 Amazon S3 之间互相拷贝，或从阿里云 OSS 迁移到 Amazon S3。  
 
 Features:  
 具体功能包括：  
@@ -11,14 +12,14 @@ Features:
 * Split multipart and get from source, multi-thread upload to S3 and merge, support resume upload (Part level).   
 源文件的自动分片获取，多线程并发上传到目的S3再合并文件，断点续传(分片级别)。  
 
-* Support source: local files, AWS S3, AliCloud OSS  
-支持的源：本地文件、AWS S3、阿里云 OSS  
+* Support source: local files, Amazon S3, AliCloud OSS  
+支持的源：本地文件、Amazon S3、阿里云 OSS  
 
-* Support destination: AWS S3  
-支持的目的地：AWS S3  
+* Support destination: Amazon S3  
+支持的目的地：Amazon S3  
 
 * Multi-files concurrently transmission and each file multi-threads download and upload.    
-多文件并发传输，且每个文件再多线程并发传输，充分压榨带宽。S3_TO_S3 或 ALIOSS_TO_S3 中间只过内存，不落盘。  
+多文件并发传输，且每个文件再多线程并发传输，充分压榨带宽。S3_TO_S3 或 ALIOSS_TO_S3 中间只过中转服务器的内存，不落盘，节省时间和存储。  
 
 * Auto-retry, progressive increase put off, auto-resume upload parts, MD5 verification on S3  
 网络超时自动多次重传。重试采用递增延迟，延迟间隔=次数*5秒。程序中断重启后自动查询S3上已有分片，断点续传(分片级别)。每个分片上传都在S3端进行MD5校验，每个文件上传完进行分片合并时可选再进行一次S3的MD5与本地进行二次校验，保证可靠传输。  
@@ -33,18 +34,20 @@ Features:
 可设置输出消息级别，如设置WARNING级别，则只输出你最关注的信息。
 --------  
 ## Notice 注意事项: 
-* ChunkSize setting. Because AWS S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
-注意 ChunkSize 的大小设置。由于 AWS S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。  
+* ChunkSize setting. Because Amazon S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
+注意 ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。  
 
 * If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
 注意 如果某个文件传输到一半，你要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
 
 Language: Python 3.7   
 by James Huang  
-
+1. Local upload to S3
 ![Architect](./img/img01.png)
-  
+2. Between AWS Global S3 and China S3
 ![Architect](./img/img02.png)
+3. From AliCloud OSS to S3
+![Architect](./img/img03.png)
 ## AWS Auth 认证配置  
 
 Create file `"credentials"` in ~/.aws/ and save below content:  
