@@ -42,7 +42,6 @@ Features:
 注意：  
 如果某个文件传输到一半，你要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
 
-
 Language: Python 3.7   
 by James Huang  
   
@@ -126,7 +125,34 @@ JobType = 'LOCAL_TO_S3' or 'S3_TO_S3' or 'ALIOSS_TO_S3'
 ```bash
 python3 s3_upload.py
 ```
+## TCP BBR improve Network performance - 提高网络性能
+If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
+如果是跨 AWS Global 和中国区，推荐启用 TCP BBR: Congestion-Based Congestion Control，可以提高传输效率  
 
+[Amazon Linux AMI 2017.09.1 Kernel 4.9.51](https://aws.amazon.com/cn/amazon-linux-ami/2017.09-release-notes/) or later version supported TCP Bottleneck Bandwidth and RTT (BBR) .  
+
+BBR is `NOT` enabled by default. You can enable it on your EC2 Instance via:：
+```
+$ sudo modprobe tcp_bbr
+
+$ sudo modprobe sch_fq
+
+$ sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
+```
+Persistent configuration should look like:
+```
+$ sudo su -
+
+# cat <<EOF>> /etc/sysconfig/modules/tcpcong.modules
+>#!/bin/bash
+> exec /sbin/modprobe tcp_bbr >/dev/null 2>&1
+> exec /sbin/modprobe sch_fq >/dev/null 2>&1
+> EOF
+
+# chmod 755 /etc/sysconfig/modules/tcpcong.modules
+
+# echo "net.ipv4.tcp_congestion_control = bbr" >> /etc/sysctl.d/00-tcpcong.conf
+```
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
