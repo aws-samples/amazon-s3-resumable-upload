@@ -33,14 +33,19 @@ Features:
 * Can setup ouput info level  
 可设置输出消息级别，如设置WARNING级别，则只输出你最关注的信息。
 --------  
-## Notice: 
+## Known Issue  注意: 
 * ChunkSize setting. Because Amazon S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
-注意：  
  ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。  
 
 * If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
-注意：  
 如果某个文件传输到一半，你要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
+
+* While same file prefix/name with same size, it will be considered as duplicated file and this file will be ignore.
+This is a trade-off for performance. It might be improved in the coming release, with Verification Option.  
+相同的文件前缀和文件名，并且文件大小相同的，则会被认为是重复文件不再传输。这是为性能考虑的折中。以后的版本考虑推出可选择是否校验文件的选项。  
+
+* S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. It might be improved in the coming release with seperated source and destination prefix.  
+S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。以后的版本考虑推出分别设置源和目的 Prefix.   
 
 Language: Python 3.7   
 by James Huang  
