@@ -15,6 +15,7 @@ from s3_upload_config import *
 import time
 import hashlib
 import logging
+from pathlib import PurePosixPath, Path
 if JobType == 'ALIOSS_TO_S3':
     import oss2  # for Ali Cloud Oss storage download
 
@@ -41,7 +42,7 @@ def get_local_file_list():
                     file_size = os.path.getsize(file_absPath)
                     if (file_size >= ChunkSize and IgnoreSmallFile) or not IgnoreSmallFile:
                         __src_file_list.append({
-                            "Key": file_relativePath,
+                            "Key": Path(file_relativePath),
                             "Size": file_size
                         })
         else:
@@ -197,7 +198,7 @@ def upload_file(srcfile, desFilelist, UploadIdList):
     logger.info(f'Start file: {srcfile["Key"]}')
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
-        prefix_and_key = os.path.join(S3Prefix, srcfile["Key"])
+        prefix_and_key = str(PurePosixPath(S3Prefix) / srcfile["Key"])
     try:
         # 循环重试3次（如果MD5计算的ETag不一致）
         for md5_retry in range(3):
@@ -260,7 +261,7 @@ def check_file_exit(srcfile, desFilelist, UploadIdList):
     # 检查源文件是否在目标文件夹中
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
-        prefix_and_key = os.path.join(S3Prefix, srcfile["Key"])
+        prefix_and_key = str(PurePosixPath(S3Prefix) / srcfile["Key"])
     for f in desFilelist:
         if f["Key"] == prefix_and_key and \
                 (srcfile["Size"] == f["Size"]):
@@ -286,7 +287,7 @@ def checkPartnumberList(srcfile, uploadId):
     try:
         prefix_and_key = srcfile["Key"]
         if JobType == 'LOCAL_TO_S3':
-            prefix_and_key = os.path.join(S3Prefix, srcfile["Key"])
+            prefix_and_key = str(PurePosixPath(S3Prefix) / srcfile["Key"])
         partnumberList = []
         PartNumberMarker = 0
         IsTruncated = True
@@ -363,7 +364,7 @@ def uploadPart(uploadId, indexList, partnumberList, srcfile):
 
 # Single Thread Upload one part, from local to s3
 def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list):
-    prefix_and_key = os.path.join(S3Prefix, srcfileKey)
+    prefix_and_key = str(PurePosixPath(S3Prefix) / srcfileKey)
     if not dryrun:
         print(f'\033[0;32;1m--->Uploading\033[0m {srcfileKey} - {partnumber}/{total}')
     with open(os.path.join(SrcDir, srcfileKey), 'rb') as data:
@@ -529,7 +530,7 @@ def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
     # 查询S3的所有Part列表uploadedListParts构建completeStructJSON
     prefix_and_key = srcfileKey
     if JobType == 'LOCAL_TO_S3':
-        prefix_and_key = os.path.join(S3Prefix, srcfileKey)
+        prefix_and_key = str(PurePosixPath(S3Prefix) / srcfileKey)
     uploadedListPartsClean = []
     PartNumberMarker = 0
     IsTruncated = True
@@ -577,7 +578,7 @@ def compare_local_to_s3():
     for source_file in fileList:
         match = False
         for destination_file in desFilelist:
-            if (os.path.join(S3Prefix, source_file["Key"]) == destination_file["Key"]) and \
+            if (str((PurePosixPath(S3Prefix) / source_file["Key"])) == destination_file["Key"]) and \
                     (source_file["Size"] == destination_file["Size"]):
                 match = True  # source 在 destination找到，并且Size一致
                 break
@@ -643,7 +644,7 @@ if __name__ == '__main__':
         logger.info('Checking write permission for dest. S3 bucket')
         s3_dest_client.put_object(
             Bucket=DesBucket,
-            Key=os.path.join(S3Prefix, 'access_test'),
+            Key=str(PurePosixPath(S3Prefix) / 'access_test'),
             Body='access_test_content'
         )
     except Exception as e:
