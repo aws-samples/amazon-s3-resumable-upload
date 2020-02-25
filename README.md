@@ -1,4 +1,4 @@
-# Amazon S3 MultiThread Resume Upload Tool v1.1  (Amazon S3多线程断点续传)   
+# Amazon S3 MultiThread Resume Upload Tool v1.2  (Amazon S3多线程断点续传)   
 
 Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable for large files  
 多线程断点续传到 Amazon S3，适合批量的大文件  
@@ -6,7 +6,7 @@ Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable f
 Upload from local disk, copy files between Global AWS and China AWS S3, or migrate from AliCloud OSS to Amazon S3  
 从本地硬盘上传，或海外与中国区 Amazon S3 之间互相拷贝，或从阿里云 OSS 迁移到 Amazon S3。  
 
-Features:  
+### Features:  
 具体功能包括：  
 
 * Split multipart and get from source, multi-thread upload to S3 and merge, support resume upload (Part level).   
@@ -33,7 +33,7 @@ Features:
 * Can setup ouput info level  
 可设置输出消息级别，如设置WARNING级别，则只输出你最关注的信息。
 --------  
-## Known Issue  注意: 
+### Known Issue  注意: 
 * ChunkSize setting. Because Amazon S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
  ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。  
 
@@ -47,9 +47,13 @@ This is a trade-off for performance. It might be improved in the coming release,
 * S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. It might be improved in the coming release with seperated source and destination prefix.  
 S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。以后的版本考虑推出分别设置源和目的 Prefix.   
 
-Language: Python 3.7   
+### Version 1.2
+* 支持 Windows 系统中，LOCAL_TO_S3 本地上传模式的路径和对应S3子目录处理。由此，现在支持 Linux, MacOS 和 Windows 系统运行。
+
+Language: Python 3.6 以上   
 by James Huang  
   
+
 ## Architecture 架构图  
 1. Local upload to S3  
 ![Architecture](./img/img01.png)
@@ -59,7 +63,7 @@ by James Huang
 ![Architecture](./img/img03.png)
   
 ## Requirements
-1. Install [Python](https://www.python.org/downloads/) 3.7 or above  
+1. Install [Python](https://www.python.org/downloads/) 3.6 or above  
   
 
 2. Install SDK  
