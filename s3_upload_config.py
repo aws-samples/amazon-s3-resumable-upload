@@ -4,13 +4,14 @@
 JobType = "S3_TO_S3"  # 'LOCAL_TO_S3' | 'S3_TO_S3' | 'ALIOSS_TO_S3'
 SrcFileIndex = "*"  # 指定要上传的文件的文件名, type = str，Upload全部文件则用 "*"
 # S3_TO_S3 源S3的Prefix(与目标S3一致)，LOCAL_TO_S3则为目标S3的Prefix, type = str
-S3Prefix = "multipart/"
+S3Prefix = "multipart"
 DesProfileName = "cn"  # 在~/.aws 中配置的能访问目标S3的 profile name
 DesBucket = "my-cn-bucket"  # 目标文件bucket, type = str
 
 """Configure for LOCAL_TO_S3"""
-SrcDir = "/Users/huangzb/Downloads/"
-# 原文件本地存放目录，目录最后一个字符串不要加斜杠, S3_TO_S3则该字段无效 type = str
+SrcDir = r"/Users/huangzb/Downloads"  # 或Windows系统是 SrcDir = r"C:\Downloads"
+# 原文件本地存放目录，目录最后一个字符不要加斜杠, 字符串前面的 "r" 不要去掉
+# S3_TO_S3则该字段无效 type = str
 
 """Configure for S3_TO_S3"""
 SrcBucket = "my-us-bucket"  # 源Bucket，LOCAL_TO_S3则本字段无效
