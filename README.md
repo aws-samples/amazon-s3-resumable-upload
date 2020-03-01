@@ -37,6 +37,9 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 * ChunkSize setting. Because Amazon S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
  ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。  
 
+* For transfering data between Global and China, please setup tcp_congestion_control BBR to improve networking performance.   
+对于Global与国内传输数据的场景，请设置 TCP 拥塞控制为 BBR，详见后文小节：TCP BBR improve Network performance  
+
 * If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
 如果某个文件传输到一半，你要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
 
@@ -49,10 +52,6 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
 
 ### Version 1.2
 * 支持 Windows 系统中，LOCAL_TO_S3 本地上传模式的路径和对应S3子目录处理。由此，现在支持 Linux, MacOS 和 Windows 系统运行。
-
-Language: Python 3.6 以上   
-by James Huang  
-  
 
 ## Architecture 架构图  
 1. Local upload to S3  
