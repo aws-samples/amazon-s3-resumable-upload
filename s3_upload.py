@@ -2,6 +2,7 @@
 # Composed by Huang Zhuobin
 # This demo split file into multiparts and upload to S3 with retry
 
+
 import os
 import sys
 import json
@@ -37,11 +38,12 @@ def get_local_file_list():
                     file_absPath = os.path.join(parent, filename)
                     file_relativePath = file_absPath[len(SrcDir)+1:]
                     file_size = os.path.getsize(file_absPath)
-                    if (file_size >= ChunkSize and IgnoreSmallFile) or not IgnoreSmallFile:
-                        __src_file_list.append({
-                            "Key": Path(file_relativePath),
-                            "Size": file_size
-                        })
+                    if file_size >= ChunkSize or not IgnoreSmallFile:
+                        if file_size != 0:
+                            __src_file_list.append({
+                                "Key": Path(file_relativePath),
+                                "Size": file_size
+                            })
         else:
             file_size = os.path.getsize(os.path.join(SrcDir, SrcFileIndex))
             __src_file_list = [{
@@ -68,7 +70,7 @@ def get_s3_file_list(s3_client, bucket):
         )
         if response_fileList["KeyCount"] != 0:
             for n in response_fileList["Contents"]:
-                if n["Key"][-1] != '/':      # Key以"/“结尾的是子目录，不处理
+                if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
                     __des_file_list.append({
                         "Key": n["Key"],
                         "Size": n["Size"]
@@ -82,7 +84,7 @@ def get_s3_file_list(s3_client, bucket):
                 )
                 for n in response_fileList["Contents"]:
                     if (n["Size"] >= ChunkSize and IgnoreSmallFile) or not IgnoreSmallFile:
-                        if n["Key"][-1] != '/':      # Key以"/“结尾的是子目录，不处理
+                        if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
                             __des_file_list.append({
                                 "Key": n["Key"],
                                 "Size": n["Size"]
@@ -137,7 +139,7 @@ def get_ali_oss_file_list(__ali_bucket):
 
         if len(response_fileList.object_list) != 0:
             for n in response_fileList.object_list:
-                if n.key[-1] != '/':      # Key以"/“结尾的是子目录，不处理
+                if n.size != 0:      # 子目录或 0 size 数据，不处理
                     __des_file_list.append({
                         "Key": n.key,
                         "Size": n.size
@@ -149,7 +151,7 @@ def get_ali_oss_file_list(__ali_bucket):
                     marker=response_fileList.next_marker
                 )
                 for n in response_fileList.object_list:
-                    if n.key[-1] != '/':  # Key以"/“结尾的是子目录，不处理
+                    if n.size != 0:  # 子目录或 0 size 数据，不处理
                         __des_file_list.append({
                             "Key": n.key,
                             "Size": n.size
@@ -582,11 +584,11 @@ def compare_local_to_s3():
         if not match:
             deltaList.append(source_file)
     if not deltaList:
-        logger.info('All source files are in destination Bucket/Prefix')
+        logger.warning('All source files are in destination Bucket/Prefix. Job well done.')
     else:
-        logger.warning(f'There are {len(deltaList)} files not in destination or not the same size, list:')
+        logger.warning(f'There are {len(deltaList)} files not in destination or not the same size. List:')
         for delta_file in deltaList:
-            logger.warning(json.dumps(delta_file))
+            logger.warning(str(delta_file))
     return
 
 
@@ -613,9 +615,9 @@ def compare_buckets():
         if not match:
             deltaList.append(source_file)
     if not deltaList:
-        logger.info('All source files are in destination Bucket/Prefix')
+        logger.warning('All source files are in destination Bucket/Prefix. Job well done.')
     else:
-        logger.warning(f'There are {len(deltaList)} files not in destination or not the same size, list:')
+        logger.warning(f'There are {len(deltaList)} files not in destination or not the same size. List:')
         for delta_file in deltaList:
             logger.warning(json.dumps(delta_file))
     return
