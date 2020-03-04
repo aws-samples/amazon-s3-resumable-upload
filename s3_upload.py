@@ -22,9 +22,13 @@ if JobType == 'ALIOSS_TO_S3':
 
 # Configure logging
 logger = logging.getLogger()
-streamHandler = logging.StreamHandler()
-streamHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
-logger.addHandler(streamHandler)
+os.system("mkdir s3_upload_log")
+this_file_name = os.path.splitext(os.path.basename(__file__))[0]
+log_file_name = './s3_upload_log/log-'+this_file_name+'-'+str(time.time())[:10]+'.log'
+print('Logging to file:', os.path.abspath(log_file_name), 'Logging level:', LoggingLevel)
+fileHandler = logging.FileHandler(filename=log_file_name)
+fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
+logger.addHandler(fileHandler)
 logger.setLevel(logging.WARNING)
 if LoggingLevel == 'INFO':
     logger.setLevel(logging.INFO)
@@ -719,4 +723,4 @@ if __name__ == '__main__':
         print(
             f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_h}H:{time_m}M:{time_s}S \033[0m- FROM: {SrcDir} TO {DesBucket}/{S3Prefix}')
         compare_local_to_s3()
-
+    print('Logged to file:', os.path.abspath(log_file_name))
