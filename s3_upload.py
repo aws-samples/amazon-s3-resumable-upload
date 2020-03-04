@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+# Python 3.7
 # Composed by Huang Zhuobin
-# This demo split file into multiparts and upload to S3 with retry
+# This demo split file into multiparts and use s3 multipart upload to S3 with retry
+# install boto3 refer to https://github.com/boto/boto3
 
 
 import os
@@ -8,6 +10,7 @@ import sys
 import json
 import base64
 from boto3.session import Session
+from botocore.client import Config
 from concurrent import futures
 from s3_upload_config import *
 import time
@@ -375,7 +378,6 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
                 chunkdata_md5 = hashlib.md5(chunkdata)
                 md5list[partnumber-1] = chunkdata_md5
                 if not dryrun:
-                    # upload_client = Session(profile_name=DesProfileName).client('s3')
                     s3_dest_client.upload_part(
                         Body=chunkdata,
                         Bucket=DesBucket,
@@ -632,9 +634,10 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # 定义 s3 client
-    s3_dest_client = Session(profile_name=DesProfileName).client('s3')
+    s3_config = Config(max_pool_connections=25)
+    s3_dest_client = Session(profile_name=DesProfileName).client('s3', config=s3_config)
     if JobType == 'S3_TO_S3':
-        s3_src_client = Session(profile_name=SrcProfileName).client('s3')
+        s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
     elif JobType == 'ALIOSS_TO_S3':
         ali_bucket = oss2.Bucket(oss2.Auth(ali_access_key_id, ali_access_key_secret), ali_endpoint, ali_SrcBucket)
 

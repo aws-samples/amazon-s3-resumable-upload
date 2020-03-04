@@ -25,11 +25,10 @@ ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS endpoint，在OSS控制台�
 
 """Advanced Configure"""
 Megabytes = 1024*1024
-ChunkSize = 50 * Megabytes  # 文件分片大小，不小于5M，单文件分片总数不能超过10000, type = int
-MaxRetry = 200  # 单个Part上传失败后，最大重试次数, type = int
-MaxThread = 3  # 单文件同时上传的进程数量, type = int
-MaxParallelFile = 3  # 并行操作文件数量, type = int
-# 即同时并发的进程数 = MaxParallelFile * MaxThread
+ChunkSize = 10 * Megabytes  # 文件分片大小，不小于5M，单文件分片总数不能超过10000, type = int
+MaxRetry = 20  # 单个Part上传失败后，最大重试次数, type = int
+MaxThread = 5  # 单文件同时上传的进程数量, type = int
+MaxParallelFile = 5  # 并行操作文件数量，即同时并发的进程数 = MaxParallelFile * MaxThread, type = int
 IgnoreSmallFile = False  # 是否跳过小于chunksize的小文件, type = bool
 StorageClass = "STANDARD"
 # 'STANDARD'|'REDUCED_REDUNDANCY'|'STANDARD_IA'|'ONEZONE_IA'|'INTELLIGENT_TIERING'|'GLACIER'|'DEEP_ARCHIVE'
@@ -37,5 +36,6 @@ ifVerifyMD5 = False  # 是否做两次的MD5校验
 # 为True则一个文件完成上传合并分片之后再次进行整个文件的ETag校验MD5。
 # 对于S3_TO_S3，该开关True会在断点续传的时候重新下载所有已传过的分片来计算MD5。
 # 该开关不影响每个分片上传时候的校验，即使为False也会校验每个分片MD5。
+
 DontAskMeToClean = False  # False 遇到存在现有的未完成upload时，不再询问是否Clean，默认不Clean，自动续传
 LoggingLevel = "INFO"  # 日志输出级别 'WARNING' | 'INFO' | 'DEBUG'
