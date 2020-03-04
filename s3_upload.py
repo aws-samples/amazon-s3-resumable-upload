@@ -22,9 +22,11 @@ if JobType == 'ALIOSS_TO_S3':
 
 # Configure logging
 logger = logging.getLogger()
-os.system("mkdir s3_upload_log")
+os.system("mkdir log")
 this_file_name = os.path.splitext(os.path.basename(__file__))[0]
-log_file_name = './s3_upload_log/log-'+this_file_name+'-'+str(time.time())[:10]+'.log'
+t = time.gmtime()
+file_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
+log_file_name = './log/'+this_file_name+'-'+file_time+'.log'
 print('Logging to file:', os.path.abspath(log_file_name), 'Logging level:', LoggingLevel)
 fileHandler = logging.FileHandler(filename=log_file_name)
 fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
