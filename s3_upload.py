@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-# Python 3.7
 # Composed by Huang Zhuobin
-# This demo split file into multiparts and use s3 multipart upload to S3 with retry
-# install boto3 refer to https://github.com/boto/boto3
-
+# This demo split file into multiparts and upload to S3 with retry
 
 import os
 import sys
