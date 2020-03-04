@@ -22,6 +22,7 @@ if JobType == 'ALIOSS_TO_S3':
 
 # Configure logging
 logger = logging.getLogger()
+# File logging
 os.system("mkdir log")
 this_file_name = os.path.splitext(os.path.basename(__file__))[0]
 t = time.gmtime()
@@ -31,6 +32,11 @@ print('Logging to file:', os.path.abspath(log_file_name), 'Logging level:', Logg
 fileHandler = logging.FileHandler(filename=log_file_name)
 fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
 logger.addHandler(fileHandler)
+# Screen stream logging
+streamHandler = logging.StreamHandler()
+streamHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
+logger.addHandler(streamHandler)
+# Loggin Level
 logger.setLevel(logging.WARNING)
 if LoggingLevel == 'INFO':
     logger.setLevel(logging.INFO)
@@ -53,6 +59,8 @@ def get_local_file_list():
                                 "Key": Path(file_relativePath),
                                 "Size": file_size
                             })
+                        else:
+                            logger.warning(f'Zero size file, skip: {Path(file_relativePath)}')
         else:
             file_size = os.path.getsize(os.path.join(SrcDir, SrcFileIndex))
             __src_file_list = [{
@@ -79,11 +87,14 @@ def get_s3_file_list(s3_client, bucket):
         )
         if response_fileList["KeyCount"] != 0:
             for n in response_fileList["Contents"]:
-                if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
-                    __des_file_list.append({
-                        "Key": n["Key"],
-                        "Size": n["Size"]
-                    })
+                if n["Size"] >= ChunkSize or not IgnoreSmallFile:
+                    if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
+                        __des_file_list.append({
+                            "Key": n["Key"],
+                            "Size": n["Size"]
+                        })
+                    else:
+                        logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
             while response_fileList["IsTruncated"]:
                 response_fileList = s3_client.list_objects_v2(
                     Bucket=bucket,
@@ -92,12 +103,14 @@ def get_s3_file_list(s3_client, bucket):
                     ContinuationToken=response_fileList["NextContinuationToken"]
                 )
                 for n in response_fileList["Contents"]:
-                    if (n["Size"] >= ChunkSize and IgnoreSmallFile) or not IgnoreSmallFile:
+                    if n["Size"] >= ChunkSize or not IgnoreSmallFile:
                         if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
                             __des_file_list.append({
                                 "Key": n["Key"],
                                 "Size": n["Size"]
                             })
+                        else:
+                            logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
         else:
             logger.info('File list is empty in the s3 bucket')
     except Exception as err:
@@ -153,6 +166,8 @@ def get_ali_oss_file_list(__ali_bucket):
                         "Key": n.key,
                         "Size": n.size
                     })
+                else:
+                    logger.warning(f'Zero size file, skip: {ali_SrcBucket}/{n["Key"]}')
             while response_fileList.is_truncated:
                 response_fileList = __ali_bucket.list_objects(
                     prefix=S3Prefix,
@@ -165,6 +180,8 @@ def get_ali_oss_file_list(__ali_bucket):
                             "Key": n.key,
                             "Size": n.size
                         })
+                    else:
+                        logger.warning(f'Zero size file, skip: {ali_SrcBucket}/{n["Key"]}')
         else:
             logger.info('File list is empty in the ali_oss bucket')
     except Exception as err:
