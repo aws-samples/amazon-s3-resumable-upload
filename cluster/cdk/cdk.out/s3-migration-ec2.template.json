@@ -1,0 +1,608 @@
+{
+  "Resources": {
+    "masterInstanceSecurityGroup0F95C227": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "s3-migration-ec2/master/InstanceSecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Internet access SSH",
+            "FromPort": 22,
+            "IpProtocol": "tcp",
+            "ToPort": 22
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "s3_migrate_cluster_master"
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": "s3-migration-vpc:ExportsOutputRefVPCB9E5F0B4BD23A326"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/master/InstanceSecurityGroup/Resource"
+      }
+    },
+    "masterInstanceRoleCB246A98": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "ec2.",
+                      {
+                        "Ref": "AWS::URLSuffix"
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/AmazonSSMManagedInstanceCore"
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/CloudWatchLogsFullAccess"
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/AmazonS3FullAccess"
+              ]
+            ]
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "s3_migrate_cluster_master"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/master/InstanceRole/Resource"
+      }
+    },
+    "masterInstanceRoleDefaultPolicyA25E2E92": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "dynamodb:*",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::ImportValue": "s3-migration-resource:ExportsOutputFnGetAttddbFFDD78E5ArnC4E8EA9F"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
+            },
+            {
+              "Action": [
+                "sqs:SendMessage",
+                "sqs:GetQueueAttributes",
+                "sqs:GetQueueUrl"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::ImportValue": "s3-migration-resource:ExportsOutputFnGetAttsqsqueue2C45FF35Arn6523B613"
+              }
+            },
+            {
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:ChangeMessageVisibility",
+                "sqs:GetQueueUrl",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::ImportValue": "s3-migration-resource:ExportsOutputFnGetAttsqsDLQ99818123Arn3AD55F93"
+              }
+            },
+            {
+              "Action": [
+                "ssm:DescribeParameters",
+                "ssm:GetParameters",
+                "ssm:GetParameter",
+                "ssm:GetParameterHistory"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":ssm:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":parameter/",
+                    {
+                      "Fn::ImportValue": "s3-migration-resource:ExportsOutputRefparabucket348D12E7A8BDF64D"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": [
+                "ssm:DescribeParameters",
+                "ssm:GetParameters",
+                "ssm:GetParameter",
+                "ssm:GetParameterHistory"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":ssm:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":parameter/s3_migrate_credentials"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "masterInstanceRoleDefaultPolicyA25E2E92",
+        "Roles": [
+          {
+            "Ref": "masterInstanceRoleCB246A98"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/master/InstanceRole/DefaultPolicy/Resource"
+      }
+    },
+    "masterInstanceProfile03B4062A": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "masterInstanceRoleCB246A98"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/master/InstanceProfile"
+      }
+    },
+    "master6E325D64": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "IamInstanceProfile": {
+          "Ref": "masterInstanceProfile03B4062A"
+        },
+        "ImageId": {
+          "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amihvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter"
+        },
+        "InstanceType": "t3.micro",
+        "KeyName": "id_rsa",
+        "SecurityGroupIds": [
+          {
+            "Fn::GetAtt": [
+              "masterInstanceSecurityGroup0F95C227",
+              "GroupId"
+            ]
+          }
+        ],
+        "SubnetId": {
+          "Fn::ImportValue": "s3-migration-vpc:ExportsOutputRefVPCPublicSubnet1SubnetB4246D30D84F935B"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "s3_migrate_cluster_master"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": "#!/bin/bash\nyum update -y\nyum install git -y\nyum install python3 -y\npip3 install boto3 requests\n\ncd /home/ec2-user/  || exit\ngit clone -b dev https://github.com/aws-samples/amazon-s3-resumable-upload.git\nchown -R ec2-user:ec2-user amazon-s3-resumable-upload/\n\n# Setup BBR\n/bin/cp -rf /home/ec2-user/amazon-s3-resumable-upload/cluster_version/tcpcong.modules /etc/sysconfig/modules/tcpcong.modules\nchmod 755 /etc/sysconfig/modules/tcpcong.modules\necho \"net.ipv4.tcp_congestion_control = bbr\" >> /etc/sysctl.d/00-tcpcong.conf\nmodprobe tcp_bbr\nmodprobe sch_fq\nsysctl -w net.ipv4.tcp_congestion_control=bbr\n\npython3 amazon-s3-resumable-upload/cluster_version/s3_upload_cluster_master.py\n# log exported to ~/log/\n"
+        }
+      },
+      "DependsOn": [
+        "masterInstanceRoleDefaultPolicyA25E2E92",
+        "masterInstanceRoleCB246A98"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/master/Resource"
+      }
+    },
+    "workerasgInstanceSecurityGroup0B5C0813": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "s3-migration-ec2/worker-asg/InstanceSecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Internet access SSH",
+            "FromPort": 22,
+            "IpProtocol": "tcp",
+            "ToPort": 22
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "s3-migration-ec2/worker-asg"
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": "s3-migration-vpc:ExportsOutputRefVPCB9E5F0B4BD23A326"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/worker-asg/InstanceSecurityGroup/Resource"
+      }
+    },
+    "workerasgInstanceRoleDBFAAE89": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "ec2.",
+                      {
+                        "Ref": "AWS::URLSuffix"
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/AmazonSSMManagedInstanceCore"
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/CloudWatchLogsFullAccess"
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/AmazonS3FullAccess"
+              ]
+            ]
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "s3-migration-ec2/worker-asg"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/worker-asg/InstanceRole/Resource"
+      }
+    },
+    "workerasgInstanceRoleDefaultPolicyE78A0CD8": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "dynamodb:*",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::ImportValue": "s3-migration-resource:ExportsOutputFnGetAttddbFFDD78E5ArnC4E8EA9F"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
+            },
+            {
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:ChangeMessageVisibility",
+                "sqs:GetQueueUrl",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::ImportValue": "s3-migration-resource:ExportsOutputFnGetAttsqsqueue2C45FF35Arn6523B613"
+              }
+            },
+            {
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:ChangeMessageVisibility",
+                "sqs:GetQueueUrl",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::ImportValue": "s3-migration-resource:ExportsOutputFnGetAttsqsDLQ99818123Arn3AD55F93"
+              }
+            },
+            {
+              "Action": [
+                "ssm:DescribeParameters",
+                "ssm:GetParameters",
+                "ssm:GetParameter",
+                "ssm:GetParameterHistory"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":ssm:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":parameter/",
+                    {
+                      "Fn::ImportValue": "s3-migration-resource:ExportsOutputRefparabucket348D12E7A8BDF64D"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": [
+                "ssm:DescribeParameters",
+                "ssm:GetParameters",
+                "ssm:GetParameter",
+                "ssm:GetParameterHistory"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":ssm:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":parameter/s3_migrate_credentials"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "workerasgInstanceRoleDefaultPolicyE78A0CD8",
+        "Roles": [
+          {
+            "Ref": "workerasgInstanceRoleDBFAAE89"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/worker-asg/InstanceRole/DefaultPolicy/Resource"
+      }
+    },
+    "workerasgInstanceProfileFDF419DD": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "workerasgInstanceRoleDBFAAE89"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/worker-asg/InstanceProfile"
+      }
+    },
+    "workerasgLaunchConfig4A6CC604": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId": {
+          "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amihvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter"
+        },
+        "InstanceType": "c5.xlarge",
+        "IamInstanceProfile": {
+          "Ref": "workerasgInstanceProfileFDF419DD"
+        },
+        "KeyName": "id_rsa",
+        "SecurityGroups": [
+          {
+            "Fn::GetAtt": [
+              "workerasgInstanceSecurityGroup0B5C0813",
+              "GroupId"
+            ]
+          }
+        ],
+        "SpotPrice": "0.5",
+        "UserData": {
+          "Fn::Base64": "#!/bin/bash\nyum update -y\nyum install git -y\nyum install python3 -y\npip3 install boto3 requests\n\ncd /home/ec2-user/  || exit\ngit clone -b dev https://github.com/aws-samples/amazon-s3-resumable-upload.git\nchown -R ec2-user:ec2-user amazon-s3-resumable-upload/\n\n# Setup BBR\n/bin/cp -rf /home/ec2-user/amazon-s3-resumable-upload/cluster_version/tcpcong.modules /etc/sysconfig/modules/tcpcong.modules\nchmod 755 /etc/sysconfig/modules/tcpcong.modules\necho \"net.ipv4.tcp_congestion_control = bbr\" >> /etc/sysctl.d/00-tcpcong.conf\nmodprobe tcp_bbr\nmodprobe sch_fq\nsysctl -w net.ipv4.tcp_congestion_control=bbr\n\n"
+        }
+      },
+      "DependsOn": [
+        "workerasgInstanceRoleDefaultPolicyE78A0CD8",
+        "workerasgInstanceRoleDBFAAE89"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/worker-asg/LaunchConfig"
+      }
+    },
+    "workerasgASG89D00822": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "MaxSize": "10",
+        "MinSize": "0",
+        "Cooldown": "1200",
+        "DesiredCapacity": "0",
+        "LaunchConfigurationName": {
+          "Ref": "workerasgLaunchConfig4A6CC604"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "PropagateAtLaunch": true,
+            "Value": "s3-migration-ec2/worker-asg"
+          }
+        ],
+        "VPCZoneIdentifier": [
+          {
+            "Fn::ImportValue": "s3-migration-vpc:ExportsOutputRefVPCPublicSubnet1SubnetB4246D30D84F935B"
+          },
+          {
+            "Fn::ImportValue": "s3-migration-vpc:ExportsOutputRefVPCPublicSubnet2Subnet74179F3969CC10AD"
+          }
+        ]
+      },
+      "UpdatePolicy": {
+        "AutoScalingScheduledAction": {
+          "IgnoreUnmodifiedGroupSizeProperties": true
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-ec2/worker-asg/ASG"
+      }
+    }
+  },
+  "Parameters": {
+    "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amihvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+    }
+  },
+  "Outputs": {
+    "Output": {
+      "Value": {
+        "Ref": "master6E325D64"
+      }
+    }
+  }
+}

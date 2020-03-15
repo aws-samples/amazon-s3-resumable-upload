@@ -12,7 +12,7 @@ import base64
 from boto3.session import Session
 from botocore.client import Config
 from concurrent import futures
-from s3_upload_config import *
+from s3_migration_config import *
 import time
 import hashlib
 import logging
@@ -25,7 +25,7 @@ logger = logging.getLogger()
 # File logging
 os.system("mkdir log")
 this_file_name = os.path.splitext(os.path.basename(__file__))[0]
-t = time.gmtime()
+t = time.localtime()
 file_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
 log_file_name = './log/'+this_file_name+'-'+file_time+'.log'
 print('Logging to file:', os.path.abspath(log_file_name), 'Logging level:', LoggingLevel)
@@ -219,7 +219,7 @@ class NextFile(Exception):
     pass
 
 
-def upload_file(srcfile, desFilelist, UploadIdList):
+def upload_file(srcfile, desFilelist, UploadIdList): # UploadIdList就是multipart_uploaded_list
     logger.info(f'Start file: {srcfile["Key"]}')
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
@@ -228,7 +228,7 @@ def upload_file(srcfile, desFilelist, UploadIdList):
         # 循环重试3次（如果MD5计算的ETag不一致）
         for md5_retry in range(3):
             # 检查文件是否已存在，存在不继续、不存在且没UploadID要新建、不存在但有UploadID得到返回的UploadID
-            response_check_upload = check_file_exit(srcfile, desFilelist, UploadIdList)
+            response_check_upload = check_file_exist(srcfile, desFilelist, UploadIdList)
             if response_check_upload == 'UPLOAD':
                 logger.info(f'New upload: {srcfile["Key"]}')
                 response_new_upload = s3_dest_client.create_multipart_upload(
@@ -248,7 +248,7 @@ def upload_file(srcfile, desFilelist, UploadIdList):
                 # 获取已上传partnumberList
                 partnumberList = checkPartnumberList(srcfile, reponse_uploadId)
 
-            # 获取索引列表
+            # 获取索引列表，例如[0, 10, 20]
             response_indexList = split(srcfile)
 
             # 执行分片upload
@@ -282,7 +282,7 @@ def upload_file(srcfile, desFilelist, UploadIdList):
     return
 
 
-def check_file_exit(srcfile, desFilelist, UploadIdList):
+def check_file_exist(srcfile, desFilelist, UploadIdList):
     # 检查源文件是否在目标文件夹中
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
@@ -342,7 +342,7 @@ def checkPartnumberList(srcfile, uploadId):
 def split(srcfile):
     partnumber = 1
     indexList = [0]
-    while ChunkSize * partnumber < srcfile["Size"]: # 如果刚好是"="，则无需再分下一part，所以这里不能用"<="
+    while ChunkSize * partnumber < srcfile["Size"]:  # 如果刚好是"="，则无需再分下一part，所以这里不能用"<="
         indexList.append(ChunkSize * partnumber)
         partnumber += 1
     if partnumber > 10000:

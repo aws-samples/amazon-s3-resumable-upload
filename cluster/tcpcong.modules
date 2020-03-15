@@ -1,0 +1,3 @@
+#!/bin/bash
+exec /sbin/modprobe tcp_bbr >/dev/null 2>&1
+exec /sbin/modprobe sch_fq >/dev/null 2>&1

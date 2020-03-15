@@ -1,0 +1,113 @@
+{
+  "Resources": {
+    "ddbFFDD78E5": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "KeySchema": [
+          {
+            "AttributeName": "Key",
+            "KeyType": "HASH"
+          }
+        ],
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "Key",
+            "AttributeType": "S"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "TableName": "s3_migrate_file_list"
+      },
+      "UpdateReplacePolicy": "Retain",
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-resource/ddb/Resource"
+      }
+    },
+    "sqsDLQ99818123": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "MessageRetentionPeriod": 1209600,
+        "QueueName": "s3_migrate_file_list-DLQ",
+        "VisibilityTimeout": 3600
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-resource/sqs_DLQ/Resource"
+      }
+    },
+    "sqsqueue2C45FF35": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "MessageRetentionPeriod": 1209600,
+        "QueueName": "s3_migrate_file_list",
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "sqsDLQ99818123",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 3
+        },
+        "VisibilityTimeout": 3600
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-resource/sqs_queue/Resource"
+      }
+    },
+    "parabucket348D12E7": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Type": "String",
+        "Value": "[{\"src_bucket\": \"broad-references\", \"src_prefix\": \"\", \"des_bucket\": \"s3-open-data\", \"des_prefix\": \"broad-references\"}, {\"src_bucket\": \"gatk-test-data\", \"src_prefix\": \"\", \"des_bucket\": \"s3-open-data\", \"des_prefix\": \"gatk-test-data\"}]",
+        "Name": "s3_migrate_bucket_para"
+      },
+      "Metadata": {
+        "aws:cdk:path": "s3-migration-resource/para-bucket/Resource"
+      }
+    }
+  },
+  "Outputs": {
+    "ExportsOutputFnGetAttddbFFDD78E5ArnC4E8EA9F": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ddbFFDD78E5",
+          "Arn"
+        ]
+      },
+      "Export": {
+        "Name": "s3-migration-resource:ExportsOutputFnGetAttddbFFDD78E5ArnC4E8EA9F"
+      }
+    },
+    "ExportsOutputFnGetAttsqsqueue2C45FF35Arn6523B613": {
+      "Value": {
+        "Fn::GetAtt": [
+          "sqsqueue2C45FF35",
+          "Arn"
+        ]
+      },
+      "Export": {
+        "Name": "s3-migration-resource:ExportsOutputFnGetAttsqsqueue2C45FF35Arn6523B613"
+      }
+    },
+    "ExportsOutputFnGetAttsqsDLQ99818123Arn3AD55F93": {
+      "Value": {
+        "Fn::GetAtt": [
+          "sqsDLQ99818123",
+          "Arn"
+        ]
+      },
+      "Export": {
+        "Name": "s3-migration-resource:ExportsOutputFnGetAttsqsDLQ99818123Arn3AD55F93"
+      }
+    },
+    "ExportsOutputRefparabucket348D12E7A8BDF64D": {
+      "Value": {
+        "Ref": "parabucket348D12E7"
+      },
+      "Export": {
+        "Name": "s3-migration-resource:ExportsOutputRefparabucket348D12E7A8BDF64D"
+      }
+    }
+  }
+}

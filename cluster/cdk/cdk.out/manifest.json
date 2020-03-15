@@ -1,0 +1,1107 @@
+{
+  "version": "1.21.0",
+  "artifacts": {
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    },
+    "s3-migration-vpc": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "s3-migration-vpc.template.json"
+      },
+      "metadata": {
+        "/s3-migration-vpc/VPC/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCB9E5F0B4",
+            "trace": [
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:286:25)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet1SubnetB4246D30",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:576:24)",
+              "new PublicSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:726:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:505:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet1RouteTableFEE4B781",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:591:23)",
+              "new PublicSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:726:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:505:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet1RouteTableAssociation0B0896DC",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:596:9)",
+              "new PublicSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:726:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:505:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet1DefaultRoute91CEF279",
+            "trace": [
+              "PublicSubnet.addDefaultInternetRoute (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:616:23)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:317:30",
+              "Array.forEach (<anonymous>)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:316:32)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet1/EIP": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet1EIP6AD938E8",
+            "trace": [
+              "PublicSubnet.addNatGateway (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:737:27)",
+              "NatGateway.configureNat (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:52:33)",
+              "Vpc.createNatGateways (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:463:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:322:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet1/NATGateway": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet1NATGatewayE0556630",
+            "trace": [
+              "PublicSubnet.addNatGateway (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:735:21)",
+              "NatGateway.configureNat (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:52:33)",
+              "Vpc.createNatGateways (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:463:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:322:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet2Subnet74179F39",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:576:24)",
+              "new PublicSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:726:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:505:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet2RouteTable6F1A15F1",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:591:23)",
+              "new PublicSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:726:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:505:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet2RouteTableAssociation5A808732",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:596:9)",
+              "new PublicSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:726:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:505:42",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet2DefaultRouteB7481BBA",
+            "trace": [
+              "PublicSubnet.addDefaultInternetRoute (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:616:23)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:317:30",
+              "Array.forEach (<anonymous>)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:316:32)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet2/EIP": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet2EIP4947BC00",
+            "trace": [
+              "PublicSubnet.addNatGateway (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:737:27)",
+              "NatGateway.configureNat (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:52:33)",
+              "Vpc.createNatGateways (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:463:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:322:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PublicSubnet2/NATGateway": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPublicSubnet2NATGateway3C070193",
+            "trace": [
+              "PublicSubnet.addNatGateway (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:735:21)",
+              "NatGateway.configureNat (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:52:33)",
+              "Vpc.createNatGateways (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:463:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:322:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet1Subnet8BCA10E0",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:576:24)",
+              "new PrivateSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:753:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:510:43",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet1RouteTableBE8A6027",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:591:23)",
+              "new PrivateSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:753:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:510:43",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet1RouteTableAssociation347902D1",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:596:9)",
+              "new PrivateSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:753:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:510:43",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet1DefaultRouteAE1D6490",
+            "trace": [
+              "PrivateSubnet.addRoute (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:657:23)",
+              "NatGateway.configureSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:63:16)",
+              "NatGateway.configureNat (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:57:18)",
+              "Vpc.createNatGateways (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:463:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:322:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet2SubnetCFCDAA7A",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:576:24)",
+              "new PrivateSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:753:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:510:43",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet2RouteTable0A19E10E",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:591:23)",
+              "new PrivateSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:753:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:510:43",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet2RouteTableAssociation0C73D413",
+            "trace": [
+              "new Subnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:596:9)",
+              "new PrivateSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:753:9)",
+              "/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:510:43",
+              "Array.forEach (<anonymous>)",
+              "Vpc.createSubnetResources (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:489:32)",
+              "Vpc.createSubnets (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:480:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:306:14)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/PrivateSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCPrivateSubnet2DefaultRouteF4F5CFD2",
+            "trace": [
+              "PrivateSubnet.addRoute (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:657:23)",
+              "NatGateway.configureSubnet (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:63:16)",
+              "NatGateway.configureNat (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/nat.js:57:18)",
+              "Vpc.createNatGateways (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:463:18)",
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:322:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/IGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCIGWB7E252D3",
+            "trace": [
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:310:25)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/VPCGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCVPCGW99B986DC",
+            "trace": [
+              "new Vpc (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:312:25)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/s3ep/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCs3epC838BB3F",
+            "trace": [
+              "new GatewayVpcEndpoint (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc-endpoint.js:77:26)",
+              "Vpc.addS3Endpoint (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:438:16)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/VPC/ddbep/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VPCddbep1E1D732D",
+            "trace": [
+              "new GatewayVpcEndpoint (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc-endpoint.js:77:26)",
+              "Vpc.addDynamoDbEndpoint (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/vpc.js:450:16)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/Exports/Output{\"Ref\":\"VPCB9E5F0B4\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefVPCB9E5F0B4BD23A326",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/Exports/Output{\"Ref\":\"VPCPublicSubnet1SubnetB4246D30\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefVPCPublicSubnet1SubnetB4246D30D84F935B",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-vpc/Exports/Output{\"Ref\":\"VPCPublicSubnet2Subnet74179F39\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefVPCPublicSubnet2Subnet74179F3969CC10AD",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ]
+      }
+    },
+    "s3-migration-resource": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "s3-migration-resource.template.json"
+      },
+      "metadata": {
+        "/s3-migration-resource/ddb": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": "s3_migrate_file_list",
+            "trace": [
+              "new Table (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-dynamodb/lib/table.js:196:23)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/ddb/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ddbFFDD78E5",
+            "trace": [
+              "new Table (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-dynamodb/lib/table.js:178:22)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/sqs_DLQ/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "sqsDLQ99818123",
+            "trace": [
+              "new Queue (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-sqs/lib/queue.js:47:23)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/sqs_queue/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "sqsqueue2C45FF35",
+            "trace": [
+              "new Queue (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-sqs/lib/queue.js:47:23)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/para-bucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "parabucket348D12E7",
+            "trace": [
+              "new StringParameter (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ssm/lib/parameter.js:98:26)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/Exports/Output{\"Fn::GetAtt\":[\"ddbFFDD78E5\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttddbFFDD78E5ArnC4E8EA9F",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/Exports/Output{\"Fn::GetAtt\":[\"sqsqueue2C45FF35\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttsqsqueue2C45FF35Arn6523B613",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/Exports/Output{\"Fn::GetAtt\":[\"sqsDLQ99818123\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttsqsDLQ99818123Arn3AD55F93",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-resource/Exports/Output{\"Ref\":\"parabucket348D12E7\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefparabucket348D12E7A8BDF64D",
+            "trace": [
+              "Stack.prepareCrossReference (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:686:13)",
+              "Stack.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/stack.js:560:43)",
+              "Function.prepare (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:87:27)",
+              "Function.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:51:14)",
+              "App.synth (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/app.js:71:52)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ]
+      }
+    },
+    "s3-migration-ec2": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "s3-migration-ec2.template.json"
+      },
+      "dependencies": [
+        "s3-migration-vpc",
+        "s3-migration-resource"
+      ],
+      "metadata": {
+        "/s3-migration-ec2/master/InstanceSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "masterInstanceSecurityGroup0F95C227",
+            "trace": [
+              "new SecurityGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/security-group.js:173:30)",
+              "new Instance (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/instance.js:25:34)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/master/InstanceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "masterInstanceRoleCB246A98",
+            "trace": [
+              "new Role (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/role.js:41:22)",
+              "new Instance (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/instance.js:33:35)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/master/InstanceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "masterInstanceRoleDefaultPolicyA25E2E92",
+            "trace": [
+              "new Policy (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/policy.js:30:26)",
+              "Role.addToPolicy (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/role.js:160:34)",
+              "Function.addToPrincipal (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/grant.js:57:65)",
+              "Table.grant (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-dynamodb/lib/table.js:42:26)",
+              "Table.grantFullAccess (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-dynamodb/lib/table.js:82:21)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/master/InstanceProfile": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "masterInstanceProfile03B4062A",
+            "trace": [
+              "new Instance (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/instance.js:37:28)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/master/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "master6E325D64",
+            "trace": [
+              "new Instance (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/instance.js:59:25)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/SsmParameterValue:--aws--service--ami-amazon-linux-latest--amzn2-ami-hvm-x86_64-gp2:C96584B6-F00A-464E-AD19-53AFF4B05118.Parameter": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amihvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter",
+            "trace": [
+              "Function.fromStringParameterAttributes (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ssm/lib/parameter.js:130:15)",
+              "Function.valueForTypedStringParameter (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ssm/lib/parameter.js:197:21)",
+              "AmazonLinuxImage.getImage (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/machine-image.js:137:41)",
+              "new Instance (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/instance.js:41:48)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "desiredCapacity has been configured. Be aware this will reset the size of your AutoScalingGroup on every deployment. See https://github.com/aws/aws-cdk/issues/5215",
+            "trace": [
+              "ConstructNode.addWarning (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/core/lib/construct.js:277:14)",
+              "new AutoScalingGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-autoscaling/lib/auto-scaling-group.js:186:23)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg/InstanceSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "workerasgInstanceSecurityGroup0B5C0813",
+            "trace": [
+              "new SecurityGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-ec2/lib/security-group.js:173:30)",
+              "new AutoScalingGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-autoscaling/lib/auto-scaling-group.js:124:30)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg/InstanceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "workerasgInstanceRoleDBFAAE89",
+            "trace": [
+              "new Role (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/role.js:41:22)",
+              "new AutoScalingGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-autoscaling/lib/auto-scaling-group.js:131:35)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg/InstanceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "workerasgInstanceRoleDefaultPolicyE78A0CD8",
+            "trace": [
+              "new Policy (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/policy.js:30:26)",
+              "Role.addToPolicy (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/role.js:160:34)",
+              "Function.addToPrincipal (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-iam/lib/grant.js:57:65)",
+              "Table.grant (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-dynamodb/lib/table.js:42:26)",
+              "Table.grantFullAccess (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-dynamodb/lib/table.js:82:21)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:51",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7665:25",
+              "Kernel._ensureSync (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8274:20)",
+              "Kernel.invoke (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7664:26)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg/InstanceProfile": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "workerasgInstanceProfileFDF419DD",
+            "trace": [
+              "new AutoScalingGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-autoscaling/lib/auto-scaling-group.js:136:28)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg/LaunchConfig": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "workerasgLaunchConfig4A6CC604",
+            "trace": [
+              "new AutoScalingGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-autoscaling/lib/auto-scaling-group.js:144:30)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/worker-asg/ASG": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "workerasgASG89D00822",
+            "trace": [
+              "new AutoScalingGroup (/private/var/folders/5w/m8fqnlm5643chxpsd1kpvbh8qkj1ty/T/jsii-kernel-tr0JSv/node_modules/@aws-cdk/aws-autoscaling/lib/auto-scaling-group.js:215:33)",
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ],
+        "/s3-migration-ec2/Output": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Output",
+            "trace": [
+              "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:49",
+              "Kernel._wrapSandboxCode (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:8298:20)",
+              "Kernel._create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7838:26)",
+              "Kernel.create (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7585:21)",
+              "KernelHost.processRequest (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7372:28)",
+              "KernelHost.run (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7312:14)",
+              "Immediate._onImmediate (/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/jsii/_embedded/jsii/jsii-runtime.js:7315:37)",
+              "processImmediate (internal/timers.js:439:21)"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "runtime": {
+    "libraries": {
+      "@aws-cdk/cx-api": "1.27.0",
+      "@aws-cdk/core": "1.27.0",
+      "@aws-cdk/region-info": "1.26.0",
+      "@aws-cdk/aws-iam": "1.26.0",
+      "@aws-cdk/aws-cloudwatch": "1.26.0",
+      "@aws-cdk/aws-logs": "1.26.0",
+      "@aws-cdk/aws-events": "1.26.0",
+      "@aws-cdk/aws-kms": "1.26.0",
+      "@aws-cdk/aws-s3": "1.26.0",
+      "@aws-cdk/aws-ssm": "1.26.0",
+      "@aws-cdk/aws-ec2": "1.26.0",
+      "@aws-cdk/aws-autoscaling-common": "1.26.0",
+      "@aws-cdk/aws-elasticloadbalancing": "1.26.0",
+      "@aws-cdk/assets": "1.26.0",
+      "@aws-cdk/aws-s3-assets": "1.26.0",
+      "@aws-cdk/aws-sqs": "1.26.0",
+      "@aws-cdk/aws-lambda": "1.26.0",
+      "@aws-cdk/aws-sns": "1.26.0",
+      "@aws-cdk/aws-cloudformation": "1.26.0",
+      "@aws-cdk/aws-route53": "1.26.0",
+      "@aws-cdk/aws-certificatemanager": "1.26.0",
+      "@aws-cdk/aws-elasticloadbalancingv2": "1.26.0",
+      "@aws-cdk/aws-autoscaling": "1.26.0",
+      "@aws-cdk/aws-applicationautoscaling": "1.26.0",
+      "@aws-cdk/aws-stepfunctions": "1.26.0",
+      "@aws-cdk/aws-ecr": "1.26.0",
+      "@aws-cdk/aws-ecr-assets": "1.26.0",
+      "@aws-cdk/aws-sns-subscriptions": "1.26.0",
+      "@aws-cdk/aws-autoscaling-hooktargets": "1.26.0",
+      "@aws-cdk/aws-apigateway": "1.26.0",
+      "@aws-cdk/aws-cloudfront": "1.26.0",
+      "@aws-cdk/aws-route53-targets": "1.26.0",
+      "@aws-cdk/aws-sam": "1.26.0",
+      "@aws-cdk/aws-secretsmanager": "1.26.0",
+      "@aws-cdk/aws-servicediscovery": "1.26.0",
+      "@aws-cdk/aws-ecs": "1.26.0",
+      "@aws-cdk/aws-stepfunctions-tasks": "1.26.0",
+      "@aws-cdk/custom-resources": "1.26.0",
+      "@aws-cdk/aws-dynamodb": "1.26.0",
+      "jsii-runtime": "Python/3.8.0"
+    }
+  }
+}
