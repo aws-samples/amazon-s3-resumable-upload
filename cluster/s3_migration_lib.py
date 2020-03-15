@@ -294,7 +294,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
                 )
                 IsTruncated = list_multipart_uploads["IsTruncated"]
                 NextKeyMarker = list_multipart_uploads["NextKeyMarker"]
-                if 'Uploads' in list_multipart_uploads:
+                if "Uploads" in list_multipart_uploads:
                     for i in list_multipart_uploads["Uploads"]:
                         if i["Key"] == Des_key:
                             multipart_uploaded_list.append({
@@ -303,14 +303,14 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
                                 "UploadId": i["UploadId"]
                             })
                             logger.info(f'Unfinished upload, Key: {i["Key"]}, Time: {i["Initiated"]}')
-                    break  # 退出重试循环
+                break  # 退出重试循环
             except Exception as e:
                 logger.error(f'Fail to list multipart upload {str(e)}')
-            if retry >= MaxRetry:
-                logger.error(f'Fail MaxRetry list multipart upload {str(e)}')
-                return []
-            else:
-                time.sleep(5*retry)
+                if retry >= MaxRetry:
+                    logger.error(f'Fail MaxRetry list multipart upload {str(e)}')
+                    return []
+                else:
+                    time.sleep(5*retry)
 
     return multipart_uploaded_list
 
@@ -352,18 +352,17 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=1
                 )
                 PartNumberMarker = response_uploadedList['NextPartNumberMarker']
                 IsTruncated = response_uploadedList['IsTruncated']
-                if 'Parts' in response_uploadedList:
-                    logger.info(f'Response part number list len: {len(response_uploadedList["Parts"])}')
-                    for partnumberObject in response_uploadedList["Parts"]:
-                        partnumberList.append(partnumberObject["PartNumber"])
-                    break
+                logger.info(f'Response part number list len: {len(response_uploadedList["Parts"])}')
+                for partnumberObject in response_uploadedList["Parts"]:
+                    partnumberList.append(partnumberObject["PartNumber"])
+                break
             except Exception as e:
                 logger.error(f'Fail to list parts in checkPartnumberList. {str(e)}')
-            if retry >= MaxRetry:
-                logger.error(f'Fail MaxRetry list parts in checkPartnumberList. {str(e)}')
-                return []
-            else:
-                time.sleep(5*retry)
+                if retry >= MaxRetry:
+                    logger.error(f'Fail MaxRetry list parts in checkPartnumberList. {str(e)}')
+                    return []
+                else:
+                    time.sleep(5*retry)
         # 循环完成获取list
 
     if partnumberList:  # 如果空则表示没有查到已上传的Part
@@ -519,7 +518,7 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
         IsTruncated = False
         for retryTime in range(MaxRetry + 1):
             try:
-                logger.info(f'Get complete partnumber list {retry} retry, PartNumberMarker: {PartNumberMarker}...')
+                logger.info(f'Get complete partnumber list {retryTime} retry, PartNumberMarker: {PartNumberMarker}...')
                 response_uploadedList = s3_des_client.list_parts(
                     Bucket=Des_bucket,
                     Key=Des_key,
@@ -530,17 +529,16 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
                 NextPartNumberMarker = response_uploadedList['NextPartNumberMarker']
                 IsTruncated = response_uploadedList['IsTruncated']
                 # 把 ETag 加入到 Part List
-                if 'Parts' in response_uploadedList:
-                    for partObject in response_uploadedList["Parts"]:
-                        ETag = partObject["ETag"]
-                        PartNumber = partObject["PartNumber"]
-                        addup = {
-                            "ETag": ETag,
-                            "PartNumber": PartNumber
-                        }
-                        uploadedListPartsClean.append(addup)
-                    PartNumberMarker = NextPartNumberMarker
-                    break
+                for partObject in response_uploadedList["Parts"]:
+                    ETag = partObject["ETag"]
+                    PartNumber = partObject["PartNumber"]
+                    addup = {
+                        "ETag": ETag,
+                        "PartNumber": PartNumber
+                    }
+                    uploadedListPartsClean.append(addup)
+                PartNumberMarker = NextPartNumberMarker
+                break
             except ClientError as e:
                 if e.response['Error']['Code'] == 'NoSuchUpload':
                     # Fail to list part list，没这个ID，则是别人已经完成这个Job了。
@@ -548,13 +546,18 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
                                  f' {Des_bucket}/{Des_key}, {str(e)}')
                     return "ERR"
                 logger.error(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
+                if retryTime >= MaxRetry:
+                    logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
+                    return "ERR"
+                else:
+                    time.sleep(5 * retryTime)
             except Exception as e:
                 logger.error(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
-            if retryTime >= MaxRetry:
-                logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
-                return "ERR"
-            else:
-                time.sleep(5 * retryTime)
+                if retryTime >= MaxRetry:
+                    logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
+                    return "ERR"
+                else:
+                    time.sleep(5 * retryTime)
         # 循环获取直到拿完全部parts
 
     if len(uploadedListPartsClean) != len_indexList:
