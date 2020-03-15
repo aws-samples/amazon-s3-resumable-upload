@@ -285,7 +285,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
         IsTruncated = False
         for retry in range(MaxRetry+1):
             try:
-                logger.info(f'Get unfinished multipart upload id list {retry} retry...')
+                logger.info(f'Getting unfinished upload id list {retry} retry {Des_bucket}/{Des_key}...')
                 list_multipart_uploads = s3_client.list_multipart_uploads(
                     Bucket=Des_bucket,
                     Prefix=Des_key,
@@ -330,6 +330,8 @@ def check_file_exist(prefix_and_key, UploadIdList):
     for u in keyIDList:
         if u["Initiated"] > UploadID_latest["Initiated"]:
             UploadID_latest = u
+    # pick last one upload id with latest Initiated time
+    logger.info(f"Pick UploadId Initiated Time: {UploadID_latest['Initiated']}")
     return UploadID_latest["UploadId"]
 
 
@@ -352,9 +354,10 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=1
                 )
                 PartNumberMarker = response_uploadedList['NextPartNumberMarker']
                 IsTruncated = response_uploadedList['IsTruncated']
-                logger.info(f'Response part number list len: {len(response_uploadedList["Parts"])}')
-                for partnumberObject in response_uploadedList["Parts"]:
-                    partnumberList.append(partnumberObject["PartNumber"])
+                if 'Parts' in response_uploadedList:
+                    logger.info(f'Response part number list len: {len(response_uploadedList["Parts"])}')
+                    for partnumberObject in response_uploadedList["Parts"]:
+                        partnumberList.append(partnumberObject["PartNumber"])
                 break
             except Exception as e:
                 logger.error(f'Fail to list parts in checkPartnumberList. {str(e)}')
@@ -368,8 +371,7 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=1
     if partnumberList:  # 如果空则表示没有查到已上传的Part
         logger.info(f"Found uploaded partnumber: {len(partnumberList)} - {json.dumps(partnumberList)}")
     else:
-        logger.warning(f'Part number list is empty, '
-                       f'response_uploadedList: {json.dumps(response_uploadedList, default=str)}')
+        logger.info(f'Part number list is empty')
     return partnumberList
 
 
@@ -662,9 +664,9 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                                 )
                                 break
                             except Exception as e:
-                                logger.error(f'Fail to delete sqs message: {Des_bucket}/{Des_key}, {str(e)}')
+                                logger.error(f'Fail to delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
                                 if retry >= MaxRetry:
-                                    logger.error(f'Fail MaxRetry delete sqs message: {Des_bucket}/{Des_key}, {str(e)}')
+                                    logger.error(f'Fail MaxRetry delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
                                 else:
                                     time.sleep(5 * retry)
 
