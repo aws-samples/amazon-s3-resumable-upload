@@ -58,9 +58,12 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
         instance_id = urllib.request.urlopen(urllib.request.Request(
             "http://169.254.169.254/latest/meta-data/instance-id"
         )).read().decode('utf-8')
-        sqs = boto3.client('sqs')
-        dynamodb = boto3.resource('dynamodb')
-        ssm = boto3.client('ssm')
+        region = json.loads(urllib.request.urlopen(urllib.request.Request(
+            "http://169.254.169.254/latest/dynamic/instance-identity/document"
+        )).read().decode('utf-8'))['region']
+        sqs = boto3.client('sqs', region)
+        dynamodb = boto3.resource('dynamodb', region)
+        ssm = boto3.client('ssm', region)
 
         # 取另一个Account的credentials
         credentials = json.loads(ssm.get_parameter(
@@ -73,10 +76,10 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
             region_name=credentials["region"]
         )
         if JobType.upper() == "PUT":
-            s3_src_client = boto3.client('s3', config=s3_config)
+            s3_src_client = boto3.client('s3', region, config=s3_config)
             s3_des_client = credentials_session.client('s3', config=s3_config)
         elif JobType.upper() == "GET":
-            s3_des_client = boto3.client('s3', config=s3_config)
+            s3_des_client = boto3.client('s3', region, config=s3_config)
             s3_src_client = credentials_session.client('s3', config=s3_config)
         else:
             logger.error('Wrong JobType setting in config.ini file')
@@ -212,7 +215,7 @@ def job_upload_sqs_ddb(sqs, sqs_queue, table, job_list, MaxRetry=30):
     sqs_batch = 0
     sqs_message = []
     logger.info(f'Start uploading jobs to queue: {sqs_queue}')
-    # create ddb writer
+    # create ddb writer, 这里写table是为了一次性发数十万的job到sqs时在table有记录可以核对
     with table.batch_writer() as ddb_batch:
         for job in job_list:
             # write to ddb, auto batch
@@ -221,9 +224,9 @@ def job_upload_sqs_ddb(sqs, sqs_queue, table, job_list, MaxRetry=30):
                     ddb_key = str(PurePosixPath(job["Src_bucket"]) / job["Src_key"])
                     ddb_batch.put_item(Item={
                         "Key": ddb_key,
-                        "Src_bucket": job["Src_bucket"],
-                        "Des_bucket": job["Des_bucket"],
-                        "Des_key": job["Des_key"],
+                        # "Src_bucket": job["Src_bucket"],
+                        # "Des_bucket": job["Des_bucket"],
+                        # "Des_key": job["Des_key"],
                         "Size": job["Size"]
                     })
                     break
@@ -279,6 +282,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
     IsTruncated = True
     multipart_uploaded_list = []
     while IsTruncated:
+        IsTruncated = False
         for retry in range(MaxRetry+1):
             try:
                 logger.info(f'Get unfinished multipart upload id list {retry} retry...')
@@ -299,7 +303,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
                                 "UploadId": i["UploadId"]
                             })
                             logger.info(f'Unfinished upload, Key: {i["Key"]}, Time: {i["Initiated"]}')
-                break  # 退出重试循环
+                    break  # 退出重试循环
             except Exception as e:
                 logger.error(f'Fail to list multipart upload {str(e)}')
             if retry >= MaxRetry:
@@ -330,13 +334,15 @@ def check_file_exist(prefix_and_key, UploadIdList):
 
 
 # Check uploaded part number list on Des_bucket
-def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry):
+def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=10):
     partnumberList = []
     PartNumberMarker = 0
     IsTruncated = True
     while IsTruncated:
+        IsTruncated = False
         for retry in range(MaxRetry+1):
             try:
+                logger.info(f'Get partnumber list {retry} retry, PartNumberMarker: {PartNumberMarker}...')
                 response_uploadedList = s3_des_client.list_parts(
                     Bucket=Des_bucket,
                     Key=Des_key,
@@ -347,9 +353,10 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry):
                 PartNumberMarker = response_uploadedList['NextPartNumberMarker']
                 IsTruncated = response_uploadedList['IsTruncated']
                 if 'Parts' in response_uploadedList:
+                    logger.info(f'Response part number list len: {len(response_uploadedList["Parts"])}')
                     for partnumberObject in response_uploadedList["Parts"]:
                         partnumberList.append(partnumberObject["PartNumber"])
-                break
+                    break
             except Exception as e:
                 logger.error(f'Fail to list parts in checkPartnumberList. {str(e)}')
             if retry >= MaxRetry:
@@ -361,6 +368,9 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry):
 
     if partnumberList:  # 如果空则表示没有查到已上传的Part
         logger.info(f"Found uploaded partnumber: {len(partnumberList)} - {json.dumps(partnumberList)}")
+    else:
+        logger.warning(f'Part number list is empty, '
+                       f'response_uploadedList: {json.dumps(response_uploadedList, default=str)}')
     return partnumberList
 
 
@@ -506,8 +516,10 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
     PartNumberMarker = 0
     IsTruncated = True
     while IsTruncated:
+        IsTruncated = False
         for retryTime in range(MaxRetry + 1):
             try:
+                logger.info(f'Get complete partnumber list {retry} retry, PartNumberMarker: {PartNumberMarker}...')
                 response_uploadedList = s3_des_client.list_parts(
                     Bucket=Des_bucket,
                     Key=Des_key,
@@ -527,8 +539,8 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
                             "PartNumber": PartNumber
                         }
                         uploadedListPartsClean.append(addup)
-                PartNumberMarker = NextPartNumberMarker
-                break
+                    PartNumberMarker = NextPartNumberMarker
+                    break
             except ClientError as e:
                 if e.response['Error']['Code'] == 'NoSuchUpload':
                     # Fail to list part list，没这个ID，则是别人已经完成这个Job了。
@@ -536,18 +548,13 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
                                  f' {Des_bucket}/{Des_key}, {str(e)}')
                     return "ERR"
                 logger.error(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
-                if retryTime >= MaxRetry:
-                    logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
-                    return "ERR"
-                else:
-                    time.sleep(5 * retryTime)
             except Exception as e:
                 logger.error(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
-                if retryTime >= MaxRetry:
-                    logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
-                    return "ERR"
-                else:
-                    time.sleep(5 * retryTime)
+            if retryTime >= MaxRetry:
+                logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
+                return "ERR"
+            else:
+                time.sleep(5 * retryTime)
         # 循环获取直到拿完全部parts
 
     if len(uploadedListPartsClean) != len_indexList:

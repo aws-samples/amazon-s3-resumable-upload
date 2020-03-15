@@ -58,9 +58,12 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
         instance_id = urllib.request.urlopen(urllib.request.Request(
             "http://169.254.169.254/latest/meta-data/instance-id"
         )).read().decode('utf-8')
-        sqs = boto3.client('sqs')
-        dynamodb = boto3.resource('dynamodb')
-        ssm = boto3.client('ssm')
+        region = json.loads(urllib.request.urlopen(urllib.request.Request(
+            "http://169.254.169.254/latest/dynamic/instance-identity/document"
+        )).read().decode('utf-8'))['region']
+        sqs = boto3.client('sqs', region)
+        dynamodb = boto3.resource('dynamodb', region)
+        ssm = boto3.client('ssm', region)
 
         # 取另一个Account的credentials
         credentials = json.loads(ssm.get_parameter(
@@ -73,10 +76,10 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
             region_name=credentials["region"]
         )
         if JobType.upper() == "PUT":
-            s3_src_client = boto3.client('s3', config=s3_config)
+            s3_src_client = boto3.client('s3', region, config=s3_config)
             s3_des_client = credentials_session.client('s3', config=s3_config)
         elif JobType.upper() == "GET":
-            s3_des_client = boto3.client('s3', config=s3_config)
+            s3_des_client = boto3.client('s3', region, config=s3_config)
             s3_src_client = credentials_session.client('s3', config=s3_config)
         else:
             logger.error('Wrong JobType setting in config.ini file')
