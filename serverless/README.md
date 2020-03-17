@@ -33,7 +33,34 @@ Lambda 15分钟运行超时后，SQS消息InvisibleTime超时，消息恢复，�
 5. 自动匹配分片号码
 6. 下载剩下未上传的分片
 
-### 配置说明
+### CDK 自动化部署
+请先安装 AWS CDK 然后按以下命令部署，CDK安装部署可参照官网：  
+https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html   
+
+```bash
+cd cdk-serverless
+cdk deploy
+```
+该 CDK 由 Python 编写，会自动部署以下资源：  
+* 新建 S3 Bucket  
+* 新建 SQS Queue 队列和 一个相应的 SQS Queue DLQ 死信队列。InVisibleTime 15 分钟，有效期 14 天，重试 100 次后送 DLQ  
+* 新建 DynamoDB 表  
+* 上传 Lambda 代码并配置函数相关参数，请在部署前修改 CDK 模版中 app.py 文件，或者等部署完之后在Lambda环境变量中修改  
+```
+Des_bucket_default = 'your_des_bucket'
+Des_prefix_default = 'my_prefix'
+Des_region = 'cn-northwest-1'
+StorageClass = 'STANDARD'
+aws_access_key_id = 'xxxxxxxxx'
+aws_secret_access_key = 'xxxxxxxxxxxxxxx'
+```
+* 配置 Lambda 的运行超时时间 15 分钟，内存 1GB  
+* 自动配置 Lambda 访问 S3，SQS 和 DynamoDB 的 IAM 权限。  
+* 注意：推荐不在 CDK 中配置 Lambda 的环境变量，而是在 Lambda 部署完成后在 Lambda 中配置，特别是aws_access_key_id 和 aws_secret_access_key，这样可以避免写 Access Key 到你的 CDK 文件中引发无意中泄漏。但缺点是，再次用 CDK 部署新版本的 Lambda 函数的话，环境变量会被覆盖为 CDK 中的配置参数。  
+* 注意：CDK 不支持用现有的 S3 Bucket 来配置触发，只能让 CDK 新建。所以如果你要使用现有的 S3，则需要手工配置这个 Bucket 触发SQS，其他可以继续用 CDK 部署。  
+
+### 手工配置说明  
+如不希望用 CDK 部署可以参照以下手工部署步骤：
 * 配置 SQS 消息队列，以及对应的死信队列DLQ。策略为消息有效期14天，15分钟超时，重试100次转入DLQ。
 * 配置 SQS Access Policy，允许S3 bucket发布消息。修改以下json中account和bucket等信息：
 ```json
@@ -84,7 +111,8 @@ aws_access_key_id
 aws_secret_access_key  
 用于访问跟 Lambda 不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。
 
-table_queue_name  
+queue_name  
+table_name  
 访问的SQS和DynamoDB的表名，需与CloudFormation/CDK创建的ddb/sqs名称一致  
 ```
 
