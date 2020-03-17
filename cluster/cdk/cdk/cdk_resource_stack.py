@@ -30,7 +30,7 @@ class CdkResourceStack(core.Stack):
                                    visibility_timeout=core.Duration.hours(1),
                                    retention_period=core.Duration.days(14),
                                    dead_letter_queue=sqs.DeadLetterQueue(
-                                       max_receive_count=3,
+                                       max_receive_count=24,
                                        queue=self.sqs_queue_DLQ
                                    )
                                    )
@@ -38,8 +38,17 @@ class CdkResourceStack(core.Stack):
                                                    string_value=json.dumps(bucket_para),
                                                    parameter_name=ssm_parameter_bucket
                                                    )
-        self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
-            self, "para-credential",
-            parameter_name=ssm_parameter_credentials,
-            version=2
-        )
+        self.ssm_credential_para = ssm.StringParameter(self, "para-credential",
+                                                       string_value=json.dumps({
+                                                           "aws_access_key_id": "your_aws_access_key_id",
+                                                           "aws_secret_access_key": "your_aws_secret_access_key",
+                                                           "region": "cn-northwest-1"
+                                                       }),
+                                                       parameter_name=ssm_parameter_credentials
+                                                       )
+        # 以下是用于已经配置了一个ssm_credential_para的情况
+        # self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
+        #     self, "para-credential",
+        #     parameter_name=ssm_parameter_credentials,
+        #     version=2
+        # )

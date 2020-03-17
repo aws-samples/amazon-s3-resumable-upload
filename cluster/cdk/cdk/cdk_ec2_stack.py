@@ -80,4 +80,4 @@ class CdkEc2Stack(core.Stack):
         ssm_credential_para.grant_read(master)
         ssm_credential_para.grant_read(worker_asg)
 
-        core.CfnOutput(self, "Output", value=master.instance_id)
+        core.CfnOutput(self, "JobSenderEC2", value=master.instance_id)

@@ -6,10 +6,10 @@ with open("README.md") as fp:
 
 
 setuptools.setup(
-    name="s3_upload_cluster",
+    name="s3_migration_cluster",
     version="0.0.1",
 
-    description="s3_upload_cluster",
+    description="s3_migration_cluster",
     long_description=long_description,
     long_description_content_type="text/markdown",
 
