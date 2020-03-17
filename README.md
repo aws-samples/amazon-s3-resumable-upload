@@ -1,7 +1,7 @@
 # Amazon S3 MultiThread Resume Migration Solution  (Amazon S3多线程断点续传迁移)   
 
 Breaking-point resume supported, suitable for large files  
-多线程断点续传，适合批量的大文件  
+多线程断点续传，充分利用带宽，适合批量的大文件迁移到S3。  
 
 Upload from local server, migrate files between Global AWS and China AWS S3, or migrate from AliCloud OSS to Amazon S3. Now support Single Node Version, Cluster Servers Version and Serverless AWS Lambda Version.  
 从本地服务器上传，或海外与中国区 Amazon S3 之间互相拷贝，或从阿里云 OSS 迁移到 Amazon S3。现已支持单机版，多台服务器的集群版和无服务器 AWS Lambda 版本。  
