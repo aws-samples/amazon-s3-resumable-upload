@@ -7,8 +7,8 @@ import aws_cdk.aws_lambda as lam
 from aws_cdk.aws_lambda_event_sources import SqsEventSource
 import aws_cdk.aws_s3_notifications as s3n
 
-Des_bucket_default = 'hawkey999'
-Des_prefix_default = 's3-migration-from-us'
+Des_bucket_default = 'your_des_bucket'
+Des_prefix_default = 'my_prefix'
 Des_region = 'cn-northwest-1'
 StorageClass = 'STANDARD'
 aws_access_key_id = 'xxxxxxxxx'
