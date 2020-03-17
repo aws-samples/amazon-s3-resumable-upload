@@ -56,6 +56,18 @@ EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部�
   
 ![Cluster Diagram](./img/02.png)  
 
+### Limitation 局限
+* It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
+本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。不要在复制的过程中修改源文件。  
+
+* Don't change the chunksize while start data copying.  
+不要在开始数据复制之后修改Chunksize。  
+
+* It only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node uploader.  
+本项目只对比文件Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
+
+* It doesn't support Zero Size object.  
+本项目不支持传输文件大小为0的对象。  
 
 ### TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
