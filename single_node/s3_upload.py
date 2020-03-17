@@ -12,7 +12,7 @@ import base64
 from boto3.session import Session
 from botocore.client import Config
 from concurrent import futures
-from s3_migration_config import *
+from s3_upload_config.py import *
 import time
 import hashlib
 import logging
