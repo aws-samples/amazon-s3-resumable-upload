@@ -27,3 +27,5 @@ class CdkVpcStack(core.Stack):
                                  [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)])
         self.vpc.add_dynamo_db_endpoint("ddbep",
                                         [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)])
+        self.vpc.add_interface_endpoint("sqsep",
+                                        ec2.InterfaceVpcEndpointAwsService.SQS)
