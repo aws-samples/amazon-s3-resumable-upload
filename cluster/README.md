@@ -73,17 +73,34 @@ SQS 配置死信队列DLQ，确保消息被多次重新仍失败进入DLQ做额�
 * 存入目标S3 存储级别可直接设置 IA, Deep Archive 等
 
 ## 部署
-### 1. CDK自动部署
-* CDK 自动化部署以下所有资源除了 2. 手工配置的Key：  
-VPC,  
-IAM Role,  
-SQS,  
-DynamoDB,  
-EC2 JobSender, EC2 ASG Workers,  
+### 1. 前置配置
+* 请在 CDK 部署前手工配置 SSM Parameter Store  
+名称：s3_migration_credentials  
+类型：SecureString  
+Tier：Standard
+KMS key source：My current account/alias/aws/ssm  或选择其他你已有的加密 KMS Key  
+这个 s3_migration_credentials 是用于访问跟EC2不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
+```
+{
+  "aws_access_key_id": "your_aws_access_key_id",
+  "aws_secret_access_key": "your_aws_secret_access_key",
+  "region": "cn-northwest-1"
+}
+```
+配置示意图：  
+![配置示意图](./img/05.png)
+### 2. CDK自动部署
+* CDK 自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
+VPC 和 S3 Endpoint,  
+SQS Queue 和 DLQ,  
+DynamoDB 表,  
+EC2 JobSender,  
+EC2 Workers Autoscaling Group,  
 SSM Parameter Store: s3_migrate_bucket_para  
+EC2 所需要的 IAM Role  
 * EC2 User Data 自动启用 TCP BBR，并自动启动 s3_migration_cluster_jobsender.py 或 s3_migration_cluster_worker.py
 User data在EC2启动时自动拉去github上的程序和默认配置。建议把程序和配置放你自己的S3上面，让user data启动时拉取你修改后的配置，并使用通用 Amazon Linux 2 AMI。
-* 如果有需要可以修改 EC2上的配置文件 s3_migration_config.ini
+* 如果有需要可以修改 EC2 上的配置文件 s3_migration_config.ini 说明如下
 ```
 * JobType = PUT 或 GET 决定了Worker把自己的IAM Role用来访问源还是访问目的S3，, PUT表示EC2跟目标S3不在一个Account，GET表示EC2跟源S3不在一个Account
 
@@ -116,16 +133,7 @@ User data在EC2启动时自动拉去github上的程序和默认配置。建议�
 ```
 * Lambda 可单独设置和部署，也可以与EC2一起消费同一个SQS Queue，也可以分别独立的Queue  
 * 注意三个超时时间的配合： SQS, EC2 JobTimeout, Lambda(CDK 默认部署是SQS/EC2 JobTimeout为1小时)  
-
-### 2. 手工配置
-* 请额外手工配置这个 SSM Parameter Store: s3_migration_credentials 用于访问跟EC2不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
-```
-{
-  "aws_access_key_id": "your_aws_access_key_id",
-  "aws_secret_access_key": "your_aws_secret_access_key",
-  "region": "cn-northwest-1"
-}
-```
+* 注意：CDK 删除资源的时候是不会删除 DynamoDB 表的，你需要手工删除  
 
 ## License
 

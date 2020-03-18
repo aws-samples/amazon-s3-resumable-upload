@@ -37,7 +37,9 @@ if __name__ == '__main__':
     #######
 
     # Load Bucket para from ssm parameter store
+    logger.info(f'Get ssm_parameter_bucket: {ssm_parameter_bucket}')
     load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Parameter']['Value'])
+    logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
     for bucket_para in load_bucket_para:
         src_bucket = bucket_para['src_bucket']
         src_prefix = bucket_para['src_prefix']

@@ -111,13 +111,14 @@ aws_access_key_id
 aws_secret_access_key  
 用于访问跟 Lambda 不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。
 
-queue_name  
-table_name  
-访问的SQS和DynamoDB的表名，需与CloudFormation/CDK创建的ddb/sqs名称一致  
+table_queue_name  
+访问的DynamoDB的表名，需与CloudFormation/CDK创建的ddb名称一致  
 ```
 
 * Lambda 设置超时时间15分钟，内存可以调整，可以从1GB开始尝试。
 必要时调整Lambda代码中这两个参数来配合Lambda内存调优：MaxThread和max_pool_connections。代码其他参数不要修改。
+
+* 配置 Lambda 被SQS触发，一次取一条消息  
 
 
 ## License

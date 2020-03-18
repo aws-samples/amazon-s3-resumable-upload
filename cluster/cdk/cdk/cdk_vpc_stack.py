@@ -8,9 +8,9 @@ class CdkVpcStack(core.Stack):
         super().__init__(scope, _id, **kwargs)
 
         self.vpc = ec2.Vpc(self, "VPC",
-                           max_azs=2,
+                           max_azs=3,
                            cidr="10.10.0.0/16",
-                           # configuration will create `3 groups × 2 AZs = 6` subnets.
+                           # configuration will create `3 groups × 3 AZs = 9` subnets.
                            subnet_configuration=[ec2.SubnetConfiguration(
                                subnet_type=ec2.SubnetType.PUBLIC,
                                name="Public",
@@ -25,7 +25,7 @@ class CdkVpcStack(core.Stack):
 
         self.vpc.add_s3_endpoint("s3ep",
                                  [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)])
-        self.vpc.add_dynamo_db_endpoint("ddbep",
-                                        [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)])
-        self.vpc.add_interface_endpoint("sqsep",
-                                        ec2.InterfaceVpcEndpointAwsService.SQS)
+        # self.vpc.add_dynamo_db_endpoint("ddbep",
+        #                                 [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)])
+        # self.vpc.add_interface_endpoint("sqsep",
+        #                                 ec2.InterfaceVpcEndpointAwsService.SQS)

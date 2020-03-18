@@ -55,6 +55,7 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
     s3_config = Config(max_pool_connections=50)  # boto default 10
 
     if os.uname()[0] == 'Linux' and not LocalProfileMode:  # on EC2, use EC2 role
+        logger.info('Get instance-id and running region')
         instance_id = urllib.request.urlopen(urllib.request.Request(
             "http://169.254.169.254/latest/meta-data/instance-id"
         )).read().decode('utf-8')
@@ -66,6 +67,7 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
         ssm = boto3.client('ssm', region)
 
         # 取另一个Account的credentials
+        logger.info(f'Get ssm_parameter_credentials: {ssm_parameter_credentials}')
         credentials = json.loads(ssm.get_parameter(
             Name=ssm_parameter_credentials,
             WithDecryption=True

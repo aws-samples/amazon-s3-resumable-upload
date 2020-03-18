@@ -4,19 +4,21 @@ from s3_migration_lib import step_function, wait_sqs_available
 from botocore.config import Config
 from pathlib import PurePosixPath
 
-# 常量
+# 环境变量
 Des_bucket_default = os.environ['Des_bucket_default']
 Des_prefix_default = os.environ['Des_prefix_default']
 aws_access_key_id = os.environ['aws_access_key_id']
 aws_secret_access_key = os.environ['aws_secret_access_key']
 
 table_queue_name = os.environ['table_queue_name']
+# queue_name = os.environ['queue_name']  # Lambda不用
 StorageClass = os.environ['StorageClass']
 
-MaxRetry = 10
-MaxThread = 50
-MaxParallelFile = 1
-JobTimeout = 3000
+# 内部参数
+MaxRetry = 10  # 最大请求重试次数
+MaxThread = 50  # 最大线程数
+# MaxParallelFile = 1  # 最大同时处理文件数，Lambda不用
+JobTimeout = 900  # 单个 Job 超时时间，如大于Lambda的超时时间则无效
 
 ResumableThreshold = 5 * 1024 * 1024  # Accelerate to ignore get list
 CleanUnfinishedUpload = False  # For debug
@@ -31,9 +33,9 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 region = os.environ['Des_region']
-sqs = boto3.client('sqs')
 dynamodb = boto3.resource('dynamodb')
-ssm = boto3.client('ssm')
+# sqs = boto3.client('sqs')
+# ssm = boto3.client('ssm')
 
 # 取另一个Account的credentials
 credentials_session = boto3.session.Session(
@@ -45,14 +47,14 @@ credentials_session = boto3.session.Session(
 s3_src_client = boto3.client('s3', config=s3_config)
 s3_des_client = credentials_session.client('s3', config=s3_config)
 
-table = dynamodb.Table(table_queue_name)
-table.wait_until_exists()
-sqs_queue = wait_sqs_available(sqs, table_queue_name)
+table = dynamodb.Table(table_name)
+# table.wait_until_exists()
+# sqs_queue = wait_sqs_available(sqs, queue_name)
 
 try:
-    context = ssl._create_unverified_context()
+    ssl_context = ssl._create_unverified_context()
     response = urllib.request.urlopen(
-        urllib.request.Request("https://checkip.amazonaws.com"), timeout=3, context=context
+        urllib.request.Request("https://checkip.amazonaws.com"), timeout=3, context=ssl_context
     ).read()
     instance_id = "lambda-" + response.decode('utf-8')[0:-1]
 except Exception as e:
@@ -82,10 +84,7 @@ def lambda_handler(event, context):
                 Src_key = urllib.parse.unquote_plus(Src_key)
                 Size = One_record['s3']['object']['size']
                 if Size == 0:
-                    return {
-                        'statusCode': 200,
-                        'body': "Zero size file"
-                    }
+                    continue  # 跳过0 size文件
                 Des_bucket, Des_prefix = Des_bucket_default, Des_prefix_default
                 job = {
                     'Src_bucket': Src_bucket,
@@ -94,6 +93,14 @@ def lambda_handler(event, context):
                     'Des_bucket': Des_bucket,
                     'Des_key': str(PurePosixPath(Des_prefix) / Src_key)
                 }
+                upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
+                                                 StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
+                                                 JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
+
+                if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
+                    continue
+                else:
+                    raise TimeoutOrMaxRetry
     if 'Des_bucket' not in job:  # 消息结构不对
         logger.warning(f'Wrong sqs job: {json.dumps(job, default=str)}')
         logger.warning('Try to handle next message')
@@ -101,36 +108,9 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'body': "Wrong sqs job return"
             }
-    #
-    # # S3直接触发SQS的把Size等信息补上，不补是不影响业务流程的，只是方便统计和补数据
-    # with table.batch_writer() as ddb_batch:
-    #     # write to ddb, auto batch
-    #     for retry in range(MaxRetry + 1):
-    #         try:
-    #             ddb_key = str(PurePosixPath(job["Src_bucket"]) / job["Src_key"])
-    #             ddb_batch.put_item(Item={
-    #                 "Key": ddb_key,
-    #                 "Src_bucket": job["Src_bucket"],
-    #                 "Des_bucket": job["Des_bucket"],
-    #                 "Des_key": job["Des_key"],
-    #                 "Size": job["Size"]
-    #             })
-    #             break
-    #         except Exception as e:
-    #             logger.error(f'Fail writing to DDB: {ddb_key}, {str(e)}')
-    #             if retry >= MaxRetry:
-    #                 logger.error(f'Fail writing to DDB: {ddb_key}')
-    #             else:
-    #                 time.sleep(5 * retry)
 
-    upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
-                                     StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
-                                     JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
+    return {
+        'statusCode': 200,
+        'body': 'Complete handle sqs'
+    }
 
-    if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
-        return {
-            'statusCode': 200,
-            'body': upload_etag_full
-        }
-    else:
-        raise TimeoutOrMaxRetry

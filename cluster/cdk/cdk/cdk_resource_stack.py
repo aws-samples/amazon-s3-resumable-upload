@@ -4,6 +4,8 @@ import aws_cdk.aws_dynamodb as ddb
 import aws_cdk.aws_sqs as sqs
 import aws_cdk.aws_ssm as ssm
 import json
+from aws_cdk.aws_lambda_event_sources import SqsEventSource
+import aws_cdk.aws_s3_notifications as s3n
 
 table_queue_name = 's3_migrate_file_list'
 ssm_parameter_bucket = 's3_migrate_bucket_para'
@@ -38,17 +40,16 @@ class CdkResourceStack(core.Stack):
                                                    string_value=json.dumps(bucket_para),
                                                    parameter_name=ssm_parameter_bucket
                                                    )
-        self.ssm_credential_para = ssm.StringParameter(self, "para-credential",
-                                                       string_value=json.dumps({
-                                                           "aws_access_key_id": "your_aws_access_key_id",
-                                                           "aws_secret_access_key": "your_aws_secret_access_key",
-                                                           "region": "cn-northwest-1"
-                                                       }),
-                                                       parameter_name=ssm_parameter_credentials
-                                                       )
-        # 以下是用于已经配置了一个ssm_credential_para的情况
-        # self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
-        #     self, "para-credential",
-        #     parameter_name=ssm_parameter_credentials,
-        #     version=2
-        # )
+
+        # 你需要先手工配置了一个ssm_credential_para，然后在这里导入，注意版本号一致!!!
+        self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
+            self, "ssm_parameter_credentials",
+            parameter_name=ssm_parameter_credentials,
+            version=2
+        )
+
+        # 这里新建一个S3 bucket，里面新建Object就会触发SQS启动搬迁工作。
+        # 对于现有的S3 bucket，不在这里配置，由jobsender进行扫描并生成SQS Job任务。
+        self.s3bucket = s3.Bucket(self, "newbucket")
+        self.s3bucket.add_event_notification(s3.EventType.OBJECT_CREATED,
+                                             s3n.SqsDestination(self.sqs_queue))

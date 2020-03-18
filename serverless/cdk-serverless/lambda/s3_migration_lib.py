@@ -55,6 +55,7 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
     s3_config = Config(max_pool_connections=50)  # boto default 10
 
     if os.uname()[0] == 'Linux' and not LocalProfileMode:  # on EC2, use EC2 role
+        logger.info('Get instance-id and running region')
         instance_id = urllib.request.urlopen(urllib.request.Request(
             "http://169.254.169.254/latest/meta-data/instance-id"
         )).read().decode('utf-8')
@@ -66,6 +67,7 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
         ssm = boto3.client('ssm', region)
 
         # 取另一个Account的credentials
+        logger.info(f'Get ssm_parameter_credentials: {ssm_parameter_credentials}')
         credentials = json.loads(ssm.get_parameter(
             Name=ssm_parameter_credentials,
             WithDecryption=True
@@ -283,7 +285,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
     multipart_uploaded_list = []
     while IsTruncated:
         IsTruncated = False
-        for retry in range(MaxRetry+1):
+        for retry in range(MaxRetry + 1):
             try:
                 logger.info(f'Getting unfinished upload id list {retry} retry {Des_bucket}/{Des_key}...')
                 list_multipart_uploads = s3_client.list_multipart_uploads(
@@ -310,7 +312,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
                     logger.error(f'Fail MaxRetry list multipart upload {str(e)}')
                     return []
                 else:
-                    time.sleep(5*retry)
+                    time.sleep(5 * retry)
 
     return multipart_uploaded_list
 
@@ -342,7 +344,7 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=1
     IsTruncated = True
     while IsTruncated:
         IsTruncated = False
-        for retry in range(MaxRetry+1):
+        for retry in range(MaxRetry + 1):
             try:
                 logger.info(f'Get partnumber list {retry} retry, PartNumberMarker: {PartNumberMarker}...')
                 response_uploadedList = s3_des_client.list_parts(
@@ -365,7 +367,7 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=1
                     logger.error(f'Fail MaxRetry list parts in checkPartnumberList. {str(e)}')
                     return []
                 else:
-                    time.sleep(5*retry)
+                    time.sleep(5 * retry)
         # 循环完成获取list
 
     if partnumberList:  # 如果空则表示没有查到已上传的Part
@@ -601,22 +603,24 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
             # TODO: 一次拿一批，如果是大量小文件就比较快
             logger.info('Get Job from sqs queue...')
             sqs_job_get = sqs.receive_message(QueueUrl=sqs_queue)
+
             # Empty queue message available
-            if "Messages" not in sqs_job_get:  # No message on sqs queue
-                # 检查是否还有其他在in-flight中的，sleep, 循环等待
-                logger.info('No message in queue available, wait for inFlight message...')
-                sqs_in_flight = sqs.get_queue_attributes(
-                    QueueUrl=sqs_queue,
-                    AttributeNames=['ApproximateNumberOfMessagesNotVisible']
-                )
-                if sqs_in_flight['Attributes']['ApproximateNumberOfMessagesNotVisible'] == '0':
-                    logger.warning('No message in queue available and inFlight. Wait 1 min...')
-                    # TODO: Empty queue, send sns notification, or use CloudWatch Alarm
-                    pass
+            if 'Messages' not in sqs_job_get:  # No message on sqs queue
+                logger.info('No message in queue available, wait...')
                 time.sleep(60)
+                # 检查是否还有其他在in-flight中的，sleep, 循环等待
+                # sqs_in_flight = sqs.get_queue_attributes(
+                #     QueueUrl=sqs_queue,
+                #     AttributeNames=['ApproximateNumberOfMessagesNotVisible']
+                # )
+                # if sqs_in_flight['Attributes']['ApproximateNumberOfMessagesNotVisible'] == '0':
+                #     logger.warning('No message in queue available and inFlight. Wait 1 min...')
+                #     # TODO: Empty queue, send sns notification, or use CloudWatch Alarm
+                #     pass
 
             # 拿到 Job message
             else:
+                # TODO: 尚未完整处理 SQS 存在多条消息的情况，实际只针对一次取一个SQS消息
                 for sqs_job in sqs_job_get["Messages"]:
                     job = json.loads(sqs_job["Body"])
                     job_receipt = sqs_job["ReceiptHandle"]  # 用于后面删除message
@@ -642,15 +646,20 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                                     'Des_bucket': Des_bucket,
                                     'Des_key': str(PurePosixPath(Des_prefix) / Src_key)
                                 }
-                    if 'Des_bucket' not in job:
+                    if 'Des_bucket' not in job and 'Event' not in job:
                         logger.warning(f'Wrong sqs job: {json.dumps(job, default=str)}')
                         logger.warning('Try to handle next message')
                         time.sleep(1)
                         continue
                     ######## 主流程
-                    upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
-                                                     StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
-                                                     JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
+                    if 'Event' not in job:
+                        upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
+                                                         StorageClass, ChunkSize, MaxRetry, MaxThread,
+                                                         ResumableThreshold, JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
+                    else:
+                        if job['Event'] == 's3:TestEvent':
+                            logger.info('Skip s3:TestEvent')
+                            upload_etag_full = "s3:TestEvent"
                     ########
                     # Del Job on sqs
                     if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
@@ -773,7 +782,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
         for retry in range(MaxRetry + 1):
             try:
                 logger.info(f'Write log to DDB via start this round of job: {Src_bucket}/{Src_key}')
-                percent = int(len(partnumberList)/len(indexList)*100)
+                percent = int(len(partnumberList) / len(indexList) * 100)
                 cur_time = time.time()
                 table.update_item(
                     Key={

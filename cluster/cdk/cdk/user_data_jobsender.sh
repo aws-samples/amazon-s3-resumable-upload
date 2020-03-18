@@ -1,7 +1,5 @@
 #!/bin/bash
-echo "yum update -y"
 yum update -y
-
 echo "Install git, python3 and boto3"
 yum install git -y
 yum install python3 -y
@@ -28,10 +26,9 @@ modprobe tcp_bbr
 modprobe sch_fq
 sysctl -w net.ipv4.tcp_congestion_control=bbr
 
-
 # Add to start application
-echo "nohup python3 /home/ec2-user/amazon-s3-resumable-upload/cluster/s3_migration_cluster_worker.py &" >> /etc/rc.local
+echo "nohup python3 /home/ec2-user/amazon-s3-resumable-upload/cluster/s3_migration_cluster_jobsender.py &" >> /etc/rc.local
 
-echo "Start python3 s3_migration_cluster_worker.py"
+echo "Start python3 s3_migration_cluster_jobsender.py"
 cd amazon-s3-resumable-upload/cluster/  || exit
-nohup python3 s3_migration_cluster_worker.py &
+nohup python3 s3_migration_cluster_jobsender.py &
