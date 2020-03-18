@@ -8,7 +8,7 @@
                         "files": {
                                 "collect_list": [
                                         {
-                                                "file_path": "/home/ec2-user/amazon-s3-resumable-upload/cluster/s3_migration_log",
+                                                "file_path": "/home/ec2-user/amazon-s3-resumable-upload/cluster/s3_migration_log/*",
                                                 "log_group_name": "s3_migration_log",
                                                 "log_stream_name": "cluster-{instance_id}"
                                         },
