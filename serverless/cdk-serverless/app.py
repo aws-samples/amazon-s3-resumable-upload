@@ -44,8 +44,7 @@ class CdkResourceStack(core.Stack):
                                memory_size=1024,
                                timeout=core.Duration.minutes(15),
                                environment={
-                                   'table_name': ddb_file_list.table_name,
-                                   'queue_name': sqs_queue.queue_name,
+                                   'table_queue_name': ddb_file_list.table_name,
                                    'Des_bucket_default': Des_bucket_default,
                                    'Des_prefix_default': Des_prefix_default,
                                    'Des_region': Des_region,

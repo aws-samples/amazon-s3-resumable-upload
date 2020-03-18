@@ -16,8 +16,7 @@ chown -R ec2-user:ec2-user amazon-s3-resumable-upload/
 echo "Install CW Agent"
 wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
 rpm -U ./amazon-cloudwatch-agent.rpm
-/bin/cp -rf /home/ec2-user/amazon-s3-resumable-upload/cluster/cw-agent-config.json /opt/aws/amazon-cloudwatch-agent/bin/config.json
-amazon-cloudwatch-agent-ctl -a start
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/home/ec2-user/amazon-s3-resumable-upload/cluster/cw-agent-config.json -s
 
 # Setup BBR
 echo "Setup BBR"

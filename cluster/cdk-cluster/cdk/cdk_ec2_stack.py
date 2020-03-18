@@ -2,7 +2,6 @@ from aws_cdk import core
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_autoscaling as autoscaling
 import aws_cdk.aws_iam as iam
-import aws_cdk.aws_logs as log
 import aws_cdk.aws_s3 as s3
 
 # Adjust ec2 type for worker autoscaling group here
@@ -42,7 +41,8 @@ class CdkEc2Stack(core.Stack):
         jobsender.role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
         jobsender.role.add_managed_policy(
-            iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchLogsFullAccess"))
+            iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchAgentServerPolicy"))
+
         # jobsender.role.add_managed_policy(
         #     iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess"))
 
@@ -67,12 +67,8 @@ class CdkEc2Stack(core.Stack):
         # 赋予EC2 SSM 管理角色，这样SSM可以远程管理，可以用SessionManager登录
         worker_asg.role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
-
-        # 创建 CloudWatchLogs 允许EC2发logs
-        log_group = log.LogGroup(self, "s3-migration-ec2-loggroup",
-                                 retention=log.RetentionDays.ONE_MONTH)
-        log_group.grant_write(worker_asg)
-        log_group.grant_write(jobsender)
+        worker_asg.role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchAgentServerPolicy"))
 
         # 允许访问新建的DynamoDB表
         ddb_file_list.grant_full_access(jobsender)

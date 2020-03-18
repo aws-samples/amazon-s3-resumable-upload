@@ -41,12 +41,11 @@ def set_log(LoggingLevel):
     fileHandler = logging.FileHandler(filename=_log_file_name)
     fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
     _logger.addHandler(fileHandler)
-    # Screen stream logging INFO 模式下在当前屏幕也输出，便于监控。生产使用建议 WARNING 模式
-    if LoggingLevel == 'INFO':
-        streamHandler = logging.StreamHandler()
-        streamHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
-        _logger.addHandler(streamHandler)
-
+    # Screen stream logging INFO 模式下在当前屏幕也输出，便于debug监控。
+    # if LoggingLevel == 'INFO':
+    #     streamHandler = logging.StreamHandler()
+    #     streamHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
+    #     _logger.addHandler(streamHandler)
     return _logger, _log_file_name
 
 
