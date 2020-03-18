@@ -12,65 +12,14 @@ import base64
 from boto3.session import Session
 from botocore.client import Config
 from concurrent import futures
-from configparser import ConfigParser
+from s3_upload_config.py import *
 import time
 import hashlib
 import logging
 from pathlib import PurePosixPath, Path
-
-#####
-# Read config.ini
-cfg = ConfigParser()
-try:
-    file_path = os.path.split(os.path.abspath(__file__))[0]
-    cfg.read(f'{file_path}/s3_upload_config.ini', encoding='utf-8-sig')
-
-    JobType = cfg.get('Basic', 'JobType')
-    SrcFileIndex = cfg.get('Basic', 'SrcFileIndex')
-    DesProfileName = cfg.get('Basic', 'DesProfileName')
-    DesBucket = cfg.get('Basic', 'DesBucket')
-    S3Prefix = cfg.get('Basic', 'S3Prefix')
-
-    Megabytes = 1024*1024
-    ChunkSize = cfg.getint('Advanced', 'ChunkSize') * Megabytes
-    MaxRetry = cfg.getint('Advanced', 'MaxRetry')
-    MaxThread = cfg.getint('Advanced', 'MaxThread')
-    MaxParallelFile = cfg.getint('Advanced', 'MaxParallelFile')
-    IgnoreSmallFile = cfg.getboolean('Advanced', 'IgnoreSmallFile')
-    StorageClass = cfg.get('Advanced', 'StorageClass')
-    ifVerifyMD5 = cfg.getboolean('Advanced', 'ifVerifyMD5')
-    DontAskMeToClean = cfg.getboolean('Advanced', 'DontAskMeToClean')
-    LoggingLevel = cfg.get('Advanced', 'LoggingLevel')
-except Exception as e:
-    print("ERR loading s3_upload_config.ini", str(e))
-    sys.exit(0)
-
-try:
-    SrcDir = cfg.get('LOCAL_TO_S3', 'SrcDir')
-except Exception as e:
-    SrcDir = ''
-
-try:
-    SrcBucket = cfg.get('S3_TO_S3', 'SrcBucket')
-    SrcProfileName = cfg.get('S3_TO_S3', 'SrcProfileName')
-except Exception as e:
-    SrcBucket = ''
-    SrcProfileName = ''
-
 if JobType == 'ALIOSS_TO_S3':
     import oss2  # for Ali Cloud Oss storage download
-try:
-    ali_SrcBucket = cfg.get('ALIOSS_TO_S3', 'ali_SrcBucket')
-    ali_access_key_id = cfg.get('ALIOSS_TO_S3', 'ali_access_key_id')
-    ali_access_key_secret = cfg.get('ALIOSS_TO_S3', 'ali_access_key_secret')
-    ali_endpoint = cfg.get('ALIOSS_TO_S3', 'ali_endpoint')
-except Exception as e:
-    ali_SrcBucket = ""
-    ali_access_key_id = ""
-    ali_access_key_secret = ""
-    ali_endpoint = ""
 
-#####
 # Configure logging
 logger = logging.getLogger()
 # File logging
