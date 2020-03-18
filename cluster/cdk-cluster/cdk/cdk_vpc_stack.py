@@ -8,16 +8,11 @@ class CdkVpcStack(core.Stack):
         super().__init__(scope, _id, **kwargs)
 
         self.vpc = ec2.Vpc(self, "VPC",
-                           max_azs=3,
+                           max_azs=2,
                            cidr="10.10.0.0/16",
-                           # configuration will create `3 groups × 3 AZs = 9` subnets.
                            subnet_configuration=[ec2.SubnetConfiguration(
                                subnet_type=ec2.SubnetType.PUBLIC,
                                name="Public",
-                               cidr_mask=24
-                           ), ec2.SubnetConfiguration(
-                               subnet_type=ec2.SubnetType.PRIVATE,
-                               name="Private",
                                cidr_mask=24
                            )
                            ]

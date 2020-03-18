@@ -88,18 +88,36 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
 }
 ```
 配置示意图：  
-![配置示意图](./img/05.png)
+![配置示意图](./img/05.png)  
+* 配置 CDK 中 app.py 你需要传输的S3桶信息，示例如下：  
+```
+[{
+    "src_bucket": "your_global_bucket_1",
+    "src_prefix": "your_prefix",
+    "des_bucket": "your_china_bucket_1",
+    "des_prefix": "prefix_1",
+    }, {
+    "src_bucket": "your_global_bucket_2",
+    "src_prefix": "your_prefix",
+    "des_bucket": "your_china_bucket_2",
+    "des_prefix": "prefix_2",
+    }]
+```
+这些会被CDK自动部署到 Parameter Store 的 s3_migrate_bucket_para  
 ### 2. CDK自动部署
-* CDK 自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
-VPC 和 S3 Endpoint,  
-SQS Queue 和 DLQ,  
-DynamoDB 表,  
-EC2 JobSender,  
-EC2 Workers Autoscaling Group,  
-SSM Parameter Store: s3_migrate_bucket_para  
-EC2 所需要的 IAM Role  
-* EC2 User Data 自动启用 TCP BBR，并自动启动 s3_migration_cluster_jobsender.py 或 s3_migration_cluster_worker.py
-User data在EC2启动时自动拉去github上的程序和默认配置。建议把程序和配置放你自己的S3上面，让user data启动时拉取你修改后的配置，并使用通用 Amazon Linux 2 AMI。
+* CDK 会自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
+VPC（含2AZ，2个公有子网） 和 S3 Endpoint,  
+SQS Queue: s3_migrate_file_list 
+SQS Queue DLQ: s3_migrate_file_list-DLQ,  
+DynamoDB 表: s3_migrate_file_list,  
+EC2 JobSender: t3.micro,  
+EC2 Workers Autoscaling Group: c5.large 可以在 cdk_ec2_stack.py 中修改,  
+SSM Parameter Store: s3_migrate_bucket_para 作为S3桶信息给Jobsender去扫描比对  
+EC2 所需要访问各种资源的 IAM Role  
+  
+* EC2 User Data 自动安装 CloudWatch Logs Agent 收集 EC2 初始化运行 User Data 时候的 Logs，以及收集 s3_migrate 程序运行产生的 Logs 
+* EC2 User Data 自动启用 TCP BBR，并自动启动 s3_migration_cluster_jobsender.py 或 s3_migration_cluster_worker.py  
+* EC2 启动 User data 自动拉 github 上的程序和默认配置。建议把程序和配置放你自己的S3上面，让user data启动时拉取你修改后的配置，并使用通用 Amazon Linux 2 AMI。  
 * 如果有需要可以修改 EC2 上的配置文件 s3_migration_config.ini 说明如下
 ```
 * JobType = PUT 或 GET 决定了Worker把自己的IAM Role用来访问源还是访问目的S3，, PUT表示EC2跟目标S3不在一个Account，GET表示EC2跟源S3不在一个Account
@@ -131,6 +149,16 @@ User data在EC2启动时自动拉去github上的程序和默认配置。建议�
 * 不建议修改：ifVerifyMD5Twice, ChunkSize, CleanUnfinishedUpload, LocalProfileMode
 * 隐藏参数 max_pool_connections=50 在 s3_migration_lib.py
 ```
+* Jobsender 启动之后会按照 Parameter Store 上所配置的 s3_migrate_bucket_para 来获取桶信息
+* 默认配置 Worker 的 Autoscaling Group 的期望 EC2 数量为 0。你可以自行调整启动的服务器数量。
+
+## 监控  
+* SQS 队列监控还有多少任务在进行 ( Messages Available ) ，以及多少是正在进行的 ( Messages in Flight )   
+* SQS 死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次）
+* DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
+* Jobsender / Worker 的运行日志会收集到 CloudWatch Logs，日志组名是 s3_migrate_log  
+
+### 其他说明
 * Lambda 可单独设置和部署，也可以与EC2一起消费同一个SQS Queue，也可以分别独立的Queue  
 * 注意三个超时时间的配合： SQS, EC2 JobTimeout, Lambda(CDK 默认部署是SQS/EC2 JobTimeout为1小时)  
 * 注意：CDK 删除资源的时候是不会删除 DynamoDB 表的，你需要手工删除  
