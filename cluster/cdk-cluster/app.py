@@ -7,30 +7,35 @@ from cdk.cdk_ec2_stack import CdkEc2Stack
 from cdk.cdk_resource_stack import CdkResourceStack
 
 ############
-# Define bucket before deploy
+# Define bucket before deploy CDK
 bucket_para = [{
     "src_bucket": "huangzb-s3-migration-test",
     "src_prefix": "first-1",
-    "des_bucket": "hawkey999",
-    "des_prefix": "s3-migration-test-cdk-deploy1",
+    "des_bucket": "s3-migration-test-nx",
+    "des_prefix": "s3-migration-cdk-from-us",
     }, {
     "src_bucket": "huangzb-tokyo-video",
     "src_prefix": "small",
-    "des_bucket": "hawkey999",
-    "des_prefix": "s3-migration-test-cdk-deploy1",
+    "des_bucket": "s3-migration-test-nx",
+    "des_prefix": "s3-migration-cdk-from-jp",
     }]
 
 # key_name = "id_rsa"  # Optional if use SSM-SessionManager
 
 '''
-请在部署CDK前，先在ssm parameter store手工创建一个名为 "s3_migrate_credentials" 的 secure parameter：
-这个是跟EC2不在一个Account体系下的另一个Account的access_key
-例如EC2在Global，则这个是China Account access_key，反之EC2在中国，这就是Global Account，以下是这个参数的例子：
+BEFORE DEPLOY CDK, please setup a "s3_migrate_credentials" secure parameter in ssm parameter store MANUALLY!
+This is the access_key which is not in the same account as ec2.
+For example, if ec2 running in Global, this is China Account access_key. Example as below:
 {
     "aws_access_key_id": "your_aws_access_key_id",
     "aws_secret_access_key": "your_aws_secret_access_key",
     "region": "cn-northwest-1"
 }
+CDK don not allow to deploy secure para, so you have to do it mannually
+And then in this template will assign ec2 role to access it.
+请在部署CDK前，先在ssm parameter store手工创建一个名为 "s3_migrate_credentials" 的 secure parameter：
+这个是跟EC2不在一个Account体系下的另一个Account的access_key
+例如EC2在Global，则这个是China Account access_key，反之EC2在中国，这就是Global Account
 CDK 不允许直接部署加密Key，所以你需要先去手工创建，然后在CDK中会赋予EC2角色有读取权限
 '''
 

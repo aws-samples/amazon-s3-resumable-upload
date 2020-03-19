@@ -4,7 +4,6 @@ import aws_cdk.aws_dynamodb as ddb
 import aws_cdk.aws_sqs as sqs
 import aws_cdk.aws_ssm as ssm
 import json
-from aws_cdk.aws_lambda_event_sources import SqsEventSource
 import aws_cdk.aws_s3_notifications as s3n
 
 table_queue_name = 's3_migrate_file_list'
@@ -36,11 +35,15 @@ class CdkResourceStack(core.Stack):
                                        queue=self.sqs_queue_DLQ
                                    )
                                    )
+        self.sqs_queue.metric_approximate_number_of_messages_not_visible()
+        self.sqs_queue.metric_approximate_number_of_messages_visible()
         self.ssm_bucket_para = ssm.StringParameter(self, "para-bucket",
                                                    string_value=json.dumps(bucket_para),
                                                    parameter_name=ssm_parameter_bucket
                                                    )
 
+        # You need to manually setup ssm_credential_para in SSM Parameter Store before deploy CDK
+        # Here import ssm_credential_para, MIND THE VERSION NUMBER MUST BE EXACT THE SAME !!!
         # 你需要先手工配置了一个ssm_credential_para，然后在这里导入，注意版本号一致!!!
         self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
             self, "ssm_parameter_credentials",
@@ -48,6 +51,8 @@ class CdkResourceStack(core.Stack):
             version=2
         )
 
+        # New a S3 bucket, new object in this bucket will trigger SQS jobs
+        # This is not for existing S3 bucket. Jobsender will scan the existing bucket and create sqs jobs.
         # 这里新建一个S3 bucket，里面新建Object就会触发SQS启动搬迁工作。
         # 对于现有的S3 bucket，不在这里配置，由jobsender进行扫描并生成SQS Job任务。
         self.s3bucket = s3.Bucket(self, "newbucket")

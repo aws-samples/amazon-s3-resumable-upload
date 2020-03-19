@@ -158,10 +158,13 @@ EC2 所需要访问各种资源的 IAM Role
 ## 监控  
 * SQS 队列监控还有多少任务在进行 ( Messages Available ) ，以及多少是正在进行的 ( Messages in Flight )   
 * SQS 死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次）
+* Autoscaling Group 网络、CPU和实例数量
+* 以上监控在 CDK 中会创建 Dashboard
 * DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 * Jobsender / Worker 的运行日志会收集到 CloudWatch Logs，日志组名是 s3_migrate_log  
-* Autoscaling Up: 创建基于 SQS 队列 Messages Available 的 Alarm，触发 Autoscaling 增加 EC2 
-* Autoscaling Shut Down: 创建表达式 Expression: SQS Messages Available + Messages in Flight = 0
+* Autoscaling Up: 创建基于 SQS 队列 Messages Available 的 Alarm，5 分钟大于 100 消息基于触发 Autoscaling 增加 EC2 
+* Autoscaling Shut Down: 创建表达式 Expression: SQS Messages Available + Messages in Flight = 0。即队列中无消息会将 EC2 数量降到 1  
+* 以上 Autoscaling 和 Alarm 都会在 CDK 中创建。请在 cdk_ec2_stack 中设置告警的 EMAIL   
 
 ## Limitation 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
