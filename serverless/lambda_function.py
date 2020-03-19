@@ -14,6 +14,7 @@ table_queue_name = os.environ['table_queue_name']
 StorageClass = os.environ['StorageClass']
 
 # 内部参数
+JobType = "PUT"
 MaxRetry = 10  # 最大请求重试次数
 MaxThread = 50  # 最大线程数
 MaxParallelFile = 1  # Lambda 中暂时没用到
@@ -40,9 +41,10 @@ credentials_session = boto3.session.Session(
     aws_secret_access_key=aws_secret_access_key,
     region_name=region
 )
-
 s3_src_client = boto3.client('s3', config=s3_config)
 s3_des_client = credentials_session.client('s3', config=s3_config)
+if JobType.upper() == "GET":
+    s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
 table = dynamodb.Table(table_queue_name)
 

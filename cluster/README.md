@@ -1,4 +1,4 @@
-# Amazon S3 MultiThread Resume Migration Solution  (Amazon S3多线程断点续传迁移)   
+# Amazon S3 MultiThread Resume Migration Cluster Solution  (Amazon S3多线程断点续传迁移集群方案)   
 
 Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国S3之间传输   
   
@@ -107,7 +107,7 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
 ### 2. CDK自动部署
 * CDK 会自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
 VPC（含2AZ，2个公有子网） 和 S3 Endpoint,  
-SQS Queue: s3_migrate_file_list 
+SQS Queue: s3_migrate_file_list  
 SQS Queue DLQ: s3_migrate_file_list-DLQ,  
 DynamoDB 表: s3_migrate_file_list,  
 EC2 JobSender: t3.micro,  
