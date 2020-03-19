@@ -708,7 +708,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # 定义 s3 client
-    s3_config = Config(max_pool_connections=25)
+    s3_config = Config(max_pool_connections=50)
     s3_dest_client = Session(profile_name=DesProfileName).client('s3', config=s3_config)
     if JobType == 'S3_TO_S3':
         s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
