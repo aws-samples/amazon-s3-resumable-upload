@@ -58,7 +58,7 @@ EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部�
 
 ### Limitation 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
-本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。不要在复制的过程中修改源文件。  
+本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 
 * Don't change the chunksize while start data copying.  
 不要在开始数据复制之后修改Chunksize。  
