@@ -1,4 +1,4 @@
-# Amazon S3 MultiThread Resume Upload Tool v1.2  (Amazon S3多线程断点续传)   
+# Amazon S3 MultiThread Resume Upload Tool v1.2 - Single Node Version (Amazon S3多线程断点续传 - 单机版)   
 
 Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable for large files  
 多线程断点续传到 Amazon S3，适合批量的大文件  

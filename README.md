@@ -26,14 +26,18 @@ Cluster and Serverless version support source: Amazon S3
 可设置S3存储级别，如：标准、S3-IA、Glacier或深度归档。  
 
 ### Single Node Version 单机版  
-* 单机运行：能运行 AWS 命令行的地方都能运行，适合各种数据源的场景  
-* 自动遍历： 自动遍历下级子目录，也可以指定单一文件拷贝  
-* 断点续传，不用担心网络中断或Down机  
-* 多线程，充分压榨带宽  
+* Single node: It can run on any place which can run AWS CLI, suitable for different kind of data source senario.  
+单机运行：能运行 AWS 命令行的地方都能运行，适合各种数据源的场景  
+* Auto traversal: Auto traversal sub-directory, can also specify to just one file copying  
+自动遍历： 自动遍历下级子目录，也可以指定单一文件拷贝  
+* Break-point resume upload, no worry of network breaken or server crash.  
+断点续传，不用担心网络中断或Down机  
+* Multiple thread concurrently transmission, fully usage of bandwidth.  
+多线程，充分压榨带宽  
   
   [Single Node Version 进入单机版](./single_node/)
     
-  单机版架构图如下：  
+  Single node version architecture 单机版架构图如下：  
   
 ![SingleNode Diagram](./img/01.png)
   
@@ -41,18 +45,24 @@ Cluster and Serverless version support source: Amazon S3
 ### Cluster and Serverless Version 集群与无服务器版本  
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
 EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部署和运行在不同场景，也可以一起运行。  
-* 海外和国内S3互传：集群版适用于海量文件传输，无服务器版适合不定期突发传输。  
-* 快速且稳定：多节点 X 单节点多文件 X 单文件多线程，支撑海量巨型文件并发传输。启用BBR加速。  
-* 可靠：SQS消息队列管理文件级任务，断点续传，超时中断保护。每个分片MD5完整性校验。Single Point of True，最终文件合并以S3上的分片为准，确保分片一致。  
-* 安全：内存转发不写盘，传输SSL加密，开源代码可审计，采用IAM Role和利用ParameterStore加密存储AcceesKey。  
-* 可控运营：任务派发与传输速度相匹配，系统容量可控可预期；DynamoDB和SQS读写次数只与文件数相关，而与文件大小基本无关；日志自动收集；AWS CDK自动部署；  
-* 弹性成本优化：集群自动扩展，结合EC2 Spot节省成本；无服务器Lambda只按调用次数计费；支持直接存入S3各种存储级别，节省长期存储成本。
-* 无服务器 Lambda 同样可以支撑单文件几十GB级别的对象，特有续传技术，不用担心15分钟超时  
+* Transmission between AWS Global and AWS China: Cluster version is suitable for mass data migration. Serverless version is suitable for unschedule burst migration.  
+海外和国内S3互传：集群版适用于海量文件传输，无服务器版适合不定期突发传输。  
+* Fast and stable: Multiple nodes X Multiple files/node X Multiple threads/file. Support mass of hugh file concurrently migration. TCP BBR is enable for cluster to accelerating.  
+快速且稳定：多节点 X 单节点多文件 X 单文件多线程，支撑海量巨型文件并发传输。启用BBR加速。  
+* Reliability: SQS queue managed files level jobs, break-point resume trasmission, with timeout protection. Every part will be verified with MD5 after transmission. Single Point of True, final file merging takes the destination S3 as standard, to ensure integrity.  
+可靠：SQS消息队列管理文件级任务，断点续传，超时中断保护。每个分片MD5完整性校验。Single Point of True，最终文件合并以S3上的分片为准，确保分片一致。  
+* Security: Transfer in memory, no writing to disk. SSL encryption on transmission. Open source for audit. Leverage IAM role and ParameterStore(KMS) to store credential Access Key.  
+安全：内存转发不写盘，传输SSL加密，开源代码可审计，采用IAM Role和利用 ParameterStore 加密存储密钥 AcceesKey。  
+* Controlable operation: Job dispatched match the speed of transmission. System capacity predictable. DynamoDB and SQS read/write frequency only related to file numbers, no related to file size. Auto-collect logs to CloudWatch log group. AWS CDK auto deploy.   
+可控运营：任务派发与传输速度相匹配，系统容量可控可预期；DynamoDB和SQS读写次数只与文件数相关，而与文件大小基本无关；日志自动收集；AWS CDK自动部署；  
+* Elastic cost optimization: Cluster auto scale up and down, combining with EC2 spot to save cost. Serverless AWS Lambda only pay for invocation. Support all kind of S3 Storage Class, save long term storage cost.  
+弹性成本优化：集群自动扩展，结合EC2 Spot节省成本；无服务器Lambda只按调用次数计费；支持直接存入S3各种存储级别，节省长期存储成本。  
+* Serverless solution with AWS Lambda can also support large file of tens of GBytes size with unique resumable technique, no worry of 15 mins timeout of Lambda.  
   
   [Cluster Version 进入集群版](./cluster/)  
   [Serverless Version 进入无服务器版](./serverless/)  
       
-  集群和无服务器版架构图如下：  
+  Cluster&Serverless Architeture 集群和无服务器版架构图如下：  
   
 ![Cluster Diagram](./img/02.png)  
 
