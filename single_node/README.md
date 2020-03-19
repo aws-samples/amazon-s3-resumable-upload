@@ -50,8 +50,8 @@ This is a trade-off for performance. It might be improved in the coming release,
 * S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. It might be improved in the coming release with seperated source and destination prefix.  
 S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。以后的版本考虑推出分别设置源和目的 Prefix.   
 
-### Version 1.2
-* 支持 Windows 系统中，LOCAL_TO_S3 本地上传模式的路径和对应S3子目录处理。由此，现在支持 Linux, MacOS 和 Windows 系统运行。
+### Version 1.3
+* Change config file to ini
 
 ## Architecture 架构图  
 1. Local upload to S3  
