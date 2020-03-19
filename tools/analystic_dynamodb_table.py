@@ -121,6 +121,7 @@ def get_descend(data):  # 降序
 if __name__ == '__main__':
     table_queue_name = "s3_migrate_file_list"
     src_session = boto3.session.Session(profile_name='iad')
+    
     dynamodb = src_session.resource('dynamodb')
     table = dynamodb.Table(table_queue_name)
 
