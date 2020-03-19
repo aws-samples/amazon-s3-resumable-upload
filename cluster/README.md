@@ -112,8 +112,11 @@ SQS Queue DLQ: s3_migrate_file_list-DLQ,
 DynamoDB 表: s3_migrate_file_list,  
 EC2 JobSender: t3.micro,  
 EC2 Workers Autoscaling Group: c5.large 可以在 cdk_ec2_stack.py 中修改,  
+EC2 Autoscaling
 SSM Parameter Store: s3_migrate_bucket_para 作为S3桶信息给Jobsender去扫描比对  
 EC2 所需要访问各种资源的 IAM Role  
+CloudWatch Dashboard 监控
+CloudWatch Alarm on Sqs queue empty 发SNS通知邮件
   
 * EC2 User Data 自动安装 CloudWatch Logs Agent 收集 EC2 初始化运行 User Data 时候的 Logs，以及收集 s3_migrate 程序运行产生的 Logs 
 * EC2 User Data 自动启用 TCP BBR，并自动启动 s3_migration_cluster_jobsender.py 或 s3_migration_cluster_worker.py  
