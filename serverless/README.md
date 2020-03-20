@@ -59,7 +59,11 @@ table_queue_name 会由 CDK 自动生成
 * 自动配置 Lambda 访问 S3，SQS 和 DynamoDB 的 IAM 权限。  
 * 注意：推荐不在 CDK 中配置 Lambda 的环境变量，而是在 Lambda 部署完成后在 Lambda 中配置，特别是aws_access_key_id 和 aws_secret_access_key，这样可以避免写 Access Key 到你的 CDK 文件中引发无意中泄漏。但缺点是，再次用 CDK 部署新版本的 Lambda 函数的话，环境变量会被覆盖为 CDK 中的配置参数。  
 * 注意：CDK 不支持用现有的 S3 Bucket 来配置触发，只能让 CDK 新建。所以如果你要使用现有的 S3，则需要手工配置这个 Bucket 触发SQS，其他可以继续用 CDK 部署。  
-
+* CDK 会新建一个 CloudWatch Dashboard: s3_migrate_serverless 监控 SQS 消息和 Lambda 运行状态
+* 通过Lambda Log Group 创建了三个自定义 Log Filter，过滤出 Uploading, Downloading, Complete 的分片 Bytes，并统计为 Lambda 流量发布到 Dashboard
+* 创建一个 Alarm ，检测到 SQS queue 空了，即没有 Visible 也没有 InVisible 消息，则发出 SNS 告警到订阅的邮件地址，告知任务全部完成了。邮件地址请在 CDK 的 app.py 文件中定义，或到 SNS 中修改。
+![监控](./img/08.png)
+  
 ### 手工配置说明  
 如不希望用 CDK 部署可以参照以下手工部署步骤：
 * 配置 SQS 消息队列，以及对应的死信队列DLQ。策略为消息有效期14天，15分钟超时，重试100次转入DLQ。
@@ -115,13 +119,35 @@ aws_access_key_region
 aws_access_key_region 代码, 例如 cn-north-1
 ```
 table_queue_name  
-```访问的DynamoDB的表名，需与CloudFormation/CDK创建的ddb名称一致  
+```
+访问的DynamoDB的表名，需与CloudFormation/CDK创建的ddb名称一致  
 
 
 * Lambda 设置超时时间15分钟，内存可以调整，可以从1GB开始尝试。
 必要时调整Lambda代码中这两个参数来配合Lambda内存调优：MaxThread和max_pool_connections。代码其他参数不要修改。
 
 * 配置 Lambda 被SQS触发，一次取一条消息  
+
+* 对 Lambda 的 log group 创建三个 Log filter，匹配 Pattern 如下:
+```
+Namespace: s3_migrate
+Filter name: Downloading-bytes
+Pattern: [info, date, sn, p="--->Downloading", bytes, key]
+Value: $bytes
+default value: 0
+Filter name: Uploading-bytes
+Pattern: [info, date, sn, p="--->Uploading", bytes, key]
+Value: $bytes
+default value: 0
+Filter name: Complete-bytes
+Pattern: [info, date, sn, p="--->Complete", bytes, key]
+Value: $bytes
+default value: 0
+```
+这样就把 Lambda 的流量统计到了自定义 Metric s3_migrate，可以在 CloudWatch Metric 监控了。把监控配置为统计方式：Sum，周期 1 分钟。
+
+* 配置 SQS 监控告警，把 Visible 和 InVisible 消息相加，如果连续 3 of 3 为 <= 0 则发 SNS 告警通知。
+
 
 ## Limitation 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  

@@ -61,6 +61,10 @@ In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix 
 * Notice: For security reason, no recommend to put aws_access_key_id and aws_secret_access_key of the Destination Account here in CDK file. That might cause you leak it if not intented to commit the CDK file to some code repo.  It is better to config it in Lambda Env Var after CDK deployment. But cons is if you deploy cdk again, the variable will be overwritten.
 * Config Lambda timeout 15 mintues and 1GB mem  
 * Auto config Lambda role to access the new created S3, SQS queue and the DynamoDB Table  
+* CDK will create a new CloudWatch Dashboard: s3_migrate_serverless to monitor SQS queue and Lambda running status
+* Will create 3 customized Log Filter for Lambda Log Group. They are to filter Uploading, Downloading, Complete parts Bytes, and statistic them as Lambda traffic and publish to Dashboard
+* Create an Alarm, while detect SQS queue is empty. I.e. no Visible and no InVisible message, then send SNS to subcription email to inform all jobs are done. The email address is defined in CDK app.py, please change it or change in SNS after CDK deploy.
+![Dashboard](./img/08.png)
 
 ### Manually Config the whole solution:  
 If you don't want to use CDK to auto deploy, you can follow above CDK deploy statment to create related resource, and remind:
@@ -124,6 +128,26 @@ The DynamoDB table name, same as the tale created by CloudFormation/CDK
 PUT mode means Lambda role as source S3 client and access_key credentials as destination S3 client.  
 GET mode means Lambda role as destination S3 client and access_key credentials as source S3 client.
 * Config Lambda is trigger by SQS, batch size 1.  
+
+* Create Lambda log group with 3 Log filter, to match below Pattern:
+```
+Namespace: s3_migrate
+Filter name: Downloading-bytes
+Pattern: [info, date, sn, p="--->Downloading", bytes, key]
+Value: $bytes
+default value: 0
+Filter name: Uploading-bytes
+Pattern: [info, date, sn, p="--->Uploading", bytes, key]
+Value: $bytes
+default value: 0
+Filter name: Complete-bytes
+Pattern: [info, date, sn, p="--->Complete", bytes, key]
+Value: $bytes
+default value: 0
+```
+So Lambda traffic bytes/min will be emit to CloudWatch Metric for monitoring. Config monitor Statistic: Sum with 1 min.
+
+* 配置 SQS 监控告警，把 Visible 和 InVisible 消息相加，如果连续 3 of 3 为 <= 0 则发 SNS 告警通知。
 
 ## Limitation 
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  

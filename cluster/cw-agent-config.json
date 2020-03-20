@@ -22,6 +22,9 @@
                 }
         },
         "metrics": {
+                "append_dimensions": {
+                        "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+                },
                 "metrics_collected": {
                         "disk": {
                                 "measurement": [
