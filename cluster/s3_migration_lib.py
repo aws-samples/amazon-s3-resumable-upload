@@ -117,9 +117,9 @@ def get_s3_file_list(s3_client, bucket, S3Prefix):
             )
             break
         except Exception as err:
-            logger.error(f'Fail to get s3 list objests: {str(err)}')
+            logger.warning(f'Fail to get s3 list objests: {str(err)}')
             time.sleep(5)
-            logger.error(f'Retry get S3 list bucket: {bucket}')
+            logger.warning(f'Retry get S3 list bucket: {bucket}')
 
     if response_fileList["KeyCount"] != 0:
         for n in response_fileList["Contents"]:
@@ -144,9 +144,9 @@ def get_s3_file_list(s3_client, bucket, S3Prefix):
                     )
                     break
                 except Exception as err:
-                    logger.error(str(err))
+                    logger.warning(str(err))
                     time.sleep(5)
-                    logger.error(f'Retry get S3 list bucket: {bucket}')
+                    logger.warning(f'Retry get S3 list bucket: {bucket}')
 
             for n in response_fileList["Contents"]:
                 if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
@@ -232,7 +232,7 @@ def job_upload_sqs_ddb(sqs, sqs_queue, table, job_list, MaxRetry=30):
                     })
                     break
                 except Exception as e:
-                    logger.error(f'Fail writing to DDB: {ddb_key}, {str(e)}')
+                    logger.warning(f'Fail to writing to DDB: {ddb_key}, {str(e)}')
                     if retry >= MaxRetry:
                         logger.error(f'Fail writing to DDB: {ddb_key}')
                     else:
@@ -252,7 +252,7 @@ def job_upload_sqs_ddb(sqs, sqs_queue, table, job_list, MaxRetry=30):
                         sqs.send_message_batch(QueueUrl=sqs_queue, Entries=sqs_message)
                         break
                     except Exception as e:
-                        logger.error(f'Fail to send sqs message: {str(sqs_message)}, {str(e)}')
+                        logger.warning(f'Fail to send sqs message: {str(sqs_message)}, {str(e)}')
                         if retry >= MaxRetry:
                             logger.error(f'Fail MaxRetry {MaxRetry} send sqs message: {str(sqs_message)}')
                         else:
@@ -306,7 +306,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key, MaxRetry):
                             logger.info(f'Unfinished upload, Key: {i["Key"]}, Time: {i["Initiated"]}')
                 break  # 退出重试循环
             except Exception as e:
-                logger.error(f'Fail to list multipart upload {str(e)}')
+                logger.warning(f'Fail to list multipart upload {str(e)}')
                 if retry >= MaxRetry:
                     logger.error(f'Fail MaxRetry list multipart upload {str(e)}')
                     return []
@@ -361,7 +361,7 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client, MaxRetry=1
                         partnumberList.append(partnumberObject["PartNumber"])
                 break
             except Exception as e:
-                logger.error(f'Fail to list parts in checkPartnumberList. {str(e)}')
+                logger.warning(f'Fail to list parts in checkPartnumberList. {str(e)}')
                 if retry >= MaxRetry:
                     logger.error(f'Fail MaxRetry list parts in checkPartnumberList. {str(e)}')
                     return []
@@ -408,7 +408,8 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
             if not dryrun:
                 logger.info(f"--->Downloading {ChunkSize} Bytes {Src_bucket}/{Src_key} - {partnumber}/{total}")
             else:
-                logger.info(f"--->Downloading {ChunkSize} Bytes for verify MD5 {Src_bucket}/{Src_key} - {partnumber}/{total}")
+                logger.info(
+                    f"--->Downloading {ChunkSize} Bytes for verify MD5 {Src_bucket}/{Src_key} - {partnumber}/{total}")
             retryTime = 0
 
             # 正常工作情况下出现 stop_signal 需要退出 Thread
@@ -545,17 +546,17 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
             except ClientError as e:
                 if e.response['Error']['Code'] == 'NoSuchUpload':
                     # Fail to list part list，没这个ID，则是别人已经完成这个Job了。
-                    logger.error(f'Fail to list parts while completeUpload, might be duplicated job:'
-                                 f' {Des_bucket}/{Des_key}, {str(e)}')
+                    logger.warning(f'Fail to list parts while completeUpload, might be duplicated job:'
+                                   f' {Des_bucket}/{Des_key}, {str(e)}')
                     return "ERR"
-                logger.error(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
+                logger.warning(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
                 if retryTime >= MaxRetry:
                     logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
                     return "ERR"
                 else:
                     time.sleep(5 * retryTime)
             except Exception as e:
-                logger.error(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
+                logger.warning(f'Fail to list parts while completeUpload {Des_bucket}/{Des_key}, {str(e)}')
                 if retryTime >= MaxRetry:
                     logger.error(f'Fail MaxRetry list parts while completeUpload {Des_bucket}/{Des_key}')
                     return "ERR"
@@ -581,7 +582,7 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client, 
             result = response_complete['ETag']
             break
         except Exception as e:
-            logger.error(f'Fail to complete multipart upload {Des_bucket}/{Des_key}, {str(e)}')
+            logger.warning(f'Fail to complete multipart upload {Des_bucket}/{Des_key}, {str(e)}')
             if retryTime >= MaxRetry:
                 logger.error(f'Fail MaxRetry complete multipart upload {Des_bucket}/{Des_key}')
                 return "ERR"
@@ -654,7 +655,8 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                     if 'Event' not in job:
                         upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
                                                          StorageClass, ChunkSize, MaxRetry, MaxThread,
-                                                         ResumableThreshold, JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
+                                                         ResumableThreshold, JobTimeout, ifVerifyMD5Twice,
+                                                         CleanUnfinishedUpload)
                     else:
                         if job['Event'] == 's3:TestEvent':
                             logger.info('Skip s3:TestEvent')
@@ -672,7 +674,7 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                                 )
                                 break
                             except Exception as e:
-                                logger.error(f'Fail to delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
+                                logger.warning(f'Fail to delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
                                 if retry >= MaxRetry:
                                     logger.error(f'Fail MaxRetry delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
                                 else:
@@ -749,7 +751,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                     }
                 )
             except Exception as e:
-                logger.error(f'Fail to create new multipart upload. {str(e)}')
+                logger.warning(f'Fail to create new multipart upload. {str(e)}')
                 if md5_retry >= 2:
                     upload_etag_full = "ERR"
                     break
@@ -800,7 +802,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                 break
             except Exception as e:
                 # 日志写不了
-                logger.error(f'Fail to put log to DDB at starting this round: {Src_bucket}/{Src_key}, {str(e)}')
+                logger.warning(f'Fail to put log to DDB at starting this round: {Src_bucket}/{Src_key}, {str(e)}')
                 if retry >= MaxRetry:
                     logger.error(f'Fail MaxRetry put log to DDB at start {Src_bucket}/{Src_key}')
                 else:
@@ -848,7 +850,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                         Key=Des_key
                     )
                 except Exception as e:
-                    logger.error(f'Fail to delete on S3. {str(e)}')
+                    logger.warning(f'Fail to delete on S3. {str(e)}')
                 multipart_uploaded_list = []
                 if md5_retry >= 2:
                     logger.error(f'MD5 ETag NOT MATCHED Exceed Max Retries - {Des_bucket}/{Des_key}')
@@ -883,7 +885,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
             )
             break
         except Exception as e:
-            logger.error(f'Fail to put log to DDB at end. {str(e)}')
+            logger.warning(f'Fail to put log to DDB at end. {str(e)}')
             if retry >= MaxRetry:
                 logger.error(f'Fail MaxRetry to put log to DDB at end of job. {str(e)}')
             else:

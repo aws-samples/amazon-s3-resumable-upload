@@ -161,7 +161,7 @@ CloudWatch Alarm on Sqs queue empty 发SNS通知邮件
 ## 监控  
 * SQS 队列监控还有多少任务在进行 ( Messages Available ) ，以及多少是正在进行的 ( Messages in Flight )   
 * SQS 死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次）
-* Autoscaling Group 网络、CPU和实例数量
+* Autoscaling Group 网络、CPU和实例数量。其中实例数量需要你手工到 EC2 控制台 Autoscaling 菜单的 Monitor 分页，去 Enable "Group Metrics Collection" 功能才能收集到。
 * 以上监控在 CDK 中会创建 Dashboard
 * DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 * Jobsender / Worker 的运行日志会收集到 CloudWatch Logs，日志组名是 s3_migrate_log  
