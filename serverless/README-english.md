@@ -50,10 +50,10 @@ If you want to transmit existing S3 bucket, please leverage Jobsender from Clust
 ```
 Des_bucket_default = 'your_des_bucket'
 Des_prefix_default = 'my_prefix'
-Des_region = 'cn-northwest-1'
 StorageClass = 'STANDARD'
 aws_access_key_id = 'xxxxxxxxx'
 aws_secret_access_key = 'xxxxxxxxxxxxxxx'
+aws_access_key_region = 'cn-northwest-1'
 ```
 In S3 new object trigger mode, you need to put the Default Des_bucket/prefix here.  
 In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix information from Parameter Store, then Lambda will ignore Default Des_bucket/prefix here. So you just need to put space for these two Env Var.
@@ -103,10 +103,6 @@ Des_prefix_default
 In S3 new object trigger mode, you need to put the Default Des_bucket/prefix here.  
 In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix information from Parameter Store, then Lambda will ignore Default Des_bucket/prefix here. So you just need to put space for these two Env Var.
 ```
-Des_region  
-```
-Destination region code, e.g. cn-north-1
-```
 StorageClass  
 ```
 Select Destination S3 storage class
@@ -114,8 +110,10 @@ STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|D
 ```
 aws_access_key_id  
 aws_secret_access_key  
+aws_access_key_region  
 ```
-To access the S3 account which is not the same account as Lambda. You can get from that account IAM user credential.
+To access the S3 account which is not the same account as Lambda. You can get from that account IAM user credential.   
+aws_access_key_region code, e.g. cn-north-1
 ```
 table_queue_name  
 ```

@@ -49,10 +49,11 @@ cdk deploy
 ```
 Des_bucket_default = 'your_des_bucket'
 Des_prefix_default = 'my_prefix'
-Des_region = 'cn-northwest-1'
 StorageClass = 'STANDARD'
 aws_access_key_id = 'xxxxxxxxx'
 aws_secret_access_key = 'xxxxxxxxxxxxxxx'
+aws_access_key_region = 'cn-northwest-1'
+table_queue_name 会由 CDK 自动生成  
 ```
 * 配置 Lambda 的运行超时时间 15 分钟，内存 1GB  
 * 自动配置 Lambda 访问 S3，SQS 和 DynamoDB 的 IAM 权限。  
@@ -97,23 +98,25 @@ s3_migration_lib.py
 ```
 Des_bucket_default  
 Des_prefix_default  
+```
 是给S3新增文件触发SQS的场景，用来配置目标桶/前缀的。
 对于Jobsender扫描S3并派发Job的场景，这两项配置任意字符即可。程序看到SQS消息里面有就会使用消息里面的目标桶/前缀
-
-Des_region  
-目标region代码，如cn-north-1
-
+```
 StorageClass  
+```
 选择目标存储的存储类型
 STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE
-
+```
 aws_access_key_id  
 aws_secret_access_key  
-用于访问跟 Lambda 不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。
-
-table_queue_name  
-访问的DynamoDB的表名，需与CloudFormation/CDK创建的ddb名称一致  
+aws_access_key_region
 ```
+用于访问跟 Lambda 不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。
+aws_access_key_region 代码, 例如 cn-north-1
+```
+table_queue_name  
+```访问的DynamoDB的表名，需与CloudFormation/CDK创建的ddb名称一致  
+
 
 * Lambda 设置超时时间15分钟，内存可以调整，可以从1GB开始尝试。
 必要时调整Lambda代码中这两个参数来配合Lambda内存调优：MaxThread和max_pool_connections。代码其他参数不要修改。

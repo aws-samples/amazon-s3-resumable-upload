@@ -5,15 +5,16 @@ from botocore.config import Config
 from pathlib import PurePosixPath
 
 # 环境变量
+table_queue_name = os.environ['table_queue_name']
+StorageClass = os.environ['StorageClass']
 Des_bucket_default = os.environ['Des_bucket_default']
 Des_prefix_default = os.environ['Des_prefix_default']
 aws_access_key_id = os.environ['aws_access_key_id']
 aws_secret_access_key = os.environ['aws_secret_access_key']
-
-table_queue_name = os.environ['table_queue_name']
-StorageClass = os.environ['StorageClass']
+region = os.environ['aws_access_key_region']
 
 # 内部参数
+JobType = "PUT"
 MaxRetry = 10  # 最大请求重试次数
 MaxThread = 50  # 最大线程数
 MaxParallelFile = 1  # Lambda 中暂时没用到
@@ -31,7 +32,6 @@ s3_config = Config(max_pool_connections=50)  # 最大连接数
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-region = os.environ['Des_region']
 dynamodb = boto3.resource('dynamodb')
 
 # 取另一个Account的credentials
@@ -40,9 +40,10 @@ credentials_session = boto3.session.Session(
     aws_secret_access_key=aws_secret_access_key,
     region_name=region
 )
-
 s3_src_client = boto3.client('s3', config=s3_config)
 s3_des_client = credentials_session.client('s3', config=s3_config)
+if JobType.upper() == "GET":
+    s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
 table = dynamodb.Table(table_queue_name)
 

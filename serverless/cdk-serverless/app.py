@@ -9,11 +9,12 @@ import aws_cdk.aws_s3_notifications as s3n
 
 Des_bucket_default = 'your_des_bucket'
 Des_prefix_default = 'my_prefix'
-Des_region = 'cn-northwest-1'
 StorageClass = 'STANDARD'
 aws_access_key_id = 'xxxxxxxxx'
 aws_secret_access_key = 'xxxxxxxxxxxxxxx'
-# 请在CDK部署完成后，到Lambda的环境变量中修改 access key 配置，以便让Lambda又权限访问目标S3
+aws_access_key_region = 'cn-northwest-1'
+# After deploy CDK, please add access key config in Lambda Evironment, so it can access destination S3
+# 请在CDK部署完成后，到Lambda的环境变量中修改 access key 配置，以便让Lambda有权限访问目标S3
 
 
 class CdkResourceStack(core.Stack):
@@ -47,10 +48,10 @@ class CdkResourceStack(core.Stack):
                                    'table_queue_name': ddb_file_list.table_name,
                                    'Des_bucket_default': Des_bucket_default,
                                    'Des_prefix_default': Des_prefix_default,
-                                   'Des_region': Des_region,
                                    'StorageClass': StorageClass,
                                    'aws_access_key_id': aws_access_key_id,
-                                   'aws_secret_access_key': aws_secret_access_key
+                                   'aws_secret_access_key': aws_secret_access_key,
+                                   'aws_access_key_region': aws_access_key_region
                                })
         ddb_file_list.grant_read_write_data(handler)
         handler.add_event_source(SqsEventSource(sqs_queue))
