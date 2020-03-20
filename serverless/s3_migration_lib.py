@@ -406,9 +406,9 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
         if ifVerifyMD5Twice or not dryrun:  # 如果 ifVerifyMD5Twice 则无论是否已有上传过都重新下载，作为校验整个文件用
 
             if not dryrun:
-                logger.info(f"--->Downloading {Src_bucket}/{Src_key} - {partnumber}/{total}")
+                logger.info(f"--->Downloading {ChunkSize} Bytes {Src_bucket}/{Src_key} - {partnumber}/{total}")
             else:
-                logger.info(f"--->Downloading for verify MD5 {Src_bucket}/{Src_key} - {partnumber}/{total}")
+                logger.info(f"--->Downloading {ChunkSize} Bytes for verify MD5 {Src_bucket}/{Src_key} - {partnumber}/{total}")
             retryTime = 0
 
             # 正常工作情况下出现 stop_signal 需要退出 Thread
@@ -442,7 +442,7 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
             while retryTime <= MaxRetry and not stop_signal.is_set():
                 retryTime += 1
                 try:
-                    logger.info(f'--->Uploading {Des_bucket}/{Des_key} - {partnumber}/{total}')
+                    logger.info(f'--->Uploading {ChunkSize} Bytes {Des_bucket}/{Des_key} - {partnumber}/{total}')
                     s3_des_client.upload_part(
                         Body=getBody,
                         Bucket=Des_bucket,
@@ -467,7 +467,7 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
             complete_list.append(partnumber)
             if not dryrun:
                 logger.info(
-                    f'--->Complete {Src_bucket}/{Src_key} - {partnumber}/{total} {len(complete_list) / total:.2%}')
+                    f'--->Complete {ChunkSize} Bytes {Src_bucket}/{Src_key} - {partnumber}/{total} {len(complete_list) / total:.2%}')
         else:
             return "TIMEOUT"
         return "Complete"

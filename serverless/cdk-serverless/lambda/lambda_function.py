@@ -22,7 +22,6 @@ JobTimeout = 900
 
 ResumableThreshold = 5 * 1024 * 1024  # Accelerate to ignore get list
 CleanUnfinishedUpload = False  # For debug
-LocalProfileMode = False  # For debug
 ChunkSize = 5 * 1024 * 1024  # For debug
 ifVerifyMD5Twice = False  # For debug
 
@@ -33,6 +32,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table(table_queue_name)
 
 # 取另一个Account的credentials
 credentials_session = boto3.session.Session(
@@ -45,7 +45,6 @@ s3_des_client = credentials_session.client('s3', config=s3_config)
 if JobType.upper() == "GET":
     s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
-table = dynamodb.Table(table_queue_name)
 
 try:
     context = ssl._create_unverified_context()
