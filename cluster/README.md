@@ -13,7 +13,7 @@ Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国S3之间传�
 * 安全：内存转发不写盘，传输SSL加密，开源代码可审计，采用IAM Role和利用ParameterStore加密存储AcceesKey。  
 * 可控运营：任务派发与传输速度相匹配，系统容量可控可预期；DynamoDB和SQS读写次数只与文件数相关，而与文件大小基本无关；日志自动收集；AWS CDK自动部署；  
 * 弹性成本优化：集群自动扩展，结合EC2 Spot节省成本；无服务器Lambda只按调用次数计费；支持直接存入S3各种存储级别，节省长期存储成本。
-* 可以于无服务器 Lambda 版本一起运行，支持混合流量  
+* 可以与无服务器 Lambda 版本一起运行，支持混合流量  
   
 ## 工作原理  
 ### 流程  
@@ -160,14 +160,15 @@ CloudWatch Alarm on Sqs queue empty 发SNS通知邮件
 
 ## 监控  
 * SQS 队列监控还有多少任务在进行 ( Messages Available ) ，以及多少是正在进行的 ( Messages in Flight )   
-* SQS 死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次）
-* Autoscaling Group 网络、CPU和实例数量。其中实例数量需要你手工到 EC2 控制台 Autoscaling 菜单的 Monitor 分页，去 Enable "Group Metrics Collection" 功能才能收集到。
+* SQS 死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次），有消息进入则会发 SNS 告警邮件。
+* EC2 网络流量、CPU、内存和实例数量。其中要监控Autoscaling Group实例数量需要你手工到 EC2 控制台 Autoscaling 菜单的 Monitor 分页，去 Enable "Group Metrics Collection" 功能才能收集到。内存是通过自动安装的 CloudWatch Agent 收集。
 * 以上监控在 CDK 中会创建 Dashboard
 * DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
-* Jobsender / Worker 的运行日志会收集到 CloudWatch Logs，日志组名是 s3_migrate_log  
-* Autoscaling Up: 创建基于 SQS 队列 Messages Available 的 Alarm，5 分钟大于 100 消息基于触发 Autoscaling 增加 EC2 
-* Autoscaling Shut Down: 创建表达式 Expression: SQS Messages Available + Messages in Flight = 0。即队列中无消息会将 EC2 数量降到 1  
-* 以上 Autoscaling 和 Alarm 都会在 CDK 中创建。请在 cdk_ec2_stack 中设置告警的 EMAIL   
+* Jobsender / Worker 的运行日志会收集到 CloudWatch Logs，日志组名是 s3_migrate_log ，有报错的日志数量会输出到 Dashboard   
+* Autoscaling Up: CDK 创建了基于 SQS 队列 Messages Available 的 Alarm，5 分钟大于 100 消息基于触发 Autoscaling 增加 EC2 
+* Autoscaling Shut Down: CDK 创建了表达式 Expression: SQS Messages Available + Messages in Flight = 0 ，并且 EC2 数量大于1，则触发自动设置 EC2 数量为 1。即队列中无消息时会将 EC2 数量降到 1 。你也可以根据场景需求，把这里自动设置为 0 ，关闭全部。并在这时候发送告警 EMAIL 通知。这个告警可以作为批量传输完成后的通知，而且这样做可以只通知一次，而不会不停地15分钟通知一次
+。  
+* 以上 Autoscaling 和 Alarm 都会在 CDK 中创建。请在 cdk_ec2_stack 中设置告警的 EMAIL 地址   
 
 ## Limitation 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  

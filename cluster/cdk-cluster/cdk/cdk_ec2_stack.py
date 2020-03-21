@@ -273,7 +273,7 @@ class CdkEc2Stack(core.Stack):
             }
         )
         alarm_0 = cw.Alarm(self, "SQSempty",
-                           alarm_name="SQS queue empty and ec2 more than 1 in Cluster",
+                           alarm_name="s3-migration-cluster-SQS queue empty and ec2 more than 1 in Cluster",
                            metric=metric_all_message,
                            threshold=0,
                            comparison_operator=cw.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
@@ -281,9 +281,10 @@ class CdkEc2Stack(core.Stack):
                            datapoints_to_alarm=3,
                            treat_missing_data=cw.TreatMissingData.NOT_BREACHING
                            )
-        # alarm_topic_empty = sns.Topic(self, "SQS queue empty and ec2 more than 1 in Cluster")
-        # alarm_topic_empty.add_subscription(subscription=sub.EmailSubscription(alarm_email))
-        # alarm_0.add_alarm_action(action.SnsAction(alarm_topic_empty))
+        alarm_topic_empty = sns.Topic(self, "SQS queue empty and ec2 more than 1 in Cluster")
+        # 这个告警可以作为批量传输完成后的通知，而且这样做可以只通知一次，而不会不停地通知
+        alarm_topic_empty.add_subscription(subscription=sub.EmailSubscription(alarm_email))
+        alarm_0.add_alarm_action(action.SnsAction(alarm_topic_empty))
 
         # If queue empty, set autoscale down to 1 EC2
         action_shutdown = autoscaling.StepScalingAction(self, "shutdown",
@@ -295,7 +296,7 @@ class CdkEc2Stack(core.Stack):
 
         # While message in SQS-DLQ, alarm to sns
         alarm_DLQ = cw.Alarm(self, "SQS_DLQ",
-                             alarm_name="SQS DLQ more than 1 message-Cluster",
+                             alarm_name="s3-migration-cluster-SQS DLQ more than 1 message-Cluster",
                              metric=sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
                              threshold=0,
                              comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
