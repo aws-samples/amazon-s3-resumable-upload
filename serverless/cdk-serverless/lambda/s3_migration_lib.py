@@ -168,7 +168,10 @@ def delta_job_list(src_file_list, des_file_list, bucket_para):
     src_prefix = str(PurePosixPath(bucket_para['src_prefix']))
     des_bucket = bucket_para['des_bucket']
     des_prefix = str(PurePosixPath(bucket_para['des_prefix']))
-    dp_len = len(des_prefix) + 1  # 目的bucket的 "prefix/"长度
+    if des_prefix == '.':
+        dp_len = 0
+    else:
+        dp_len = len(des_prefix) + 1  # 目的bucket的 "prefix/"长度
     # Delta list
     logger.info(f'Compare source s3://{src_bucket}/{src_prefix} and '
                 f'destination s3://{des_bucket}/{des_prefix}')
