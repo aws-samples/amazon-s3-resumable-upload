@@ -90,21 +90,18 @@ class CdkResourceStack(core.Stack):
         handler.log_group.add_metric_filter("Complete-bytes",
                                             metric_name="Complete-bytes",
                                             metric_namespace="s3_migrate",
-                                            default_value=0,
                                             metric_value="$bytes",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '[info, date, sn, p="--->Complete", bytes, key]'))
         handler.log_group.add_metric_filter("Uploading-bytes",
                                             metric_name="Uploading-bytes",
                                             metric_namespace="s3_migrate",
-                                            default_value=0,
                                             metric_value="$bytes",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '[info, date, sn, p="--->Uploading", bytes, key]'))
         handler.log_group.add_metric_filter("Downloading-bytes",
                                             metric_name="Downloading-bytes",
                                             metric_namespace="s3_migrate",
-                                            default_value=0,
                                             metric_value="$bytes",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '[info, date, sn, p="--->Downloading", bytes, key]'))
@@ -123,14 +120,12 @@ class CdkResourceStack(core.Stack):
         handler.log_group.add_metric_filter("ERROR",
                                             metric_name="ERROR-Logs",
                                             metric_namespace="s3_migrate",
-                                            default_value=0,
                                             metric_value="1",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '"ERROR"'))
         handler.log_group.add_metric_filter("WARNING",
                                             metric_name="WARNING-Logs",
                                             metric_namespace="s3_migrate",
-                                            default_value=0,
                                             metric_value="1",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '"WARNING"'))
@@ -142,6 +137,7 @@ class CdkResourceStack(core.Stack):
                                        metric_name="WARNING-Logs",
                                        statistic="Sum",
                                        period=core.Duration.minutes(1))
+
         # Dashboard to monitor SQS and Lambda
         board = cw.Dashboard(self, "s3_migrate", dashboard_name="s3_migrate_serverless")
 
@@ -192,32 +188,42 @@ class CdkResourceStack(core.Stack):
                                                         )],
                                                height=6)
                           )
-
-        # Alarm for queue empty
-        # Alarm for queue empty, i.e. no visible message and no in-visible message
-        metric_all_message = cw.MathExpression(
-            expression="a + b",
-            label="empty_queue_expression",
-            using_metrics={
-                "a": sqs_queue.metric_approximate_number_of_messages_visible(),
-                "b": sqs_queue.metric_approximate_number_of_messages_not_visible()
-            }
-        )
-        alarm_0 = cw.Alarm(self, "SQSempty",
-                           alarm_name="SQS queue empty-Serverless",
-                           metric=metric_all_message,
-                           threshold=0,
-                           comparison_operator=cw.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-                           evaluation_periods=3,
-                           datapoints_to_alarm=3,
-                           treat_missing_data=cw.TreatMissingData.IGNORE
-                           )
-        alarm_topic = sns.Topic(self, "SQS queue empty-Serverless")
+        # Alarm for queue - DLQ
+        alarm_DLQ = cw.Alarm(self, "SQS_DLQ",
+                             alarm_name="SQS Dead Letter Queue",
+                             metric=sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
+                             threshold=0,
+                             comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                             evaluation_periods=1,
+                             datapoints_to_alarm=1)
+        alarm_topic = sns.Topic(self, "SQS queue-DLQ has dead letter")
         alarm_topic.add_subscription(subscription=sub.EmailSubscription(alarm_email))
-        alarm_0.add_alarm_action(action.SnsAction(alarm_topic))
+        alarm_DLQ.add_alarm_action(action.SnsAction(alarm_topic))
 
+        # Alarm for queue empty, i.e. no visible message and no in-visible message
+        # metric_all_message = cw.MathExpression(
+        #     expression="a + b",
+        #     label="empty_queue_expression",
+        #     using_metrics={
+        #         "a": sqs_queue.metric_approximate_number_of_messages_visible(),
+        #         "b": sqs_queue.metric_approximate_number_of_messages_not_visible()
+        #     }
+        # )
+        # alarm_0 = cw.Alarm(self, "SQSempty",
+        #                    alarm_name="SQS queue empty-Serverless",
+        #                    metric=metric_all_message,
+        #                    threshold=0,
+        #                    comparison_operator=cw.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+        #                    evaluation_periods=3,
+        #                    datapoints_to_alarm=3,
+        #                    treat_missing_data=cw.TreatMissingData.IGNORE
+        #                    )
+        # alarm_topic = sns.Topic(self, "SQS queue empty-Serverless")
+        # alarm_topic.add_subscription(subscription=sub.EmailSubscription(alarm_email))
+        # alarm_0.add_alarm_action(action.SnsAction(alarm_topic))
+
+        # core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for Serverless: " + alarm_email)
         core.CfnOutput(self, "Dashboard", value="CloudWatch Dashboard name s3_migrate_serverless")
-        core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for Serverless: " + alarm_email)
 
 
 ###############

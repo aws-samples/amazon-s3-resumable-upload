@@ -71,15 +71,15 @@ class CdkEc2Stack(core.Stack):
                                                   machine_image=linux_ami,
                                                   # key_name=key_name,  # Optional if use SSM-SessionManager
                                                   user_data=ec2.UserData.custom(user_data_worker),
-                                                  desired_capacity=3,
+                                                  desired_capacity=1,
                                                   min_capacity=1,
                                                   max_capacity=10,
-                                                  cooldown=core.Duration.minutes(20),
                                                   spot_price="0.5"
                                                   )
-        # TODO: There is no MetricsCollection in CDK autoscaling group yet.
+
+        # TODO: There is no MetricsCollection in CDK autoscaling group high level API yet.
         # You need to enable "Group Metrics Collection" in EC2 Console Autoscaling Group - Monitoring tab for metric:
-        # GroupDesiredCapacity, GroupInServiceInstances, GroupPendingInstances
+        # GroupDesiredCapacity, GroupInServiceInstances, GroupPendingInstances and etc.
 
         # worker_asg.connections.allow_from_any_ipv4(ec2.Port.tcp(22), "Internet access SSH")
         # Don't need SSH since we use Session Manager
@@ -176,14 +176,12 @@ class CdkEc2Stack(core.Stack):
         s3_migrate_log.add_metric_filter("ERROR",
                                          metric_name="ERROR-Logs",
                                          metric_namespace="s3_migrate",
-                                         default_value=0,
                                          metric_value="1",
                                          filter_pattern=logs.FilterPattern.literal(
                                              '"ERROR"'))
         s3_migrate_log.add_metric_filter("WARNING",
                                          metric_name="WARNING-Logs",
                                          metric_namespace="s3_migrate",
-                                         default_value=0,
                                          metric_value="1",
                                          filter_pattern=logs.FilterPattern.literal(
                                              '"WARNING"'))
@@ -248,8 +246,12 @@ class CdkEc2Stack(core.Stack):
         # Autoscaling up when visible message > 100 every 3 of 3 x 5 mins
         worker_asg.scale_on_metric("scaleup", metric=sqs_queue.metric_approximate_number_of_messages_visible(),
                                    scaling_steps=[autoscaling.ScalingInterval(
+                                       change=1,
+                                       lower=100,
+                                       upper=500
+                                   ), autoscaling.ScalingInterval(
                                        change=2,
-                                       lower=100
+                                       lower=500
                                    ),
                                        autoscaling.ScalingInterval(
                                            change=0,
@@ -258,34 +260,37 @@ class CdkEc2Stack(core.Stack):
                                        )],
                                    adjustment_type=autoscaling.AdjustmentType.CHANGE_IN_CAPACITY)
 
-        # Alarm for queue empty, i.e. no visible message and no in-visible message
+        # Alarm for queue empty and ec2 > 1
+        # 消息队列空（没有Visible+Invisible），并且EC2不止一台，则告警，并设置EC2为1台
+        # 这里还可以根据场景调整，如果Jobsender也用来做传输，则可以在这里设置没有任务的时候，Autoscaling Group为0
         metric_all_message = cw.MathExpression(
-            expression="a + b",
+            expression="IF(((a+b) == 0) AND (c >1), 0, 1)",  # a+b且c>1则设置为0，告警
             label="empty_queue_expression",
             using_metrics={
                 "a": sqs_queue.metric_approximate_number_of_messages_visible(),
-                "b": sqs_queue.metric_approximate_number_of_messages_not_visible()
+                "b": sqs_queue.metric_approximate_number_of_messages_not_visible(),
+                "c": autoscaling_GroupInServiceInstances
             }
         )
         alarm_0 = cw.Alarm(self, "SQSempty",
-                           alarm_name="SQS queue empty-Cluster",
+                           alarm_name="SQS queue empty and ec2 more than 1 in Cluster",
                            metric=metric_all_message,
                            threshold=0,
                            comparison_operator=cw.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
                            evaluation_periods=3,
                            datapoints_to_alarm=3,
-                           treat_missing_data=cw.TreatMissingData.IGNORE
+                           treat_missing_data=cw.TreatMissingData.NOT_BREACHING
                            )
-        alarm_topic_empty = sns.Topic(self, "SQS queue empty-Cluster")
-        alarm_topic_empty.add_subscription(subscription=sub.EmailSubscription(alarm_email))
-        alarm_0.add_alarm_action(action.SnsAction(alarm_topic_empty))
+        # alarm_topic_empty = sns.Topic(self, "SQS queue empty and ec2 more than 1 in Cluster")
+        # alarm_topic_empty.add_subscription(subscription=sub.EmailSubscription(alarm_email))
+        # alarm_0.add_alarm_action(action.SnsAction(alarm_topic_empty))
 
-        # If queue empty, set worker to 1
+        # If queue empty, set autoscale down to 1 EC2
         action_shutdown = autoscaling.StepScalingAction(self, "shutdown",
                                                         auto_scaling_group=worker_asg,
                                                         adjustment_type=autoscaling.AdjustmentType.EXACT_CAPACITY
                                                         )
-        action_shutdown.add_adjustment(adjustment=1, lower_bound=1)
+        action_shutdown.add_adjustment(adjustment=1, upper_bound=0)
         alarm_0.add_alarm_action(action.AutoScalingAction(action_shutdown))
 
         # While message in SQS-DLQ, alarm to sns
