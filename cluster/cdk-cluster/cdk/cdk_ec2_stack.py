@@ -7,6 +7,7 @@ import aws_cdk.aws_cloudwatch as cw
 import aws_cdk.aws_cloudwatch_actions as action
 import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
+import aws_cdk.aws_logs as logs
 
 # Adjust ec2 type here
 worker_type = "c5.large"
@@ -70,7 +71,7 @@ class CdkEc2Stack(core.Stack):
                                                   machine_image=linux_ami,
                                                   # key_name=key_name,  # Optional if use SSM-SessionManager
                                                   user_data=ec2.UserData.custom(user_data_worker),
-                                                  desired_capacity=1,
+                                                  desired_capacity=3,
                                                   min_capacity=1,
                                                   max_capacity=10,
                                                   cooldown=core.Duration.minutes(20),
@@ -124,55 +125,127 @@ class CdkEc2Stack(core.Stack):
 
         ec2_metric_net = cw.Metric(namespace="AWS/EC2",
                                    metric_name="NetworkOut",
-                                   dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name})
-        ec2_metric_cpu = cw.Metric(namespace="AWS/EC2",
-                                   metric_name="CPUUtilization",
-                                   dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name})
+                                   # dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                   period=core.Duration.minutes(1),
+                                   statistic="Sum")
+        ec2_metric_cpu_max = cw.Metric(namespace="AWS/EC2",
+                                       metric_name="CPUUtilization",
+                                       # dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                       period=core.Duration.minutes(1),
+                                       statistic="Maximum")
+        ec2_metric_cpu_avg = cw.Metric(namespace="AWS/EC2",
+                                       metric_name="CPUUtilization",
+                                       # dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                       period=core.Duration.minutes(1))
 
         autoscaling_GroupDesiredCapacity = cw.Metric(namespace="AWS/AutoScaling",
                                                      metric_name="GroupDesiredCapacity",
                                                      dimensions={
-                                                         "AutoScalingGroupName": worker_asg.auto_scaling_group_name})
+                                                         "AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                                     period=core.Duration.minutes(1))
         autoscaling_GroupInServiceInstances = cw.Metric(namespace="AWS/AutoScaling",
                                                         metric_name="GroupInServiceInstances",
                                                         dimensions={
-                                                            "AutoScalingGroupName": worker_asg.auto_scaling_group_name})
-        autoscaling_GroupPendingInstances = cw.Metric(namespace="AWS/AutoScaling",
-                                                      metric_name="GroupPendingInstances",
-                                                      dimensions={
-                                                          "AutoScalingGroupName": worker_asg.auto_scaling_group_name})
+                                                            "AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                                        period=core.Duration.minutes(1))
+        autoscaling_GroupMinSize = cw.Metric(namespace="AWS/AutoScaling",
+                                             metric_name="GroupMinSize",
+                                             dimensions={
+                                                 "AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                             period=core.Duration.minutes(1))
+        autoscaling_GroupMaxSize = cw.Metric(namespace="AWS/AutoScaling",
+                                             metric_name="GroupMaxSize",
+                                             dimensions={
+                                                 "AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                             period=core.Duration.minutes(1))
         # CWAgent collected metric
-        cwagent_mem = cw.Metric(namespace="CWAgent",
-                                metric_name="mem_used_percent",
-                                dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
-                                statistic="Average")
-        board.add_widgets(cw.GraphWidget(title="EC2-AutoscalingGroup-NETWORK",
+        cwagent_mem_avg = cw.Metric(namespace="CWAgent",
+                                    metric_name="mem_used_percent",
+                                    dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                    statistic="Average",
+                                    period=core.Duration.minutes(1))
+        cwagent_mem_max = cw.Metric(namespace="CWAgent",
+                                    metric_name="mem_used_percent",
+                                    dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                    statistic="Maximum",
+                                    period=core.Duration.minutes(1))
+
+        # CWAgent collected application logs - filter metric
+        s3_migrate_log = logs.LogGroup(self, "applog",
+                                       log_group_name="s3_migration_log")
+        s3_migrate_log.add_metric_filter("ERROR",
+                                         metric_name="ERROR-Logs",
+                                         metric_namespace="s3_migrate",
+                                         default_value=0,
+                                         metric_value="1",
+                                         filter_pattern=logs.FilterPattern.literal(
+                                             '"ERROR"'))
+        s3_migrate_log.add_metric_filter("WARNING",
+                                         metric_name="WARNING-Logs",
+                                         metric_namespace="s3_migrate",
+                                         default_value=0,
+                                         metric_value="1",
+                                         filter_pattern=logs.FilterPattern.literal(
+                                             '"WARNING"'))
+        log_metric_ERROR = cw.Metric(namespace="s3_migrate",
+                                     metric_name="ERROR-Logs",
+                                     statistic="Sum",
+                                     period=core.Duration.minutes(1))
+        log_metric_WARNING = cw.Metric(namespace="s3_migrate",
+                                       metric_name="WARNING-Logs",
+                                       statistic="Sum",
+                                       period=core.Duration.minutes(1))
+
+        board.add_widgets(cw.GraphWidget(title="EC2-ALL-NETWORK",
                                          left=[ec2_metric_net]),
-                          cw.GraphWidget(title="EC2-AutoscalingGroup-CPU",
-                                         left=[ec2_metric_cpu]),
-                          cw.GraphWidget(title="EC2-AutoscalingGroup-MEMORY-average",
-                                         left=[cwagent_mem]),
-                          cw.GraphWidget(title="EC2-AutoscalingGroup-Capacity",
-                                         left=[autoscaling_GroupDesiredCapacity,
-                                               autoscaling_GroupInServiceInstances,
-                                               autoscaling_GroupPendingInstances]),
-                          )
-        board.add_widgets(cw.GraphWidget(title="SQS-Jobs",
-                                         left=[sqs_queue.metric_approximate_number_of_messages_visible(),
-                                               sqs_queue.metric_approximate_number_of_messages_not_visible()]),
-                          cw.GraphWidget(title="SQS-DeadLetterQueue",
-                                         left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
-                                               sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible()]),
-                          cw.SingleValueWidget(title="Running/Waiting Jobs",
-                                               metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(),
-                                                        sqs_queue.metric_approximate_number_of_messages_visible()]),
-                          cw.SingleValueWidget(title="Death Jobs",
-                                               metrics=[
-                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(),
-                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_visible()])
+                          cw.GraphWidget(title="EC2-ALL-CPU",
+                                         left=[ec2_metric_cpu_avg, ec2_metric_cpu_max]),
+                          cw.GraphWidget(title="EC2-AutoscalingGroup-MEMORY",
+                                         left=[cwagent_mem_max, cwagent_mem_avg]),
+                          cw.SingleValueWidget(title="EC2-AutoscalingGroup-Capacity",
+                                               metrics=[autoscaling_GroupDesiredCapacity,
+                                                        autoscaling_GroupInServiceInstances,
+                                                        autoscaling_GroupMinSize,
+                                                        autoscaling_GroupMaxSize],
+                                               height=6),
                           )
 
-        # Autoscaling up when visible message > 100 every 5 mins
+        board.add_widgets(cw.GraphWidget(title="SQS-Jobs",
+                                         left=[sqs_queue.metric_approximate_number_of_messages_visible(
+                                             period=core.Duration.minutes(1)
+                                         ),
+                                               sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)
+                                               )]),
+                          cw.GraphWidget(title="SQS-DeadLetterQueue",
+                                         left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                             period=core.Duration.minutes(1)
+                                         ),
+                                               sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)
+                                               )]),
+                          cw.GraphWidget(title="ERROR/WARNING Logs",
+                                         left=[log_metric_ERROR],
+                                         right=[log_metric_WARNING],
+                                         height=6),
+                          cw.SingleValueWidget(title="Running/Waiting and Death Jobs",
+                                               metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)
+                                               ),
+                                                        sqs_queue.metric_approximate_number_of_messages_visible(
+                                                            period=core.Duration.minutes(1)
+                                                        ),
+                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                            period=core.Duration.minutes(1)
+                                                        ),
+                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                                            period=core.Duration.minutes(1)
+                                                        )
+                                                        ],
+                                               height=6)
+                          )
+
+        # Autoscaling up when visible message > 100 every 3 of 3 x 5 mins
         worker_asg.scale_on_metric("scaleup", metric=sqs_queue.metric_approximate_number_of_messages_visible(),
                                    scaling_steps=[autoscaling.ScalingInterval(
                                        change=2,
@@ -203,9 +276,9 @@ class CdkEc2Stack(core.Stack):
                            datapoints_to_alarm=3,
                            treat_missing_data=cw.TreatMissingData.IGNORE
                            )
-        alarm_topic = sns.Topic(self, "SQS queue empty-Cluster")
-        alarm_topic.add_subscription(subscription=sub.EmailSubscription(alarm_email))
-        alarm_0.add_alarm_action(action.SnsAction(alarm_topic))
+        alarm_topic_empty = sns.Topic(self, "SQS queue empty-Cluster")
+        alarm_topic_empty.add_subscription(subscription=sub.EmailSubscription(alarm_email))
+        alarm_0.add_alarm_action(action.SnsAction(alarm_topic_empty))
 
         # If queue empty, set worker to 1
         action_shutdown = autoscaling.StepScalingAction(self, "shutdown",
@@ -214,6 +287,19 @@ class CdkEc2Stack(core.Stack):
                                                         )
         action_shutdown.add_adjustment(adjustment=1, lower_bound=1)
         alarm_0.add_alarm_action(action.AutoScalingAction(action_shutdown))
+
+        # While message in SQS-DLQ, alarm to sns
+        alarm_DLQ = cw.Alarm(self, "SQS_DLQ",
+                             alarm_name="SQS DLQ more than 1 message-Cluster",
+                             metric=sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
+                             threshold=0,
+                             comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                             evaluation_periods=3,
+                             datapoints_to_alarm=3,
+                             treat_missing_data=cw.TreatMissingData.IGNORE)
+        alarm_topic_DLQ = sns.Topic(self, "SQS DLQ more than 1 message-Cluster")
+        alarm_topic_DLQ.add_subscription(subscription=sub.EmailSubscription(alarm_email))
+        alarm_DLQ.add_alarm_action(action.SnsAction(alarm_topic_DLQ))
 
         # Output
         core.CfnOutput(self, "JobSenderEC2", value=jobsender.instance_id)

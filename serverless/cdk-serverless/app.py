@@ -12,8 +12,8 @@ import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
 import aws_cdk.aws_logs as logs
 
-Des_bucket_default = 'your_des_bucket'
-Des_prefix_default = 'my_prefix'
+Des_bucket_default = 's3-migration-test-nx'
+Des_prefix_default = 's3-migration-cdk-from-us'
 StorageClass = 'STANDARD'
 aws_access_key_id = 'xxxxxxxxx'
 aws_secret_access_key = 'xxxxxxxxxxxxxxx'
@@ -21,6 +21,7 @@ aws_access_key_region = 'cn-northwest-1'
 
 # Setup your alarm email
 alarm_email = "alarm_your_email@email.com"
+
 
 # After deploy CDK, please add access key config in Lambda Evironment, so it can access destination S3
 # 请在CDK部署完成后，到Lambda的环境变量中修改 access key 配置，以便让Lambda有权限访问目标S3
@@ -119,6 +120,28 @@ class CdkResourceStack(core.Stack):
                                            metric_name="Downloading-bytes",
                                            statistic="Sum",
                                            period=core.Duration.minutes(1))
+        handler.log_group.add_metric_filter("ERROR",
+                                            metric_name="ERROR-Logs",
+                                            metric_namespace="s3_migrate",
+                                            default_value=0,
+                                            metric_value="1",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '"ERROR"'))
+        handler.log_group.add_metric_filter("WARNING",
+                                            metric_name="WARNING-Logs",
+                                            metric_namespace="s3_migrate",
+                                            default_value=0,
+                                            metric_value="1",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '"WARNING"'))
+        log_metric_ERROR = cw.Metric(namespace="s3_migrate",
+                                     metric_name="ERROR-Logs",
+                                     statistic="Sum",
+                                     period=core.Duration.minutes(1))
+        log_metric_WARNING = cw.Metric(namespace="s3_migrate",
+                                       metric_name="WARNING-Logs",
+                                       statistic="Sum",
+                                       period=core.Duration.minutes(1))
         # Dashboard to monitor SQS and Lambda
         board = cw.Dashboard(self, "s3_migrate", dashboard_name="s3_migrate_serverless")
 
@@ -127,29 +150,47 @@ class CdkResourceStack(core.Stack):
                           # TODO: here monitor all lambda concurrency not just the working one. Limitation from CDK
                           # Lambda now supports monitor single lambda concurrency, will change this after CDK support
                           cw.GraphWidget(title="Lambda-all-concurrent",
-                                         left=[handler.metric_all_concurrent_executions()]),
+                                         left=[handler.metric_all_concurrent_executions(period=core.Duration.minutes(1))]),
 
                           cw.GraphWidget(title="Lambda-invocations/errors/throttles",
-                                         left=[handler.metric_invocations(),
-                                               handler.metric_errors(),
-                                               handler.metric_throttles()]),
+                                         left=[handler.metric_invocations(period=core.Duration.minutes(1)),
+                                               handler.metric_errors(period=core.Duration.minutes(1)),
+                                               handler.metric_throttles(period=core.Duration.minutes(1))]),
                           cw.GraphWidget(title="Lambda-duration",
-                                         left=[handler.metric_duration()]),
+                                         left=[handler.metric_duration(period=core.Duration.minutes(1))]),
                           )
 
         board.add_widgets(cw.GraphWidget(title="SQS-Jobs",
-                                         left=[sqs_queue.metric_approximate_number_of_messages_visible(),
-                                               sqs_queue.metric_approximate_number_of_messages_not_visible()]),
+                                         left=[sqs_queue.metric_approximate_number_of_messages_visible(
+                                             period=core.Duration.minutes(1)
+                                         ),
+                                               sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)
+                                               )]),
                           cw.GraphWidget(title="SQS-DeadLetterQueue",
-                                         left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
-                                               sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible()]),
-                          cw.SingleValueWidget(title="Running/Waiting Jobs",
-                                               metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(),
-                                                        sqs_queue.metric_approximate_number_of_messages_visible()]),
-                          cw.SingleValueWidget(title="Death Jobs",
-                                               metrics=[
-                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(),
-                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_visible()])
+                                         left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                             period=core.Duration.minutes(1)
+                                         ),
+                                               sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)
+                                               )]),
+                          cw.GraphWidget(title="ERROR/WARNING Logs",
+                                         left=[log_metric_ERROR],
+                                         right=[log_metric_WARNING]),
+                          cw.SingleValueWidget(title="Running/Waiting and Dead Jobs",
+                                               metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)
+                                               ),
+                                                        sqs_queue.metric_approximate_number_of_messages_visible(
+                                                            period=core.Duration.minutes(1)
+                                                        ),
+                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                            period=core.Duration.minutes(1)
+                                                        ),
+                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                                            period=core.Duration.minutes(1)
+                                                        )],
+                                               height=6)
                           )
 
         # Alarm for queue empty
@@ -176,7 +217,7 @@ class CdkResourceStack(core.Stack):
         alarm_0.add_alarm_action(action.SnsAction(alarm_topic))
 
         core.CfnOutput(self, "Dashboard", value="CloudWatch Dashboard name s3_migrate_serverless")
-        core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for Serverless: "+alarm_email)
+        core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for Serverless: " + alarm_email)
 
 
 ###############
