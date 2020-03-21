@@ -1,4 +1,4 @@
-# Amazon S3 MultiThread Resume Upload Tool v1.2 - Single Node Version (Amazon S3多线程断点续传 - 单机版)   
+# Amazon S3 MultiThread Resume Upload Tool v1.3 - Single Node Version (Amazon S3多线程断点续传 - 单机版)   
 
 Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable for large files  
 多线程断点续传到 Amazon S3，适合批量的大文件  
@@ -52,6 +52,7 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
 
 ### Version 1.3
 * Change config file to ini
+* Package binary version to OS X, Windows and Linux
 
 ## Architecture 架构图  
 1. Local upload to S3  
@@ -61,7 +62,15 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
 3. From AliCloud OSS to S3  
 ![Architecture](./img/img03.png)
   
-## Requirements
+## Installation  安装  
+**This tool run under Python3, if you can't install python3, you can use below package version and skip Install Python3 and SDK**  
+**本工具在Python3运行，如果不方便安装Python，可以直接使用以下打包版本，并跳过 Install Python3 and SDK**  
+[Windows版本 s3_upload.zip](./windows/s3_upload.zip)  
+[OS_X版本 s3_upload.zip](./os_x/s3_upload.zip)  
+[Linux版本 s3_upload.zip](./linux/s3_upload.zip)  
+Download and unzip the s3_upload.zip file into a folder  
+  
+### Install Python3 and SDK 
 1. Install [Python](https://www.python.org/downloads/) 3.6 or above  
   
 
@@ -72,7 +81,9 @@ Install aws python sdk boto3. If you need to copy from AliCloud OSS, you need to
     pip install -r requirements.txt --user
 ```
 
-3. AWS Credential  
+### Setup Credential  
+
+1. AWS Credential  
 You need to make sure the credentials you're using have the correct permissions to access the Amazon S3
 service. If you run into 'Access Denied' errors while running this sample, please follow the steps below.  
 确认你的 IAM user 有权限访问对应的S3.  
@@ -105,7 +116,7 @@ aws_secret_access_key=XXXXXXXXXXXXXXXXXXXXXX
 ```
 See the [Security Credentials](http://aws.amazon.com/security-credentials) page for more detail
 
-4. If you need to copy from AliCloud OSS, you need AliCloud credentials to setup in s3_upload_config.py  
+2. If you need to copy from AliCloud OSS, you need AliCloud credentials to setup in s3_upload_config.py  
 ```
 ali_SrcBucket = "your bucket name"  # 阿里云OSS 源Bucket，对于 LOCAL_TO_S3/S3_TO_S3 则本字段无效
 ali_access_key_id = "xxxxxxxxxxx"  # 阿里云 RAM 用户访问密钥
@@ -115,24 +126,38 @@ ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS 区域 endpoint，在OSS控�
 
 ## Application Configure - 应用配置
 
-Config `s3_upload_config.py`
+Config `s3_upload_config.ini`
 * 上面配置的 profile name 填入对应源和目的 profile name 项，例如：  
-```python
-SrcProfileName = 'beijing'
-DesProfileName = 'oregon'
+```
+SrcProfileName = beijing
+DesProfileName = oregon
 ```
 * Setup source type  
 'LOCAL_TO_S3' or 'S3_TO_S3' or 'ALIOSS_TO_S3'   
-```python
-JobType = 'LOCAL_TO_S3'
+```
+JobType = LOCAL_TO_S3
 ```
 * Setup address  
 设置源文件路径和上传的目的地址，以及其他可选配置
 
 ## Run the app - 运行应用
+* Python3 环境：
 ```bash
 python3 s3_upload.py
 ```
+* Window 非 Python 环境运行打包版本：
+命令行界面 **CD 到解压的目录下**，并执行：  
+```bash
+s3_upload.exe  
+```
+
+* Linux/OSX 非 Python 环境运行打包版本：
+命令行界面 **CD 到解压的目录下**，并执行：
+```bash
+./s3_upload   
+```
+
+  
 ## TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
 如果是跨 AWS Global 和中国区，推荐启用 TCP BBR: Congestion-Based Congestion Control，可以提高传输效率  

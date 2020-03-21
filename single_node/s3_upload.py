@@ -23,6 +23,7 @@ from pathlib import PurePosixPath, Path
 cfg = ConfigParser()
 try:
     file_path = os.path.split(os.path.abspath(__file__))[0]
+    print(f'Reading config file: {file_path}/s3_upload_config.ini')
     cfg.read(f'{file_path}/s3_upload_config.ini', encoding='utf-8-sig')
 
     JobType = cfg.get('Basic', 'JobType')
