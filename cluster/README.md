@@ -152,8 +152,8 @@ CloudWatch Alarm on Sqs queue empty 发SNS通知邮件
 * 不建议修改：ifVerifyMD5Twice, ChunkSize, CleanUnfinishedUpload, LocalProfileMode
 * 隐藏参数 max_pool_connections=50 在 s3_migration_lib.py
 ```
-* Jobsender 启动之后会按照 Parameter Store 上所配置的 s3_migrate_bucket_para 来获取桶信息
-* 默认配置 Worker 的 Autoscaling Group 的期望 EC2 数量为 0。你可以自行调整启动的服务器数量。
+* Jobsender 启动之后会检查 SQS 是否空，空则按照 Parameter Store 上所配置的 s3_migrate_bucket_para 来获取桶信息，然后进行比对。如果非空，则说明前面还有任务没完成，将不派送新任务。
+* 默认配置 Worker 的 Autoscaling Group 的期望 EC2 数量为 1。你可以自行调整启动的服务器数量。
 * Lambda 可单独设置和部署，也可以与EC2一起消费同一个SQS Queue，也可以分别独立的Queue  
 * 手工配置时，注意三个超时时间的配合： SQS, EC2 JobTimeout, Lambda(CDK 默认部署是SQS/EC2 JobTimeout为1小时)  
 * 注意：CDK 删除资源的时候是不会删除 DynamoDB 表的，你需要手工删除  
