@@ -103,6 +103,24 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
     return sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm
 
 
+def check_sqs_empty(sqs, sqs_queue):
+    try:
+        sqs_in_flight = sqs.get_queue_attributes(
+            QueueUrl=sqs_queue,
+            AttributeNames=['ApproximateNumberOfMessagesNotVisible', 'ApproximateNumberOfMessages']
+        )
+    except Exception as e:
+        logger.error(f'Fail to get_queue_attributes: {str(e)}')
+        return False  # Can't get sqs status, then consider it is not empty
+    NotVisible = sqs_in_flight['Attributes']['ApproximateNumberOfMessagesNotVisible']
+    Visible = sqs_in_flight['Attributes']['ApproximateNumberOfMessages']
+    if NotVisible == '0' and Visible == '0':
+        logger.info('No message in queue available and inFlight')
+        return True  # sqs is empty
+    logging.info(f'ApproximateNumberOfMessagesNotVisible: {NotVisible}, ApproximateNumberOfMessages: {Visible}')
+    return False  # sqs is not empty
+
+
 def get_s3_file_list(s3_client, bucket, S3Prefix):
     logger.info(f'Get s3 file list from bucket: {bucket}')
 
@@ -603,7 +621,6 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
     while True:
         # Get Job from sqs
         try:
-            # TODO: 一次拿一批，如果是大量小文件就比较快
             logger.info('Get Job from sqs queue...')
             sqs_job_get = sqs.receive_message(QueueUrl=sqs_queue)
 
@@ -611,15 +628,6 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
             if 'Messages' not in sqs_job_get:  # No message on sqs queue
                 logger.info('No message in queue available, wait...')
                 time.sleep(60)
-                # 检查是否还有其他在in-flight中的，sleep, 循环等待
-                # sqs_in_flight = sqs.get_queue_attributes(
-                #     QueueUrl=sqs_queue,
-                #     AttributeNames=['ApproximateNumberOfMessagesNotVisible']
-                # )
-                # if sqs_in_flight['Attributes']['ApproximateNumberOfMessagesNotVisible'] == '0':
-                #     logger.warning('No message in queue available and inFlight. Wait 1 min...')
-                #     # TODO: Empty queue, send sns notification, or use CloudWatch Alarm
-                #     pass
 
             # 拿到 Job message
             else:
@@ -893,20 +901,5 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                 logger.error(f'Fail MaxRetry to put log to DDB at end of job. {str(e)}')
             else:
                 time.sleep(5 * retry)
-
-    # Delete this file's related unfinished multipart upload, 可能有多个残留
-    # 不在这里清了，让S3的生命周期策略去清3天过期的 unfinished multipart upload
-    # for clean_i in multipart_uploaded_list:
-    #     # 其实list只查了当前Key的，不过为了安全确保其他code没被改，所以判断一下Key一致性
-    #     if clean_i["Key"] == Des_key:
-    #         try:
-    #             s3_des_client.abort_multipart_upload(
-    #                 Bucket=Des_bucket,
-    #                 Key=Des_key,
-    #                 UploadId=clean_i["UploadId"]
-    #             )
-    #         except Exception as e:
-    #             logger.error(f'Fail to clean old unfinished multipart upload {str(e)}'
-    #                          f'{Des_bucket}/{Des_key} - UploadID: {clean_i["UploadId"]}')
-
+    # complete one job
     return upload_etag_full

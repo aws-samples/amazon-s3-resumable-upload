@@ -4,13 +4,13 @@ import sys
 from configparser import ConfigParser
 
 from s3_migration_lib import get_s3_file_list, job_upload_sqs_ddb, set_env, \
-    delta_job_list, set_log
+    delta_job_list, set_log, check_sqs_empty
 
 # Read config.ini
 cfg = ConfigParser()
 try:
     file_path = os.path.split(os.path.abspath(__file__))[0]
-    cfg.read(f'{file_path}/s3_migration_cluster_config.ini')
+    cfg.read(f'{file_path}/s3_migration_cluster_config.ini', encoding='utf-8-sig')
     table_queue_name = cfg.get('Basic', 'table_queue_name')
     ssm_parameter_bucket = cfg.get('Basic', 'ssm_parameter_bucket')
     ssm_parameter_credentials = cfg.get('Basic', 'ssm_parameter_credentials')
@@ -35,34 +35,38 @@ if __name__ == '__main__':
     #######
     # Program start processing here
     #######
+    # Check SQS is empty or not
+    if check_sqs_empty(sqs, sqs_queue):
+        logger.info('Job sqs queue is empty, now process comparing s3 bucket...')
 
-    # Load Bucket para from ssm parameter store
-    logger.info(f'Get ssm_parameter_bucket: {ssm_parameter_bucket}')
-    load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Parameter']['Value'])
-    logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
-    for bucket_para in load_bucket_para:
-        src_bucket = bucket_para['src_bucket']
-        src_prefix = bucket_para['src_prefix']
-        des_bucket = bucket_para['des_bucket']
-        des_prefix = bucket_para['des_prefix']
+        # Load Bucket para from ssm parameter store
+        logger.info(f'Get ssm_parameter_bucket: {ssm_parameter_bucket}')
+        load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Parameter']['Value'])
+        logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
+        for bucket_para in load_bucket_para:
+            src_bucket = bucket_para['src_bucket']
+            src_prefix = bucket_para['src_prefix']
+            des_bucket = bucket_para['des_bucket']
+            des_prefix = bucket_para['des_prefix']
 
-        # Get List on S3
-        src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
-        des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix)
-        # Generate job list
-        job_list = delta_job_list(src_file_list, des_file_list, bucket_para)
+            # Get List on S3
+            src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
+            des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix)
+            # Generate job list
+            job_list = delta_job_list(src_file_list, des_file_list, bucket_para)
 
-        logger.info('Writing job list to local file backup...')
-        log_path = os.path.split(os.path.abspath(__file__))[0] + '/s3_migration_log'
-        local_backup_list = f'{log_path}/job-list-{src_bucket}.json'
-        with open(local_backup_list, 'w') as f:
-            json.dump(job_list, f)  # 仅做备份检查用
-        logger.info(f'Finish writing: {os.path.abspath(local_backup_list)}')
+            logger.info('Writing job list to local file backup...')
+            log_path = os.path.split(os.path.abspath(__file__))[0] + '/s3_migration_log'
+            local_backup_list = f'{log_path}/job-list-{src_bucket}.json'
+            with open(local_backup_list, 'w') as f:
+                json.dump(job_list, f)  # 仅做备份检查用
+            logger.info(f'Finish writing: {os.path.abspath(local_backup_list)}')
 
-        # Upload jobs to sqs
-        if len(job_list) != 0:
-            job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
-        else:
-            logger.info('Source and Destination are the same, no job to send.')
-
-    print('Logged to file:', os.path.abspath(log_file_name))
+            # Upload jobs to sqs
+            if len(job_list) != 0:
+                job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
+            else:
+                logger.info('Source and Destination are the same, no job to send.')
+    else:
+        logger.error('Job sqs queue is not empty or fail to get_queue_attributes. Stop process.')
+    print('Completed and logged to file:', os.path.abspath(log_file_name))
