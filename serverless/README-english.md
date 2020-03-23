@@ -1,5 +1,7 @@
 # Amazon S3 MultiThread Resume Migration Serverless Solution  
-
+  
+Cluster & Serverless Version 0.94  
+  
 ## Serverless Version  
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
 * Transmission between AWS Global and AWS China: Serverless version is suitable for unschedule burst migration.  

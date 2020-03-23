@@ -1,5 +1,8 @@
 # Amazon S3 MultiThread Resume Migration Serverless Solution  (Amazon S3 多线程断点续传迁移无服务器方案)   
 [Serverless Version ENGLISH README](./README-english.md)
+  
+Cluster & Serverless Version 0.94  
+  
 ### 无服务器版本  
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
 EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部署和运行在不同场景，也可以一起运行。  

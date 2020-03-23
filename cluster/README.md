@@ -1,7 +1,8 @@
 # Amazon S3 MultiThread Resume Migration Cluster Solution  (Amazon S3多线程断点续传迁移集群方案)   
 
 Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国S3之间传输   
-  
+Cluster & Serverless Version 0.94  
+
   集群和无服务器版架构图如下：  
   
 ![Cluster Diagram](./img/02.png)  
