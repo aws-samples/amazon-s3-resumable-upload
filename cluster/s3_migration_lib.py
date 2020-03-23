@@ -141,13 +141,13 @@ def get_s3_file_list(s3_client, bucket, S3Prefix):
 
     if response_fileList["KeyCount"] != 0:
         for n in response_fileList["Contents"]:
-            if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
-                des_file_list.append({
-                    "Key": n["Key"],
-                    "Size": n["Size"]
-                })
-            else:
-                logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
+            # if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
+            des_file_list.append({
+                "Key": n["Key"],
+                "Size": n["Size"]
+            })
+            # else:
+            #     logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
 
         # IsTruncated, keep getting next lists
         while response_fileList["IsTruncated"]:
@@ -167,13 +167,13 @@ def get_s3_file_list(s3_client, bucket, S3Prefix):
                     logger.warning(f'Retry get S3 list bucket: {bucket}')
 
             for n in response_fileList["Contents"]:
-                if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
-                    des_file_list.append({
-                        "Key": n["Key"],
-                        "Size": n["Size"]
-                    })
-                else:
-                    logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
+                # if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
+                des_file_list.append({
+                    "Key": n["Key"],
+                    "Size": n["Size"]
+                })
+                # else:
+                #     logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
         logger.info(f'Bucket list length：{str(len(des_file_list))}')
     else:
         logger.info(f'File list is empty in: {bucket}')
@@ -210,12 +210,15 @@ def delta_job_list(src_file_list, des_file_list, bucket_para):
             continue
         # 把源文件加入job list
         else:
+            Des_key = str(PurePosixPath(des_prefix) / src["Key"])
+            if src["Key"][-1] == '/':  # 源Key是个目录的情况，需要额外加 /
+                Des_key += '/'
             job_list.append(
                 {
                     "Src_bucket": src_bucket,
                     "Src_key": src["Key"],  # Src_key已经包含了Prefix
                     "Des_bucket": des_bucket,
-                    "Des_key": str(PurePosixPath(des_prefix) / src["Key"]),
+                    "Des_key": Des_key,
                     "Size": src["Size"],
                 }
             )
@@ -244,6 +247,8 @@ def job_upload_sqs_ddb(sqs, sqs_queue, table, job_list, MaxRetry=30):
             for retry in range(MaxRetry + 1):
                 try:
                     ddb_key = str(PurePosixPath(job["Src_bucket"]) / job["Src_key"])
+                    if job["Src_key"][-1] == '/':
+                        ddb_key += '/'
                     ddb_batch.put_item(Item={
                         "Key": ddb_key,
                         # "Src_bucket": job["Src_bucket"],
@@ -447,10 +452,10 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                     md5list[partnumber - 1] = chunkdata_md5
                     break  # 完成下载，不用重试
                 except Exception as err:
-                    logger.warning(f"DownloadThreadFunc - {Src_bucket}/{Src_key} - Exception log: {str(err)}")
-                    logger.warning(f"Download part fail, retry part: {partnumber} Attempts: {retryTime}")
+                    logger.warning(f"DownloadThreadFunc - {Src_bucket}/{Src_key} - Exception log: {str(err)}. "
+                                   f"Download part fail, retry part: {partnumber} Attempts: {retryTime}")
                     if retryTime > MaxRetry:
-                        logger.error(f"Quit for Max Download retries: {retryTime}")
+                        logger.error(f"Quit for Max Download retries: {retryTime} - {Src_bucket}/{Src_key}")
                         # 超过次数退出，改为跳下一个文件
                         stop_signal.set()
                         return "MaxRetry"  # 退出Thread
@@ -473,13 +478,30 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                         UploadId=uploadId,
                         ContentMD5=base64.b64encode(chunkdata_md5.digest()).decode('utf-8')
                     )
+                    # 请求已经带上md5，如果s3校验是错的就Exception
                     break
-                except Exception as err:
-                    logger.warning(f"UploadThreadFunc - {Des_bucket}/{Des_key} - Exception log: {str(err)}")
-                    logger.warning(f"Upload part fail, retry part: {partnumber} Attempts: {retryTime}")
+                except ClientError as err:
+                    if err.response['Error']['Code'] == 'NoSuchUpload':
+                        # 没这个ID，则是别人已经完成这个Job了。
+                        logger.warning(f'ClientError: Fail to upload part - might be duplicated job:'
+                                       f' {Des_bucket}/{Des_key}, {str(err)}')
+                        stop_signal.set()
+                        return "ERR"
+                    logger.warning(f"ClientError: Fail to upload part - {Des_bucket}/{Des_key} -  {str(err)}, "
+                                   f"retry part: {partnumber} Attempts: {retryTime}")
                     if retryTime > MaxRetry:
-                        logger.error(f"Quit for Max Download retries: {retryTime}")
-                        # 原来这里是超过次数退出，改为跳下一个文件
+                        logger.error(f"ClientError: Quit for Max Upload retries: {retryTime} - {Des_bucket}/{Des_key}")
+                        # 改为跳下一个文件
+                        stop_signal.set()
+                        return "MaxRetry"
+                    else:
+                        time.sleep(5 * retryTime)  # 递增延迟重试
+                except Exception as err:
+                    logger.warning(f"Exception: Fail to upload part - {Des_bucket}/{Des_key} -  {str(err)}, "
+                                   f"retry part: {partnumber} Attempts: {retryTime}")
+                    if retryTime > MaxRetry:
+                        logger.error(f"Exception: Quit for Max Upload retries: {retryTime} - {Des_bucket}/{Des_key}")
+                        # 改为跳下一个文件
                         stop_signal.set()
                         return "MaxRetry"
                     else:
@@ -516,7 +538,7 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                     t.cancel()
 
         if stop_signal.is_set():
-            logger.warning(f'TIMEOUT: {JobTimeout}S, Job: {job["Src_bucket"]}/{job["Src_key"]} - Size:{job["Size"]}')
+            logger.warning(f'TIMEOUT {JobTimeout}S or MaxRetry, Job: {job["Src_bucket"]}/{job["Src_key"]}')
             return "TIMEOUT"
         # 线程池End
         logger.info(f'All parts uploaded: {job["Src_bucket"]}/{job["Src_key"]} - Size:{job["Size"]}')
@@ -644,18 +666,16 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                                 Src_key = One_record['s3']['object']['key']
                                 Src_key = urllib.parse.unquote_plus(Src_key)
                                 Size = One_record['s3']['object']['size']
-                                if Size == 0:
-                                    return {
-                                        'statusCode': 200,
-                                        'body': "Zero size file"
-                                    }
                                 Des_bucket, Des_prefix = Des_bucket_default, Des_prefix_default
+                                Des_key = str(PurePosixPath(Des_prefix) / Src_key)
+                                if Src_key[-1] == '/':  # 针对空目录对象
+                                    table_key += '/'
                                 job = {
                                     'Src_bucket': Src_bucket,
                                     'Src_key': Src_key,
                                     'Size': Size,
                                     'Des_bucket': Des_bucket,
-                                    'Des_key': str(PurePosixPath(Des_prefix) / Src_key)
+                                    'Des_key': Des_key
                                 }
                     if 'Des_bucket' not in job and 'Event' not in job:
                         logger.warning(f'Wrong sqs job: {json.dumps(job, default=str)}')
@@ -664,14 +684,19 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                         continue
                     ######## 主流程
                     if 'Event' not in job:
-                        upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
-                                                         StorageClass, ChunkSize, MaxRetry, MaxThread,
-                                                         ResumableThreshold, JobTimeout, ifVerifyMD5Twice,
-                                                         CleanUnfinishedUpload)
+                        if job['Size'] > ResumableThreshold:
+                            upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
+                                                             StorageClass, ChunkSize, MaxRetry, MaxThread,
+                                                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
+                        else:
+                            upload_etag_full = step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
+                                                                  StorageClass, MaxRetry)
                     else:
                         if job['Event'] == 's3:TestEvent':
                             logger.info('Skip s3:TestEvent')
                             upload_etag_full = "s3:TestEvent"
+                        else:
+                            upload_etag_full = "OtherEvent"
                     ########
                     # Del Job on sqs
                     if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
@@ -685,9 +710,9 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                                 )
                                 break
                             except Exception as e:
-                                logger.warning(f'Fail to delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
+                                logger.warning(f'Fail to delete sqs message: {str(sqs_job)}, {str(e)}')
                                 if retry >= MaxRetry:
-                                    logger.error(f'Fail MaxRetry delete sqs message: {Src_bucket}/{Src_key}, {str(e)}')
+                                    logger.error(f'Fail MaxRetry delete sqs message: {str(sqs_job)}, {str(e)}')
                                 else:
                                     time.sleep(5 * retry)
 
@@ -698,7 +723,7 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
 
 
 def step_function(job, table, s3_src_client, s3_des_client, instance_id,
-                  StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
+                  StorageClass, ChunkSize, MaxRetry, MaxThread,
                   JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload):
     # 正常开始处理
     Src_bucket = job['Src_bucket']
@@ -708,11 +733,8 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
     Des_key = job['Des_key']
     logger.info(f'Start: {Src_bucket}/{Src_key}, Size: {Size}')
 
-    # Size lower than limit, not to check s3 exist parts, to save time
-    multipart_uploaded_list = []
-    if Size > ResumableThreshold:
-        # Get dest s3 unfinish multipart upload of this file
-        multipart_uploaded_list = get_uploaded_list(s3_des_client, Des_bucket, Des_key, MaxRetry)
+    # Get dest s3 unfinish multipart upload of this file
+    multipart_uploaded_list = get_uploaded_list(s3_des_client, Des_bucket, Des_key, MaxRetry)
 
     # Debug用，清理S3上现有未完成的Multipart Upload ID（不只是当前Job，而对应目标Bucket上所有的）
     if multipart_uploaded_list and CleanUnfinishedUpload:
@@ -748,19 +770,8 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                     Key=Des_key,
                     StorageClass=StorageClass
                 )
-                logger.info(f'Write log to DDB in first round of job: {Src_bucket}/{Src_key}')
-                cur_time = time.time()
-                table.update_item(
-                    Key={
-                        "Key": str(PurePosixPath(Src_bucket) / Src_key)
-                    },
-                    UpdateExpression="SET firstTime=:s, firstTime_f=:s_format, Size=:size",
-                    ExpressionAttributeValues={
-                        ":s": int(cur_time),
-                        ":s_format": time.asctime(time.localtime(cur_time)),
-                        ":size": Size
-                    }
-                )
+                # Write log to DDB in first round of job
+                ddb_first_round(table, Src_bucket, Src_key, Size, MaxRetry)
             except Exception as e:
                 logger.warning(f'Fail to create new multipart upload. {str(e)}')
                 if md5_retry >= 2:
@@ -790,34 +801,9 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
             ChunkSize
         )  # 对于大于10000分片的大文件，自动调整为Chunksize_auto
 
-        # DynamoDB log: ADD retry time, instance-id list, SET startTime of this round
-        for retry in range(MaxRetry + 1):
-            try:
-                logger.info(f'Write log to DDB via start this round of job: {Src_bucket}/{Src_key}')
-                percent = int(len(partnumberList) / len(indexList) * 100)
-                cur_time = time.time()
-                table.update_item(
-                    Key={
-                        "Key": str(PurePosixPath(Src_bucket) / Src_key)
-                    },
-                    UpdateExpression="ADD instanceID :id, tryTimes :t "
-                                     "SET thisRoundStart=:s, thisRoundStart_f=:s_format, lastTimeProgress=:p",
-                    ExpressionAttributeValues={
-                        ":t": 1,
-                        ":id": {instance_id},
-                        ":s": int(cur_time),
-                        ":s_format": time.asctime(time.localtime(cur_time)),
-                        ":p": percent
-                    }
-                )
-                break
-            except Exception as e:
-                # 日志写不了
-                logger.warning(f'Fail to put log to DDB at starting this round: {Src_bucket}/{Src_key}, {str(e)}')
-                if retry >= MaxRetry:
-                    logger.error(f'Fail MaxRetry put log to DDB at start {Src_bucket}/{Src_key}')
-                else:
-                    time.sleep(5 * retry)
+        # Write log to DDB in first round of job
+        percent = int(len(partnumberList) / len(indexList) * 100)
+        ddb_this_round(table, percent, Src_bucket, Src_key, instance_id, MaxRetry)
 
         # Job Thread: uploadPart, 加入超时机制之后返回 "TIMEOUT"
         upload_etag_full = job_processor(
@@ -871,35 +857,202 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                     continue
         # 结束 Job
         break
-
     # DynamoDB log: ADD status: DONE/ERR(upload_etag_full)
-    status = "DONE"
-    if upload_etag_full == "TIMEOUT":
-        status = "TIMEOUT"
-    elif upload_etag_full == "ERR":
-        status = "ERR"
+    ddb_complete(upload_etag_full, table, Src_bucket, Src_key, MaxRetry)
+    # complete one job
+    return upload_etag_full
+
+
+# Write log to DDB in first round of job
+def ddb_first_round(table, Src_bucket, Src_key, Size, MaxRetry):
     for retry in range(MaxRetry + 1):
         try:
+            logger.info(f'Write log to DDB in first round of job: {Src_bucket}/{Src_key}')
             cur_time = time.time()
+            table_key = str(PurePosixPath(Src_bucket) / Src_key)
+            if Src_key[-1] == '/':  # 针对空目录对象
+                table_key += '/'
             table.update_item(
                 Key={
-                    "Key": str(PurePosixPath(Src_bucket) / Src_key)
+                    "Key": table_key
                 },
-                UpdateExpression="SET totalSpentTime=:s-firstTime, lastTimeProgress=:p, endTime=:s, endTime_f=:e"
-                                 " ADD jobStatus :done",
+                UpdateExpression="SET firstTime=:s, firstTime_f=:s_format, Size=:size",
                 ExpressionAttributeValues={
-                    ":done": {status},
                     ":s": int(cur_time),
-                    ":p": 100,
-                    ":e": time.asctime(time.localtime(cur_time))
+                    ":s_format": time.asctime(time.localtime(cur_time)),
+                    ":size": Size
                 }
             )
             break
         except Exception as e:
-            logger.warning(f'Fail to put log to DDB at end. {str(e)}')
+            # 日志写不了
+            logger.warning(f'Fail to put log to DDB at starting this round: {Src_bucket}/{Src_key}, {str(e)}')
             if retry >= MaxRetry:
-                logger.error(f'Fail MaxRetry to put log to DDB at end of job. {str(e)}')
+                logger.error(f'Fail MaxRetry put log to DDB at start {Src_bucket}/{Src_key}')
             else:
                 time.sleep(5 * retry)
+
+
+# Write log to DDB in first round of job
+def ddb_start_small(table, Src_bucket, Src_key, Size, MaxRetry, instance_id):
+    for retry in range(MaxRetry + 1):
+        try:
+            logger.info(f'Write log to DDB start small file job: {Src_bucket}/{Src_key}')
+            cur_time = time.time()
+            table_key = str(PurePosixPath(Src_bucket) / Src_key)
+            if Src_key[-1] == '/':  # 针对空目录对象
+                table_key += '/'
+            table.update_item(
+                Key={
+                    "Key": table_key
+                },
+                UpdateExpression="ADD instanceID :id, tryTimes :t "
+                                 "SET firstTime=:s, firstTime_f=:s_format, Size=:size",
+                ExpressionAttributeValues={
+                    ":t": 1,
+                    ":id": {instance_id},
+                    ":s": int(cur_time),
+                    ":s_format": time.asctime(time.localtime(cur_time)),
+                    ":size": Size
+                }
+            )
+            break
+        except Exception as e:
+            # 日志写不了
+            logger.warning(f'Fail to put log to DDB at starting small file job: {Src_bucket}/{Src_key}, {str(e)}')
+            if retry >= MaxRetry:
+                logger.error(f'Fail MaxRetry put log to DDB at start small file: {Src_bucket}/{Src_key}')
+            else:
+                time.sleep(5 * retry)
+
+
+# DynamoDB log: ADD retry time, instance-id list, SET startTime of this round
+def ddb_this_round(table, percent, Src_bucket, Src_key, instance_id, MaxRetry):
+    for retry in range(MaxRetry + 1):
+        try:
+            logger.info(f'Write log to DDB via start this round of job: {Src_bucket}/{Src_key}')
+            cur_time = time.time()
+            table_key = str(PurePosixPath(Src_bucket) / Src_key)
+            if Src_key[-1] == '/':  # 针对空目录对象
+                table_key += '/'
+            table.update_item(
+                Key={
+                    "Key": table_key
+                },
+                UpdateExpression="ADD instanceID :id, tryTimes :t "
+                                 "SET thisRoundStart=:s, thisRoundStart_f=:s_format, lastTimeProgress=:p",
+                ExpressionAttributeValues={
+                    ":t": 1,
+                    ":id": {instance_id},
+                    ":s": int(cur_time),
+                    ":s_format": time.asctime(time.localtime(cur_time)),
+                    ":p": percent
+                }
+            )
+            break
+        except Exception as e:
+            # 日志写不了
+            logger.warning(f'Fail to put log to DDB at starting this round: {Src_bucket}/{Src_key}, {str(e)}')
+            if retry >= MaxRetry:
+                logger.error(f'Fail MaxRetry put log to DDB at start {Src_bucket}/{Src_key}')
+            else:
+                time.sleep(5 * retry)
+
+
+# DynamoDB log: ADD status: DONE/ERR(upload_etag_full)
+def ddb_complete(upload_etag_full, table, Src_bucket, Src_key, MaxRetry):
+    status = "DONE"
+    if upload_etag_full == "TIMEOUT":
+        status = "TIMEOUT_or_MaxRetry"
+    elif upload_etag_full == "ERR":
+        status = "ERR"
+    logger.info(f'Write job complete status to DDB: {status}')
+    cur_time = time.time()
+    table_key = str(PurePosixPath(Src_bucket) / Src_key)
+    if Src_key[-1] == '/':  # 针对空目录对象
+        table_key += '/'
+    if status == "DONE":  # 正常写DDB
+        UpdateExpression = "SET totalSpentTime=:s-firstTime, lastTimeProgress=:p, endTime=:s, endTime_f=:e" \
+                           " ADD jobStatus :done"
+        ExpressionAttributeValues = {
+            ":done": {status},
+            ":s": int(cur_time),
+            ":p": 100,
+            ":e": time.asctime(time.localtime(cur_time))
+        }
+    else:  # 状态异常，写DDB不能覆盖 lastTimeProgress
+        UpdateExpression = "SET totalSpentTime=:s-firstTime, endTime=:s, endTime_f=:e" \
+                           " ADD jobStatus :done"
+        ExpressionAttributeValues = {
+            ":done": {status},
+            ":s": int(cur_time),
+            ":e": time.asctime(time.localtime(cur_time))
+        }
+    for retry in range(MaxRetry + 1):
+        try:
+
+            table.update_item(
+                Key={"Key": table_key},
+                UpdateExpression=UpdateExpression,
+                ExpressionAttributeValues=ExpressionAttributeValues
+            )
+            break
+        except Exception as e:
+            logger.warning(f'Fail to put log to DDB at end:{Src_bucket}/{Src_key} {str(e)}')
+            if retry >= MaxRetry:
+                logger.error(f'Fail MaxRetry to put log to DDB at end of job:{Src_bucket}/{Src_key} {str(e)}')
+            else:
+                time.sleep(5 * retry)
+
+
+def step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
+                       StorageClass, MaxRetry):
+    # 开始处理小文件
+    Src_bucket = job['Src_bucket']
+    Src_key = job['Src_key']
+    Size = job['Size']
+    Des_bucket = job['Des_bucket']
+    Des_key = job['Des_key']
+    logger.info(f'Start small file procedure: {Src_bucket}/{Src_key}, Size: {Size}')
+
+    # Write DDB log for first round
+    ddb_start_small(table, Src_bucket, Src_key, Size, MaxRetry, instance_id)
+
+    for retryTime in range(MaxRetry + 1):
+        try:
+            # Get object
+            logger.info(f'--->Downloading {Size} Bytes {Src_bucket}/{Src_key} - Small file 1/1')
+            response_get_object = s3_src_client.get_object(
+                Bucket=Src_bucket,
+                Key=Src_key
+            )
+            getBody = response_get_object["Body"].read()
+            chunkdata_md5 = hashlib.md5(getBody)
+            ContentMD5 = base64.b64encode(chunkdata_md5.digest()).decode('utf-8')
+
+            # Put object
+            logger.info(f'--->Uploading {Size} Bytes {Des_bucket}/{Des_key} - Small file 1/1')
+            response_put_object = s3_des_client.put_object(
+                Body=getBody,
+                Bucket=Des_bucket,
+                Key=Des_key,
+                ContentMD5=ContentMD5,
+                StorageClass=StorageClass
+            )
+            # 请求已经带上md5，如果s3校验是错的就Exception
+            upload_etag_full = response_put_object['ETag']
+            # 结束 Upload/download
+            break
+        except Exception as e:
+            logger.warning(f'Download/Upload small file Fail: {Src_bucket}/{Src_key}, '
+                           f'{str(e)}, Attempts: {retryTime}')
+            if retryTime >= MaxRetry:
+                logger.error(f'Fail MaxRetry Download/Upload small file: {Des_bucket}/{Des_key}')
+                return "MaxRetry"
+            else:
+                time.sleep(5 * retryTime)
+
+    # Write DDB log for complete
+    ddb_complete(upload_etag_full, table, Src_bucket, Src_key, MaxRetry)
     # complete one job
     return upload_etag_full

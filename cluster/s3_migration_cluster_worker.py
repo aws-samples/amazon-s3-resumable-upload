@@ -10,7 +10,7 @@ from s3_migration_lib import set_env, set_log, job_looper
 cfg = ConfigParser()
 try:
     file_path = os.path.split(os.path.abspath(__file__))[0]
-    cfg.read(f'{file_path}/s3_migration_cluster_config.ini')
+    cfg.read(f'{file_path}/s3_migration_cluster_config.ini', encoding='utf-8-sig')
     table_queue_name = cfg.get('Basic', 'table_queue_name')
     ssm_parameter_bucket = cfg.get('Basic', 'ssm_parameter_bucket')
     ssm_parameter_credentials = cfg.get('Basic', 'ssm_parameter_credentials')
@@ -64,7 +64,7 @@ if __name__ == '__main__':
                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
                             Des_bucket_default, Des_prefix_default
                             )
-
+    # 目前是 loop ，所以实际上不会走到这里
     spent_time = int(time.time() - start_time)
     time_m, time_s = divmod(spent_time, 60)
     time_h, time_m = divmod(time_m, 60)

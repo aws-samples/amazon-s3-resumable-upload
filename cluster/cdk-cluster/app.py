@@ -10,7 +10,7 @@ from cdk.cdk_resource_stack import CdkResourceStack
 # Define bucket before deploy CDK
 bucket_para = [{
     "src_bucket": "huangzb-s3-migration-test",
-    "src_prefix": "first-1",
+    "src_prefix": "",
     "des_bucket": "s3-migration-test-nx",
     "des_prefix": "s3-migration-cdk-from-us",
     }, {

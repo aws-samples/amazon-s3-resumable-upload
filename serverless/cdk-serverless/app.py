@@ -54,6 +54,7 @@ class CdkResourceStack(core.Stack):
                                runtime=lam.Runtime.PYTHON_3_8,
                                memory_size=1024,
                                timeout=core.Duration.minutes(15),
+                               tracing=lam.Tracing.ACTIVE,
                                environment={
                                    'table_queue_name': ddb_file_list.table_name,
                                    'Des_bucket_default': Des_bucket_default,
@@ -63,6 +64,7 @@ class CdkResourceStack(core.Stack):
                                    'aws_secret_access_key': aws_secret_access_key,
                                    'aws_access_key_region': aws_access_key_region
                                })
+
         ddb_file_list.grant_read_write_data(handler)
         handler.add_event_source(SqsEventSource(sqs_queue))
 
@@ -190,7 +192,7 @@ class CdkResourceStack(core.Stack):
                           )
         # Alarm for queue - DLQ
         alarm_DLQ = cw.Alarm(self, "SQS_DLQ",
-                             alarm_name="SQS Dead Letter Queue",
+                             alarm_name="s3-migration-serverless-SQS Dead Letter Queue",
                              metric=sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
                              threshold=0,
                              comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,

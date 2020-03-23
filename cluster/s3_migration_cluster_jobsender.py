@@ -66,7 +66,7 @@ if __name__ == '__main__':
             if len(job_list) != 0:
                 job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
             else:
-                logger.info('Source and Destination are the same, no job to send.')
+                logger.info('Source list are all in Destination, no job to send.')
     else:
         logger.error('Job sqs queue is not empty or fail to get_queue_attributes. Stop process.')
     print('Completed and logged to file:', os.path.abspath(log_file_name))

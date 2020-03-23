@@ -5,7 +5,7 @@ Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed t
 EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部署和运行在不同场景，也可以一起运行。  
 * 海外和国内S3互传：无服务器版适合不定期突发传输。  
 * 配合SQS超时时间，Lambda 同样可以支撑单文件几十GB级别的对象，不用担心15分钟超时。  
-* 快速且稳定：多Lambda并发 X 单个Lambda runtime并发多线程，支撑海量巨型文件并发传输。  
+* 快速且稳定：多Lambda并发 X 单个Lambda runtime并发多线程，支撑海量巨型文件并发传输。自动区分小文件(包括 0 Size 文件)和大文件，走不同流程。  
 * 对于特殊区域，需要指定IP或必须启用BBR的场景，可以配置Lambda VPC模式，经NAT Instance访问互联网  
 * 可靠：SQS消息队列管理文件级任务，断点续传，超时中断保护。每个分片MD5完整性校验。Single Point of True，最终文件合并以S3上的分片为准，确保分片一致。  
 * 安全：内存转发不写盘，传输SSL加密，开源代码可审计，采用IAM Role和Lambda环境变量加密存储AcceesKey。  
@@ -26,7 +26,7 @@ EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部�
 Lambda 15分钟运行超时后，SQS消息InvisibleTime超时，消息恢复，重新触发一个Lambda runtime，从S3获取已上传分片列表，并继续传后续的分片。以下是log日志截图：  
 
 ![大文件断点自动续传](./img/06.png)  
-1. Lambda获取目标S3的 upload id列表，获得最后一次上次记录
+1. Lambda获取目标S3的 upload id列表，获得最后一次上传记录
 2. 获取分片列表
 3. 如出现网络中断，自动延迟重试
 4. 获得目标S3上的已上传分片列表
@@ -158,9 +158,6 @@ default value: 0
 
 * It only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node uploader.  
 本项目只对比文件Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
-
-* It doesn't support Zero Size object.  
-本项目不支持传输文件大小为0的对象。  
 
 ## License
 

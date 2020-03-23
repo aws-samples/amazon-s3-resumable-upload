@@ -35,8 +35,6 @@ class CdkResourceStack(core.Stack):
                                        queue=self.sqs_queue_DLQ
                                    )
                                    )
-        self.sqs_queue.metric_approximate_number_of_messages_not_visible()
-        self.sqs_queue.metric_approximate_number_of_messages_visible()
         self.ssm_bucket_para = ssm.StringParameter(self, "para-bucket",
                                                    string_value=json.dumps(bucket_para),
                                                    parameter_name=ssm_parameter_bucket
