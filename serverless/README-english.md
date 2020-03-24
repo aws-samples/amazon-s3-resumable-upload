@@ -6,12 +6,12 @@ Cluster & Serverless Version 0.94
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
 * Transmission between AWS Global and AWS China: Serverless version is suitable for unschedule burst migration.  
 * Serverless solution with AWS Lambda and SQS can support large file of tens of GBytes size with unique resumable technique, no worry of 15 mins timeout of Lambda.  
-* Fast and stable: Multiple nodes X Multiple files/node X Multiple threads/file. Support mass of hugh file concurrently migration. Auto-seperate small file ( including 0 Size) and large file for different procedure.  
+* **Fast and stable**: Multiple nodes X Multiple files/node X Multiple threads/file. Support mass of hugh file concurrently migration. Auto-seperate small file ( including 0 Size) and large file for different procedure.  
 * Optional to setup VPC NAT with TCP BBR enable and control EIP to accelerating in some special case. In normal case, e.g. us-east-1, no need for NAT to accelerate.   
-* Reliability: SQS queue managed files level jobs, break-point resume trasmission, with timeout protection. Every part will be verified with MD5 after transmission. Single Point of True, final file merging takes the destination S3 as standard, to ensure integrity.  
-* Security: Transfer in memory, no writing to disk. SSL encryption on transmission. Open source for audit. Leverage IAM role and Lambda Environment Variable(KMS) to store credential Access Key.  
-* Controlable operation: Job dispatched match the speed of transmission. System capacity predictable. DynamoDB and SQS read/write frequency only related to file numbers, no related to file size. Auto-collect logs to CloudWatch log group. AWS CDK auto deploy.  
-* Elastic cost optimization: Serverless AWS Lambda only pay for invocation. Support all kind of S3 Storage Class, save long term storage cost.
+* **Reliability**: SQS queue managed files level jobs, break-point resume trasmission, with timeout protection. Every part will be verified with MD5 after transmission. Single Point of True, final file merging takes the destination S3 as standard, to ensure integrity.  
+* **Security**: Transfer in memory, no writing to disk. SSL encryption on transmission. Open source for audit. Leverage IAM role and Lambda Environment Variable(KMS) to store credential Access Key.  
+* **Controlable operation**: Job dispatched match the speed of transmission. System capacity predictable. DynamoDB and SQS read/write frequency only related to file numbers, no related to file size. Auto-collect logs to CloudWatch log group. AWS CDK auto deploy.  
+* **Elastic cost optimization**: Serverless AWS Lambda only pay for invocation. Support all kind of S3 Storage Class, save long term storage cost.
   
   Serverless Version Architecture  
   
@@ -33,6 +33,9 @@ After one Lambda runtime timeout of 15 minutes, SQS message InvisibleTime timeou
 4. Got the part number list from dest. S3
 5. Auto matching the rest part number 
 6. Download and upload the rest parts
+
+### Auto Deploy Dashboard  
+![dashboard](./img/09.png)
 
 ### CDK auto deploy
 Please follow instruction document to install CDK and deploy  
@@ -68,7 +71,7 @@ In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix 
 * Create an Alarm, while detect SQS queue is empty. I.e. no Visible and no InVisible message, then send SNS to subcription email to inform all jobs are done. The email address is defined in CDK app.py, please change it or change in SNS after CDK deploy.
 ![Dashboard](./img/08.png)
 
-### Manually Config the whole solution:  
+### If Manually Config the whole solution:  
 If you don't want to use CDK to auto deploy, you can follow above CDK deploy statment to create related resource, and remind:
 * SQS Access Policy to allow S3 bucket to send message as below, please change the account and bucket in this json:
 ```json

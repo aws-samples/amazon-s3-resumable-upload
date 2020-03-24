@@ -1,5 +1,7 @@
 # Amazon S3 MultiThread Resume Migration Cluster Solution  (Amazon S3多线程断点续传迁移集群方案)   
-
+  
+[English Readme](./README-English.md)
+  
 Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国S3之间传输   
 Cluster & Serverless Version 0.94  
 
@@ -8,12 +10,12 @@ Cluster & Serverless Version 0.94
 ![Cluster Diagram](./img/02.png)  
   
 ## 特点
-* 海外和国内S3互传：集群版适用于海量文件传输，无服务器版适合不定期突发传输。  
-* 快速且稳定：多节点 X 单节点多文件 X 单文件多线程，支撑海量巨型文件并发传输。启用BBR加速。自动区分大小文件和 0 Size 文件走不同流程。  
-* 可靠：SQS消息队列管理文件级任务，断点续传，超时中断保护。每个分片MD5完整性校验。Single Point of True，最终文件合并以S3上的分片为准，确保分片一致。  
-* 安全：内存转发不写盘，传输SSL加密，开源代码可审计，采用IAM Role和利用ParameterStore加密存储AcceesKey。  
-* 可控运营：任务派发与传输速度相匹配，系统容量可控可预期；DynamoDB和SQS读写次数只与文件数相关，而与文件大小基本无关；日志自动收集；AWS CDK自动部署；  
-* 弹性成本优化：集群自动扩展，结合EC2 Spot节省成本；无服务器Lambda只按调用次数计费；支持直接存入S3各种存储级别，节省长期存储成本。
+* **海外和国内S3互传**：集群版适用于海量文件传输，无服务器版适合不定期突发传输。  
+* **快速且稳定**：多节点 X 单节点多文件 X 单文件多线程，支撑海量巨型文件并发传输。启用BBR加速。自动区分大小文件和 0 Size 文件走不同流程。  
+* **可靠**：SQS消息队列管理文件级任务，断点续传，超时中断保护。每个分片MD5完整性校验。Single Point of True，最终文件合并以S3上的分片为准，确保分片一致。  
+* **安全**：内存转发不写盘，传输SSL加密，开源代码可审计，采用IAM Role和利用ParameterStore加密存储AcceesKey。  
+* **可控运营**：任务派发与传输速度相匹配，系统容量可控可预期；DynamoDB和SQS读写次数只与文件数相关，而与文件大小基本无关；日志自动收集；AWS CDK自动部署；  
+* **弹性成本优化**：集群自动扩展，结合EC2 Spot节省成本；无服务器Lambda只按调用次数计费；支持直接存入S3各种存储级别，节省长期存储成本。
 * 可以与无服务器 Lambda 版本一起运行，支持混合流量  
   
 ## 工作原理  
@@ -50,8 +52,15 @@ S3 新增也可以直接触发SQS
 * 在DynamoDB中记录工作节点和进度，清晰获知单个文件工作状态，传输一次文件Job只需要写3-4次DynamoDB。
 * 设置 SSM ParaStore/Lambda Env 即可调整要发送Job的Bucket/Prefix，无需登录服务器
 
+#### 性能测试
+![SingleNodePerformance](./img/07.png)  
+经测试，对于大量的GB级文件，单机 25 线程以上（5文件x5线程）可达到跨境1Gbps带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。
+
+#### CDK 自动部署的 Dashboard  
+![dashboard](./img/06.png)
+
 ### 可靠与安全性  
-* 每个分片传输完成都会对收到的S3返回Etag信息，做MD5完整性校验。  
+* 每个分片传输完成都会在S3上做MD5完整性校验。  
 * 多个超时中断与重试保护，保证单个文件的送达及时性：  
 EC2 worker上有任务超时机制，config.ini中默认配置1小时  
 SQS 消息设置 Message InvisibleTime 对超时消息进行恢复，驱动节点做断点重传，建议与Worker超时时间一致。如果混合集群和Serverless架构，则以时间长的那方来设置InvisibleTime  
@@ -105,6 +114,9 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
     }]
 ```
 这些会被CDK自动部署到 Parameter Store 的 s3_migrate_bucket_para  
+
+* 配置告警通知邮件地址在 cdk_resource_stack.py
+
 ### 2. CDK自动部署
 * CDK 会自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
 VPC（含2AZ，2个公有子网） 和 S3 Endpoint,  
@@ -121,55 +133,62 @@ CloudWatch Alarm on Sqs queue empty 发SNS通知邮件
   
 * EC2 User Data 自动安装 CloudWatch Logs Agent 收集 EC2 初始化运行 User Data 时候的 Logs，以及收集 s3_migrate 程序运行产生的 Logs 
 * EC2 User Data 自动启用 TCP BBR，并自动启动 s3_migration_cluster_jobsender.py 或 s3_migration_cluster_worker.py  
-* EC2 启动 User data 自动拉 github 上的程序和默认配置。建议把程序和配置放你自己的S3上面，让user data启动时拉取你修改后的配置，并使用通用 Amazon Linux 2 AMI。  
+* EC2 User data 自动拉 github 上的程序和默认配置。建议把程序和配置放你自己的S3上面，让user data启动时拉取你修改后的配置，或者使用你自己打包的AMI启动EC2。  
 * 如果有需要可以修改 EC2 上的配置文件 s3_migration_config.ini 说明如下：
 ```
-* JobType = PUT 或 GET 决定了Worker把自己的IAM Role用来访问源还是访问目的S3，, PUT表示EC2跟目标S3不在一个Account，GET表示EC2跟源S3不在一个Account
+* JobType = PUT 或 GET 
+决定了Worker把自己的IAM Role用来访问源还是访问目的S3，, PUT表示EC2跟目标S3不在一个Account，GET表示EC2跟源S3不在一个Account
 
 * Des_bucket_default/Des_prefix_default
 是给S3新增文件触发SQS的场景，用来配置目标桶/前缀的。
 对于Jobsender扫描S3并派发Job的场景，不需要配置这两项。即使配置了，程序看到SQS消息里面有就会使用消息里面的目标桶/前缀
 
-* table_queue_name 访问的SQS和DynamoDB的表名，需与CloudFormation/CDK创建的ddb/sqs名称一致
+* table_queue_name 
+访问的SQS和DynamoDB的表名，需与CloudFormation/CDK创建的ddb/sqs名称一致
 
-* ssm_parameter_bucket 在 SSM ParameterStore 上保存的参数名，用于保存buckets的信息，需与CloudFormation/CDK创建的 parameter store 的名称一致
+* ssm_parameter_bucket 
+在 SSM ParameterStore 上保存的参数名，用于保存buckets的信息，需与CloudFormation/CDK创建的 parameter store 的名称一致
 
-* ssm_parameter_credentials 在 SSM ParameterStore 上保存的另一个账户体系下的S3访问密钥，需与CloudFormation/CDK创建的 parameter store 的名称一致
+* ssm_parameter_credentials 
+在 SSM ParameterStore 上保存的另一个账户体系下的S3访问密钥，需与CloudFormation/CDK创建的 parameter store 的名称一致
 
 * StorageClass = STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE
 选择目标存储的存储类型
 
-* ResumableThreshold, 单位MBytes，小于该值的文件，则开始传文件时不查S3上已有的Multipart Upload，不做断点续传，而直接覆盖，节省性能  
+* ResumableThreshold
+单位MBytes，小于该值的文件，则开始传文件时不走Multipart Upload，不做断点续传，节省性能  
 
-* MaxRetry, 单个Part上传失败后，最大重试次数
+* MaxRetry
+API Call在应用层面的最大重试次数
 
-* MaxThread, 单文件同时working的Thread进程数量  
+* MaxThread
+单文件同时working的Thread进程数量  
 
-* MaxParallelFile, 并行操作文件数量
+* MaxParallelFile
+并行操作文件数量
 
-* JobTimeout，单个文件传输超时时间，Seconds 秒
+* JobTimeout
+单个文件传输超时时间，Seconds 秒
 
 * LoggingLevel = WARNING | INFO | DEBUG
 * 不建议修改：ifVerifyMD5Twice, ChunkSize, CleanUnfinishedUpload, LocalProfileMode
-* 隐藏参数 max_pool_connections=50 在 s3_migration_lib.py
+* 隐藏参数 max_pool_connections=200 在 s3_migration_lib.py
 ```
 * Jobsender 启动之后会检查 SQS 是否空，空则按照 Parameter Store 上所配置的 s3_migrate_bucket_para 来获取桶信息，然后进行比对。如果非空，则说明前面还有任务没完成，将不派送新任务。
 * 默认配置 Worker 的 Autoscaling Group 的期望 EC2 数量为 1。你可以自行调整启动的服务器数量。
 * Lambda 可单独设置和部署，也可以与EC2一起消费同一个SQS Queue，也可以分别独立的Queue  
 * 手工配置时，注意三个超时时间的配合： SQS, EC2 JobTimeout, Lambda(CDK 默认部署是SQS/EC2 JobTimeout为1小时)  
-* 注意：CDK 删除资源的时候是不会删除 DynamoDB 表的，你需要手工删除  
 
 ## 监控  
 * SQS 队列监控还有多少任务在进行 ( Messages Available ) ，以及多少是正在进行的 ( Messages in Flight )   
 * SQS 死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次），有消息进入则会发 SNS 告警邮件。
 * EC2 网络流量、CPU、内存和实例数量。其中要监控Autoscaling Group实例数量需要你手工到 EC2 控制台 Autoscaling 菜单的 Monitor 分页，去 Enable "Group Metrics Collection" 功能才能收集到。内存是通过自动安装的 CloudWatch Agent 收集。
-* 以上监控在 CDK 中会创建 Dashboard
-* DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 * Jobsender / Worker 的运行日志会收集到 CloudWatch Logs，日志组名是 s3_migrate_log ，有报错的日志数量会输出到 Dashboard   
 * Autoscaling Up: CDK 创建了基于 SQS 队列 Messages Available 的 Alarm，5 分钟大于 100 消息基于触发 Autoscaling 增加 EC2 
 * Autoscaling Shut Down: CDK 创建了表达式 Expression: SQS Messages Available + Messages in Flight = 0 ，并且 EC2 数量大于1，则触发自动设置 EC2 数量为 1。即队列中无消息时会将 EC2 数量降到 1 。你也可以根据场景需求，把这里自动设置为 0 ，关闭全部。并在这时候发送告警 EMAIL 通知。这个告警可以作为批量传输完成后的通知，而且这样做可以只通知一次，而不会不停地15分钟通知一次
 。  
 * 以上 Autoscaling 和 Alarm 都会在 CDK 中创建。请在 cdk_ec2_stack 中设置告警的 EMAIL 地址   
+* DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 
 ## Limitation 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  

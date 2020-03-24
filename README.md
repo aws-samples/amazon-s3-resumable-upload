@@ -38,7 +38,7 @@ Cluster and Serverless version support source: Amazon S3
 * Multiple thread concurrently transmission, fully usage of bandwidth.  
 多线程，充分压榨带宽  
   
-  [Single Node Version 进入单机版](./single_node/)
+  [Single Node Version 进入单机版(中文说明)](./single_node/) -- -- -- [(English Readme)](./single_node/README-English.md)
     
   Single node version architecture 单机版架构图如下：  
   
@@ -62,13 +62,13 @@ EC2自动扩展集群版本和无服务器Lambda版本，可以分别单独部�
 弹性成本优化：集群自动扩展，结合EC2 Spot节省成本；无服务器Lambda只按调用次数计费；支持直接存入S3各种存储级别，节省长期存储成本。  
 * Serverless solution with AWS Lambda can also support large file of tens of GBytes size with unique resumable technique, no worry of 15 mins timeout of Lambda.  
   
-  [Cluster Version 进入集群版](./cluster/)  
-  [Serverless Version 进入无服务器版](./serverless/)  
+  [进入集群版(中文说明)](./cluster/) -- -- -- [Cluster Version (English Readme)](./cluster/README-English.md)  
+  [进入无服务器版(中文说明)](./serverless/) -- -- -- [Serverless Version (English Readme)](./serverless/README-English.md)  
       
   Cluster&Serverless Architeture 集群和无服务器版架构图如下：  
   
 ![Cluster Diagram](./img/02.png)  
-
+  
 ### Limitation 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
