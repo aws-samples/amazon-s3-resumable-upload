@@ -33,7 +33,8 @@ class CdkEc2Stack(core.Stack):
 
     def __init__(self, scope: core.Construct, _id: str, vpc, bucket_para,
                  # key_name,
-                 ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para, s3bucket,
+                 ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para,
+                 # s3bucket,
                  **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
 
@@ -106,8 +107,8 @@ class CdkEc2Stack(core.Stack):
         ssm_credential_para.grant_read(worker_asg)
 
         # Allow EC2 access new s3 bucket
-        s3bucket.grant_read(jobsender)
-        s3bucket.grant_read(worker_asg)
+        # s3bucket.grant_read(jobsender)
+        # s3bucket.grant_read(worker_asg)
 
         # Allow EC2 access exist s3 bucket
         bucket_name = ''

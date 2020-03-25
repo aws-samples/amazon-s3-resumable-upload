@@ -53,6 +53,6 @@ class CdkResourceStack(core.Stack):
         # This is not for existing S3 bucket. Jobsender will scan the existing bucket and create sqs jobs.
         # 这里新建一个S3 bucket，里面新建Object就会触发SQS启动搬迁工作。
         # 对于现有的S3 bucket，不在这里配置，由jobsender进行扫描并生成SQS Job任务。
-        self.s3bucket = s3.Bucket(self, "newbucket")
-        self.s3bucket.add_event_notification(s3.EventType.OBJECT_CREATED,
-                                             s3n.SqsDestination(self.sqs_queue))
+        # self.s3bucket = s3.Bucket(self, "newbucket")
+        # self.s3bucket.add_event_notification(s3.EventType.OBJECT_CREATED,
+        #                                      s3n.SqsDestination(self.sqs_queue))

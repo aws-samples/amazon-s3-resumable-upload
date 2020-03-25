@@ -53,11 +53,12 @@ Amazon S3 新增也可以直接触发Amazon SQS
 * 设置 SSM ParaStore/Lambda Env 即可调整要发送Job的Bucket/Prefix，无需登录服务器
 
 #### 性能测试
-![SingleNodePerformance](./img/07.png)  
-经测试，对于大量的GB级文件，单机 25 线程以上（5文件x5线程）可达到跨境1Gbps带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。
+![Performance](./img/09.png)  
+经测试，对于大量的GB级文件，单机 25 线程以上（5文件x5线程）可达到跨境 800Mbps - 1Gbps 带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。上图中可以看到Autoscaling Group在逐步增加EC2，多机吞吐叠加，传输1.2TB数据只用了1小时。并且在传输完成时自动关闭了服务器，只留下了一台。  
+![1.2TB](./img/08.png)
 
-#### CDK 自动部署的 Dashboard  
-![dashboard](./img/06.png)
+
+**以上所见的 Dashboard是 AWS CDK 自动部署的**   
 
 ### 可靠与安全性  
 * 每个分片传输完成都会在Amazon S3上做MD5完整性校验。  

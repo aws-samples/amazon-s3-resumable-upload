@@ -52,6 +52,7 @@ ec2_stack = CdkEc2Stack(app, "s3-migration-cluster-ec2", vpc, bucket_para,
                         resource_stack.sqs_queue_DLQ,
                         resource_stack.ssm_bucket_para,
                         resource_stack.ssm_credential_para,
-                        resource_stack.s3bucket)
+                        # resource_stack.s3bucket
+                        )
 
 app.synth()
