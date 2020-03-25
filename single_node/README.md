@@ -35,7 +35,7 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 --------  
 ### Known Issue  注意: 
 * ChunkSize setting. Because Amazon S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
- ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。  
+ ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。以上只针对单机版，而集群和Serverless版本已经有自动调整 ChunkSize 机制，无需人工干预。  
 
 * For transfering data between Global and China, please setup tcp_congestion_control BBR to improve networking performance.   
 对于Global与国内传输数据的场景，请设置 TCP 拥塞控制为 BBR，详见后文小节：TCP BBR improve Network performance  
@@ -63,8 +63,8 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
 ![Architecture](./img/img03.png)
   
 ## Installation  安装  
-**This tool run under Python3, if you can't install python3, you can use below package version and skip Install Python3 and SDK**  
-**本工具在Python3运行，如果不方便安装Python，可以直接使用以下打包版本，并跳过 Install Python3 and SDK**  
+**This tool runs under Python3, if you can't install python3, you can use below package version and skip the section of Install Python3 and SDK**  
+**本工具在Python3运行，如果不方便安装Python，可以直接使用以下打包版本，并跳过 Install Python3 and SDK 小节**  
 [Windows版本 s3_upload.zip](./windows/s3_upload.zip)  
 [OS_X版本 s3_upload.zip](./os_x/s3_upload.zip)  
 [Linux版本 s3_upload.zip](./linux/s3_upload.zip)  
@@ -76,7 +76,7 @@ Download and unzip the s3_upload.zip file into a folder
 
 2. Install SDK  
 Install aws python sdk boto3. If you need to copy from AliCloud OSS, you need to install oss2 package as well.   
-该工具需要先安装 AWS SDK [boto3](https://github.com/boto/boto3)，如果需要从阿里云OSS拷贝，则还需要安装阿里 SDK [oss2](https://github.com/aliyun/aliyun-oss-python-sdk)。可以 pip 一起安装
+该工具需要先安装 AWS SDK [boto3](https://github.com/boto/boto3)，如果需要从阿里云OSS拷贝，则还需要安装阿里 SDK [oss2](https://github.com/aliyun/aliyun-oss-python-sdk)。  
 ```bash
     pip install -r requirements.txt --user
 ```
@@ -137,7 +137,7 @@ DesProfileName = oregon
 ```
 JobType = LOCAL_TO_S3
 ```
-* Setup address  
+* Setup URI  
 设置源文件路径和上传的目的地址，以及其他可选配置
 
 ## Run the app - 运行应用
