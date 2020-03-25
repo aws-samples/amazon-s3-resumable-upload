@@ -52,10 +52,17 @@ Amazon S3 新增也可以直接触发Amazon SQS
 * 在Amazon DynamoDB中记录工作节点和进度，清晰获知单个文件工作状态，传输一次文件Job只需要写3-4次DynamoDB。
 * 设置 SSM ParaStore/Lambda Env 即可调整要发送Job的Bucket/Prefix，无需登录服务器
 
-#### 性能测试
+### 性能测试
 ![Performance](./img/09.png)  
-经测试，对于大量的GB级文件，单机 25 线程以上（5文件x5线程）可达到跨境 800Mbps - 1Gbps 带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。上图中可以看到Autoscaling Group在逐步增加EC2，多机吞吐叠加，传输1.2TB数据只用了1小时。并且在传输完成时自动关闭了服务器，只留下了一台。  
+测试结果，对于大量的GB级文件，单机 c5.large 25 线程以上（5文件x5线程）可达到跨境 800Mbps以上带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。上图中可以看到Autoscaling Group在逐步增加EC2，多机吞吐叠加，9台 Autoscale 吞吐线性叠加达到900+MB/s (7.2Gbps)。传输 1.2TB 数据 (916个文件) 只用了1小时，从 us-east-1 到 cn-northwest-1。并且在传输完成时自动关闭了服务器，只留下了一台。  
 ![1.2TB](./img/08.png)
+各种文件大小的用时统计：  
+![Size/Time Distributed](./img/07.png)
+* 100MB File 13 秒  
+* 1GB File 53 秒  
+* 5GB File 215 秒  
+* 40GB File 35.8 分钟  
+备注：因为文件大小分布广，所以线程设置是 5 x 30，如果大部分都是40GB这种大文件，可以设置为 2 x 100，这样巨型文件的传输时间还可以大幅缩短到10分钟
 
 
 **以上所见的 Dashboard是 AWS CDK 自动部署的**   
