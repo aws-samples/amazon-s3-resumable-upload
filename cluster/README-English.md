@@ -39,7 +39,7 @@ S3 Object created can also trigger SQS directly.
 
 * Cron event to trigger Job Sender to List bucket, compare and send new jobs.  
 
-4 ways to start diagram:  
+4 ways to start. Diagram:  
 ![4 ways to start](./img/03.png)  
 
 ### Performance and Controlable operation  
