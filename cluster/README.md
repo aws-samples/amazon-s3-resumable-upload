@@ -198,11 +198,13 @@ API Call在应用层面的最大重试次数
 * Amazon DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 
 ## 其他说明  
-* Jobsender 支持比对S3 Bucket时候忽略某些文件或某些前缀的一批文件，编辑 s3_migration_ignore_list.txt 增加你要忽略对象的 bucket/key，一个文件一行，最后一个字符如果是“*”则为通配，例如：  
+* Jobsender 比对S3 Bucket时候可以设置忽略某个文件，或某前缀/某后缀的一批文件，编辑 s3_migration_ignore_list.txt 增加你要忽略对象的 bucket/key，一个文件一行，最后一个字符如果是" * "则为通配前缀，第一个字符是" * "则为通配后缀，例如：  
 ```
 your_src_bucket/your_exact_key.mp4
 your_src_bucket/your_exact_key.*
 your_src_bucket/your_*
+*.jpg
+*/readme.md
 ```
 
 ## Limitation 局限

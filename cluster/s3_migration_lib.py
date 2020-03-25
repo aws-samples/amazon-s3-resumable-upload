@@ -8,7 +8,6 @@ import concurrent.futures
 import threading
 import base64
 import sys
-import re
 
 import urllib.request
 import boto3
@@ -202,12 +201,21 @@ def delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list):
         # 排除掉 ignore_list 里面列的 bucket/key
         src_bucket_key = src_bucket+'/'+src['Key']
         ignore_match = False
-        for ignore_key in ignore_list:  # 每个 ignore key 匹配一次
-            if ignore_key[-1] == '*':  # 模糊匹配
-                if re.match(ignore_key, src_bucket_key):  # 匹配上
+        # 每个 ignore key 匹配一次
+        for ignore_key in ignore_list:
+            # 前缀 Wildcard 匹配
+            if ignore_key[-1] == '*':
+                if src_bucket_key.startswith(ignore_key[:-1]):  # 匹配上
                     ignore_match = True
                     break
                 # 匹配不上，循环下一个 ignore_key
+            # 后缀 Wildcard 匹配
+            elif ignore_key[0] == '*':
+                if src_bucket_key.endswith(ignore_key[1:]):  # 匹配上
+                    ignore_match = True
+                    break
+                # 匹配不上，循环下一个 ignore_key
+            # 精确匹配
             else:
                 if ignore_key == src_bucket_key:  # 匹配上
                     ignore_match = True
