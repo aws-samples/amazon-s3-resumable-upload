@@ -54,7 +54,7 @@ Amazon S3 新增也可以直接触发Amazon SQS
 
 ### 性能测试
 ![Performance](./img/09.png)  
-测试结果，对于大量的GB级文件，单机 c5.large 25 线程以上（5文件x5线程）可达到跨境 800Mbps以上带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。上图中可以看到Autoscaling Group在逐步增加EC2，多机吞吐叠加，9台 Autoscale 吞吐线性叠加达到900+MB/s (7.2Gbps)。传输 1.2TB 数据 (916个文件) 只用了1小时，从 us-east-1 到 cn-northwest-1。并且在传输完成时自动关闭了服务器，只留下了一台。  
+测试结果，对于大量的GB级文件，单机 c5.large（该测试设置 5 文件 x 30 线程）可达到跨境 800Mbps以上带宽吞吐。如文件是MB级，则可以设置单节点并发处理更多的文件。上图中可以看到 Autoscaling Group 在逐步增加EC2，多机吞吐叠加，9台 Autoscale 吞吐线性叠加达到900+MB/s (7.2Gbps)。传输 1.2TB 数据 (916个文件) 只用了1小时，从 us-east-1 到 cn-northwest-1。并且在传输完成时自动关闭了服务器，只留下了一台。  
 ![1.2TB](./img/08.png)
 各种文件大小的用时统计：  
 ![Size/Time Distributed](./img/07.png)
@@ -62,8 +62,7 @@ Amazon S3 新增也可以直接触发Amazon SQS
 * 1GB File 53 秒  
 * 5GB File 215 秒  
 * 40GB File 35.8 分钟  
-备注：因为文件大小分布广，所以线程设置是 5 x 30，如果大部分都是40GB这种大文件，可以设置为 2 x 100，这样巨型文件的传输时间还可以大幅缩短到10分钟
-
+Notice: Autoscale 新增的 EC2 的指标在5分钟之后，才会被纳入该 Autoscaling Group EC2 Network 指标，所以上图看起来 All EC2 Network 指标显得更实时。  
 
 **以上所见的 Dashboard是 AWS CDK 自动部署的**   
 

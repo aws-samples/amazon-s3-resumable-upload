@@ -53,7 +53,7 @@ Amazon S3 Object created can also trigger Amazon SQS directly.
 * Source/Destination bucket/prefix setting managed centrally on AWS SSM ParaStore, no need to login to Amazon EC2 server for setting.  
 
 ### Performance testing
-For large scale of GBytes level of files, single node c5.large with with 25 or more threads (5 Files X 5 Threads) can reach 800Mbps between Global and China Amazon S3. If they are most MBytes level files, you can setup more concurrency for one Amazon EC2 node.  
+For large scale of GBytes level of files, single node c5.large ( Setting 5 Files X 30 Threads in this test) can reach 800Mbps between Global and China Amazon S3. If they are most MBytes level files, you can setup more concurrency for one Amazon EC2 node.  
 ![Performance](./img/09.png)  
 As above graph, Autoscaling Group adding more EC2, and more traffic handling adding up in line rate, 9 EC2 up to 900+MB/s (7.2Gbps).  
 Transfer 1.2TBytes (916 Files), takes only one hour, from us-east-1 to cn-northwest-1. After jobs all finished, it auto shutdown EC2s and keep only one left.  
@@ -64,7 +64,6 @@ Test files size distribution as below:
 * 1GB File 53 sec  
 * 5GB File 215 sec  
 * 40GB File 35.8 min  
-Notes: The files size distributed from KB to tens of GB, so we set threads setting to 5 x 30. If most files size are 40GBytes, then we can change threads setting to 2 x 100. So can optimize hugh file transmission time significantly to 10 mins.  
 
 ### Reliability and Security  
 * Each part transmission complete will take MD5 integrity verification on Amazon S3.  
