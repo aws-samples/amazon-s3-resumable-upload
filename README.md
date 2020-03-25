@@ -38,7 +38,7 @@ Cluster and Serverless version support source: Amazon S3
 * Multiple thread concurrently transmission, fully usage of bandwidth.  
 多线程，充分压榨带宽  
   
-  [Single Node Version 进入单机版(中文说明)](./single_node/) -- -- -- [(English Readme)](./single_node/README-English.md)
+  [Single Node Version 进入单机版](./single_node/)  
     
   Single node version architecture 单机版架构图如下：  
   
