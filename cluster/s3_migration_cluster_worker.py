@@ -43,7 +43,7 @@ except Exception as e:
 if __name__ == '__main__':
 
     # Set Logging
-    logger, log_file_name = set_log(LoggingLevel)
+    logger, log_file_name = set_log(LoggingLevel, 'ec2-worker')
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \

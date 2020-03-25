@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import time
 from configparser import ConfigParser
 
 from s3_migration_lib import get_s3_file_list, job_upload_sqs_ddb, set_env, \
@@ -21,12 +22,11 @@ except Exception as e:
     print("s3_migration_cluster_config.ini", str(e))
     sys.exit(0)
 
-
 # Main
 if __name__ == '__main__':
 
     # Set Logging
-    logger, log_file_name = set_log(LoggingLevel)
+    logger, log_file_name = set_log(LoggingLevel, 'jobsender')
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \
@@ -35,6 +35,20 @@ if __name__ == '__main__':
     #######
     # Program start processing here
     #######
+    # Get ignore file list
+    ignore_list_path = os.path.split(os.path.abspath(__file__))[0] + '/s3_migration_ignore_list.txt'
+    ignore_list = []
+    try:
+        with open(ignore_list_path, 'r') as f:
+            ignore_list = f.read().splitlines()
+        logger.info(f'Found ignore files list Length: {len(ignore_list)}, in {ignore_list_path}')
+    except Exception as e:
+        if e.args[1] == 'No such file or directory':
+            logger.info(f'No ignore files list in {ignore_list_path}')
+            print(f'No ignore files list in {ignore_list_path}')
+        else:
+            logger.info(str(e))
+
     # Check SQS is empty or not
     if check_sqs_empty(sqs, sqs_queue):
         logger.info('Job sqs queue is empty, now process comparing s3 bucket...')
@@ -53,14 +67,23 @@ if __name__ == '__main__':
             src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
             des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix)
             # Generate job list
-            job_list = delta_job_list(src_file_list, des_file_list, bucket_para)
+            job_list, ignore_records = delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list)
 
+            # Just backup for debug
             logger.info('Writing job list to local file backup...')
+            t = time.localtime()
+            start_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
             log_path = os.path.split(os.path.abspath(__file__))[0] + '/s3_migration_log'
-            local_backup_list = f'{log_path}/job-list-{src_bucket}.json'
-            with open(local_backup_list, 'w') as f:
-                json.dump(job_list, f)  # 仅做备份检查用
-            logger.info(f'Finish writing: {os.path.abspath(local_backup_list)}')
+            if job_list:
+                local_backup_list = f'{log_path}/job-list-{src_bucket}-{start_time}.json'
+                with open(local_backup_list, 'w') as f:
+                    json.dump(job_list, f)
+                logger.info(f'Finish writing: {os.path.abspath(local_backup_list)}')
+            if ignore_records:
+                local_ignore_records = f'{log_path}/ignore-records-{src_bucket}-{start_time}.json'
+                with open(local_ignore_records, 'w') as f:
+                    json.dump(ignore_records, f)
+                logger.info(f'Finish writing: {os.path.abspath(local_ignore_records)}')
 
             # Upload jobs to sqs
             if len(job_list) != 0:

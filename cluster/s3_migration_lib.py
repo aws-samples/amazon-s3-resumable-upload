@@ -8,6 +8,7 @@ import concurrent.futures
 import threading
 import base64
 import sys
+import re
 
 import urllib.request
 import boto3
@@ -18,7 +19,7 @@ logger = logging.getLogger()
 
 
 # Configure logging
-def set_log(LoggingLevel):
+def set_log(LoggingLevel, this_file_name):
     _logger = logging.getLogger()
     _logger.setLevel(logging.WARNING)
     if LoggingLevel == 'INFO':
@@ -33,7 +34,7 @@ def set_log(LoggingLevel):
         print(f'Created folder {log_path}')
     else:
         print(f'Folder exist {log_path}')
-    this_file_name = os.path.splitext(os.path.basename(__file__))[0]
+    # this_file_name = os.path.splitext(os.path.basename(__file__))[0]
     t = time.localtime()
     start_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
     _log_file_name = f'{log_path}/{this_file_name}-{start_time}.log'
@@ -181,7 +182,7 @@ def get_s3_file_list(s3_client, bucket, S3Prefix):
     return des_file_list
 
 
-def delta_job_list(src_file_list, des_file_list, bucket_para):
+def delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list):
     src_bucket = bucket_para['src_bucket']
     src_prefix = str(PurePosixPath(bucket_para['src_prefix']))
     des_bucket = bucket_para['des_bucket']
@@ -195,10 +196,29 @@ def delta_job_list(src_file_list, des_file_list, bucket_para):
                 f'destination s3://{des_bucket}/{des_prefix}')
     start_time = int(time.time())
     job_list = []
+    ignore_records = []
     for src in src_file_list:
-        in_list = False
+
+        # 排除掉 ignore_list 里面列的 bucket/key
+        src_bucket_key = src_bucket+'/'+src['Key']
+        ignore_match = False
+        for ignore_key in ignore_list:  # 每个 ignore key 匹配一次
+            if ignore_key[-1] == '*':  # 模糊匹配
+                if re.match(ignore_key, src_bucket_key):  # 匹配上
+                    ignore_match = True
+                    break
+                # 匹配不上，循环下一个 ignore_key
+            else:
+                if ignore_key == src_bucket_key:  # 匹配上
+                    ignore_match = True
+                    break
+                # 匹配不上，循环下一个 ignore_key
+        if ignore_match:
+            ignore_records.append(src_bucket_key)
+            continue  # 跳过当前 src
 
         # 比对源文件是否在目标中
+        in_list = False
         for des in des_file_list:
             # 去掉目的bucket的prefix做Key对比，且Size一致，则判为存在，不加入上传列表
             if des['Key'][dp_len:] == src['Key'] and des['Size'] == src['Size']:
@@ -224,7 +244,7 @@ def delta_job_list(src_file_list, des_file_list, bucket_para):
             )
     spent_time = int(time.time()) - start_time
     logger.info(f'Generate delta file list LENGTH: {len(job_list)} - SPENT TIME: {spent_time}S')
-    return job_list
+    return job_list, ignore_records
 
 
 def wait_sqs_available(sqs, table_queue_name):
@@ -701,6 +721,10 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                     # Del Job on sqs
                     if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
                         # 如果是超时或ERR的就不删SQS消息，是正常结束就删
+                        # 大文件会在退出线程时设 MaxRetry 为 TIMEOUT，小文件则会返回 MaxRetry
+                        # 小文件出现该问题可以认为没必要再让下一个worker再试了，不是因为文件下载太大导致，而是权限设置导致
+                        # 直接删除SQS，并且DDB并不会记录结束状态
+                        # 如果希望小文件也继续让SQS消息恢复，并让下一个worker再试，则在上面判断加upload_etag_full != "MaxRetry"
                         for retry in range(MaxRetry + 1):
                             try:
                                 logger.info(f'Try to finsh job message on sqs.')
