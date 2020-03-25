@@ -197,6 +197,14 @@ API Call在应用层面的最大重试次数
 * 以上 Autoscaling 和 Alarm 都会在 CDK 中创建。请在 cdk_ec2_stack 中设置告警的 EMAIL 地址   
 * Amazon DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 
+## 其他说明  
+* Jobsender 支持比对S3 Bucket时候忽略某些文件或某些前缀的一批文件，编辑 s3_migration_ignore_list.txt 增加你要忽略对象的 bucket/key，一个文件一行，最后一个字符如果是“*”则为通配，例如：  
+```
+your_src_bucket/your_exact_key.mp4
+your_src_bucket/your_exact_key.*
+your_src_bucket/your_*
+```
+
 ## Limitation 局限
 * 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 

@@ -195,6 +195,15 @@ If not empty, means there is still jobs not finish on last cron, it will stop, a
 * The above monitoring will be created by AWS CDK  
 * Amazon DynamoDB Table to monitor detail of each jobs  
 
+
+## Others  
+* Jobsender support ignore some objects while comparing bucket. Edit s3_migration_ignore_list.txt, add the file bucket/key as one file one line. The last character "*" means wildcard. E.g.  
+```
+your_src_bucket/your_exact_key.mp4
+your_src_bucket/your_exact_key.*
+your_src_bucket/your_*
+```
+
 ## Limitation 
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 
