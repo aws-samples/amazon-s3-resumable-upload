@@ -20,7 +20,7 @@ Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed t
 ### Performance Test:
 * us-east-1 Lambda ( No need of NAT) 1310 of files, from 4MB to 1.3GB, totally 50GB. Accomplish transmission to China cn-northwest-1 in 10 minutes. Max Lambda concurrency runtime 153. As file size growing up, transmission spent time is no growing up significantly. Each file is handled by one Lambda runtime, bigger file, will be more threads running concurrently in one runtime. In this case, Lambda setup as 1GB mem, according to your job file size, you can optimize to best cost.
 
-![Performance testing](./img/07.png)  
+![Performance testing](./img/07b.png)  
 
 * ap-northeast-1 Lambda ( Using VPC NAT Instance with EIP and TCP BBR enabled ). Single file of 80GB video file and 45GB zip file. It takes about from 2 to 6 hours to complete transmit to cn-northwest-1. It is running in ONE Lambda concurrency.  
 
