@@ -69,7 +69,7 @@ In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix 
 * CDK will create a new CloudWatch Dashboard: s3_migrate_serverless to monitor SQS queue and Lambda running status
 * Will create 3 customized Log Filter for Lambda Log Group. They are to filter Uploading, Downloading, Complete parts Bytes, and statistic them as Lambda traffic and publish to Dashboard
 * Create an Alarm, while detect SQS queue is empty. I.e. no Visible and no InVisible message, then send SNS to subcription email to inform all jobs are done. The email address is defined in CDK app.py, please change it or change in SNS after CDK deploy.
-![Dashboard](./img/08.png)
+
 
 ### If Manually Config the whole solution:  
 If you don't want to use CDK to auto deploy, you can follow above CDK deploy statment to create related resource, and remind:

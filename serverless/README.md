@@ -68,7 +68,6 @@ table_queue_name 会由 CDK 自动生成
 * CDK 会新建一个 CloudWatch Dashboard: s3_migrate_serverless 监控 SQS 消息和 Lambda 运行状态
 * 通过Lambda Log Group 创建了三个自定义 Log Filter，过滤出 Uploading, Downloading, Complete 的分片 Bytes，并统计为 Lambda 流量发布到 Dashboard
 * 创建一个 Alarm ，检测到 SQS queue 空了，即没有 Visible 也没有 InVisible 消息，则发出 SNS 告警到订阅的邮件地址，告知任务全部完成了。邮件地址请在 CDK 的 app.py 文件中定义，或到 SNS 中修改。
-![监控](./img/08.png)
   
 ### 手工配置说明  
 如不希望用 CDK 部署可以参照以下手工部署步骤：
