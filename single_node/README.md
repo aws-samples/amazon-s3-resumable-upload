@@ -66,7 +66,7 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
   
 ## Installation  安装  
 **GUI only well support LOCAL_TO_S3 mode.**  
-**This tool runs under Python3, if you are can't install python3, and you are WINDOWS SYSTEM, you can run package version and skip the section of Install Python3 &  SDK part.** 
+**This tool runs under Python3, if you can't install python3, and are WINDOWS SYSTEM, you can run package version and skip the section of Install Python3 &  SDK part.**   
 **GUI界面只对 LOCAL_TO_S3 较好支持**
 **本工具在Python3运行，如果不方便安装Python，并且是 Windows 系统，可以直接使用以下打包版本，并跳过 Install Python3 & SDK 说明小节。**  
 [Windows版本 s3_upload.zip](./windows/s3_upload.zip)  
