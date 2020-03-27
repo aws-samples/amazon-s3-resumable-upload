@@ -11,8 +11,8 @@ import hashlib
 import logging
 from pathlib import PurePosixPath, Path
 
-global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, ChunkSize, MaxRetry, MaxThread, \
-    MaxParallelFile, IgnoreSmallFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
+global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, MaxThread, \
+    MaxParallelFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
     SrcDir, SrcBucket, SrcProfileName, ali_SrcBucket, ali_access_key_id, ali_access_key_secret, ali_endpoint
 
 
@@ -36,8 +36,8 @@ def set_config():
 
     # Get local config value
     try:
-        global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, ChunkSize, MaxRetry, MaxThread, \
-            MaxParallelFile, IgnoreSmallFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
+        global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, MaxThread, \
+            MaxParallelFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
             SrcDir, SrcBucket, SrcProfileName, ali_SrcBucket, ali_access_key_id, ali_access_key_secret, ali_endpoint
         cfg.read(config_file, encoding='utf-8-sig')
         JobType = cfg.get('Basic', 'JobType')
@@ -50,7 +50,6 @@ def set_config():
         MaxRetry = cfg.getint('Advanced', 'MaxRetry')
         MaxThread = cfg.getint('Advanced', 'MaxThread')
         MaxParallelFile = cfg.getint('Advanced', 'MaxParallelFile')
-        IgnoreSmallFile = cfg.getboolean('Advanced', 'IgnoreSmallFile')
         StorageClass = cfg.get('Advanced', 'StorageClass')
         ifVerifyMD5 = cfg.getboolean('Advanced', 'ifVerifyMD5')
         DontAskMeToClean = cfg.getboolean('Advanced', 'DontAskMeToClean')
@@ -160,7 +159,7 @@ def set_config():
         Label(window, text="Local Folder").grid(column=0, row=1, sticky='w', padx=2, pady=2)
         url_txt = Entry(window, width=50)
         url_txt.grid(column=1, row=1, sticky='w', padx=2, pady=2)
-        url_btn = Button(window, text="Browse", bg="white", fg="red", command=browse)
+        url_btn = Button(window, text="   Browse   ", bg="white", fg="red", command=browse)
         url_btn.grid(column=2, row=1, sticky='w', padx=2, pady=2)
         url_txt.insert(0, SrcDir)
 
@@ -264,6 +263,7 @@ def set_config():
         input('PRESS ENTER TO QUIT')
         sys.exit(0)
     # Finish set_config()
+    return ChunkSize
 
 
 # Configure logging
@@ -303,14 +303,10 @@ def get_local_file_list():
                     file_absPath = os.path.join(parent, filename)
                     file_relativePath = file_absPath[len(SrcDir) + 1:]
                     file_size = os.path.getsize(file_absPath)
-                    if file_size >= ChunkSize or not IgnoreSmallFile:
-                        if file_size != 0:
-                            __src_file_list.append({
-                                "Key": Path(file_relativePath),
-                                "Size": file_size
-                            })
-                        else:
-                            logger.warning(f'Zero size file, skip: {Path(file_relativePath)}')
+                    __src_file_list.append({
+                        "Key": Path(file_relativePath),
+                        "Size": file_size
+                    })
         else:
             file_size = os.path.getsize(os.path.join(SrcDir, SrcFileIndex))
             __src_file_list = [{
@@ -340,14 +336,10 @@ def get_s3_file_list(s3_client, bucket):
         )
         if response_fileList["KeyCount"] != 0:
             for n in response_fileList["Contents"]:
-                if n["Size"] >= ChunkSize or not IgnoreSmallFile:
-                    if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
-                        __des_file_list.append({
-                            "Key": n["Key"],
-                            "Size": n["Size"]
-                        })
-                    else:
-                        logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
+                __des_file_list.append({
+                    "Key": n["Key"],
+                    "Size": n["Size"]
+                })
             while response_fileList["IsTruncated"]:
                 response_fileList = s3_client.list_objects_v2(
                     Bucket=bucket,
@@ -355,15 +347,12 @@ def get_s3_file_list(s3_client, bucket):
                     MaxKeys=1000,
                     ContinuationToken=response_fileList["NextContinuationToken"]
                 )
-                for n in response_fileList["Contents"]:
-                    if n["Size"] >= ChunkSize or not IgnoreSmallFile:
-                        if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
-                            __des_file_list.append({
-                                "Key": n["Key"],
-                                "Size": n["Size"]
-                            })
-                        else:
-                            logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
+                if "Contents" in response_fileList:
+                    for n in response_fileList["Contents"]:
+                        __des_file_list.append({
+                            "Key": n["Key"],
+                            "Size": n["Size"]
+                        })
         else:
             logger.info('File list is empty in the s3 bucket')
     except Exception as err:
@@ -420,13 +409,10 @@ def get_ali_oss_file_list(__ali_bucket):
 
         if len(response_fileList.object_list) != 0:
             for n in response_fileList.object_list:
-                if n.size != 0:  # 子目录或 0 size 数据，不处理
-                    __des_file_list.append({
-                        "Key": n.key,
-                        "Size": n.size
-                    })
-                else:
-                    logger.warning(f'Zero size file, skip: {ali_SrcBucket}/{n["Key"]}')
+                __des_file_list.append({
+                    "Key": n.key,
+                    "Size": n.size
+                })
             while response_fileList.is_truncated:
                 response_fileList = __ali_bucket.list_objects(
                     prefix=S3Prefix,
@@ -434,13 +420,10 @@ def get_ali_oss_file_list(__ali_bucket):
                     marker=response_fileList.next_marker
                 )
                 for n in response_fileList.object_list:
-                    if n.size != 0:  # 子目录或 0 size 数据，不处理
-                        __des_file_list.append({
-                            "Key": n.key,
-                            "Size": n.size
-                        })
-                    else:
-                        logger.warning(f'Zero size file, skip: {ali_SrcBucket}/{n["Key"]}')
+                    __des_file_list.append({
+                        "Key": n.key,
+                        "Size": n.size
+                    })
         else:
             logger.info('File list is empty in the ali_oss bucket')
     except Exception as err:
@@ -480,68 +463,182 @@ def get_uploaded_list(s3_client):
 class NextFile(Exception):
     pass
 
+def uploadTheard_small(srcfile, prefix_and_key):
+    print(f'\033[0;32;1m--->Uploading\033[0m {srcfile["Key"]} - small file')
+    with open(os.path.join(SrcDir, srcfile["Key"]), 'rb') as data:
+        for retryTime in range(MaxRetry + 1):
+            try:
+                chunkdata = data.read()
+                chunkdata_md5 = hashlib.md5(chunkdata)
+                s3_dest_client.put_object(
+                    Body=chunkdata,
+                    Bucket=DesBucket,
+                    Key=prefix_and_key,
+                    ContentMD5=base64.b64encode(chunkdata_md5.digest()).decode('utf-8'),
+                    StorageClass=StorageClass
+                )
+                print(f'\033[0;34;1m    --->Complete\033[0m {srcfile["Key"]} - small file')
+                break
+            except Exception as e:
+                logger.warning(f'Upload small file Fail: {srcfile["Key"]}, '
+                               f'{str(e)}, Attempts: {retryTime}')
+                if retryTime >= MaxRetry:
+                    logger.error(f'Fail MaxRetry Download/Upload small file: {srcfile["Key"]}')
+                    return "MaxRetry"
+                else:
+                    time.sleep(5 * retryTime)
+    return
 
-# Upload file to S3
-def upload_file(srcfile, desFilelist, UploadIdList):  # UploadIdList就是multipart_uploaded_list
+
+def download_uploadThread_small(srcfileKey):
+    for retryTime in range(MaxRetry+1):
+        try:
+            # Get object
+            print(f"\033[0;33;1m--->Downloading\033[0m {srcfileKey} - small file")
+            response_get_object = s3_src_client.get_object(
+                Bucket=SrcBucket,
+                Key=srcfileKey
+            )
+            getBody = response_get_object["Body"].read()
+            chunkdata_md5 = hashlib.md5(getBody)
+            ContentMD5 = base64.b64encode(chunkdata_md5.digest()).decode('utf-8')
+
+            # Put object
+            print(f'\033[0;32;1m    --->Uploading\033[0m {srcfileKey} - small file')
+            s3_dest_client.put_object(
+                Body=getBody,
+                Bucket=DesBucket,
+                Key=srcfileKey,
+                ContentMD5=ContentMD5,
+                StorageClass=StorageClass
+            )
+            # 结束 Upload/download
+            print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey}  - small file')
+            break
+        except Exception as e:
+            logger.warning(f'Download/Upload small file Fail: {srcfileKey}, '
+                           f'{str(e)}, Attempts: {retryTime}')
+            if retryTime >= MaxRetry:
+                logger.error(f'Fail MaxRetry Download/Upload small file: {srcfileKey}')
+                return "MaxRetry"
+            else:
+                time.sleep(5 * retryTime)
+    return
+
+
+def alioss_download_uploadThread_small(srcfileKey):
+    for retryTime in range(MaxRetry+1):
+        try:
+            # Get Objcet
+            print(f"\033[0;33;1m--->Downloading\033[0m {srcfileKey} - small file")
+            response_get_object = ali_bucket.get_object(
+                key=srcfileKey
+            )
+            getBody = b''
+            for chunk in response_get_object:
+                getBody += chunk
+            chunkdata_md5 = hashlib.md5(getBody)
+
+            # Put Object
+            print(f"\033[0;32;1m    --->Uploading\033[0m {srcfileKey} - small file")
+            s3_dest_client.put_object(
+                Body=getBody,
+                Bucket=DesBucket,
+                Key=srcfileKey,
+                ContentMD5=base64.b64encode(chunkdata_md5.digest()).decode('utf-8'),
+                StorageClass=StorageClass
+            )
+            print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} - small file')
+            break
+        except Exception as e:
+            logger.warning(f'Download/Upload small file Fail: {srcfileKey} - small file, '
+                           f'{str(e)}, Attempts: {retryTime}')
+            if retryTime >= MaxRetry:
+                logger.error(f'Fail MaxRetry Download/Upload small file: {srcfileKey} - small file')
+                return "MaxRetry"
+            else:
+                time.sleep(5 * retryTime)
+    return
+
+
+# Upload file with different JobType
+def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # UploadIdList就是multipart_uploaded_list
     logger.info(f'Start file: {srcfile["Key"]}')
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
         prefix_and_key = str(PurePosixPath(S3Prefix) / srcfile["Key"])
-    try:
-        # 循环重试3次（如果MD5计算的ETag不一致）
-        for md5_retry in range(3):
-            # 检查文件是否已存在，存在不继续、不存在且没UploadID要新建、不存在但有UploadID得到返回的UploadID
-            response_check_upload = check_file_exist(srcfile, desFilelist, UploadIdList)
-            if response_check_upload == 'UPLOAD':
-                logger.info(f'New upload: {srcfile["Key"]}')
-                response_new_upload = s3_dest_client.create_multipart_upload(
-                    Bucket=DesBucket,
-                    Key=prefix_and_key,
-                    StorageClass=StorageClass
-                )
-                # logger.info("UploadId: "+response_new_upload["UploadId"])
-                reponse_uploadId = response_new_upload["UploadId"]
-                partnumberList = []
-            elif response_check_upload == 'NEXT':
-                logger.info(f'Duplicated. {srcfile["Key"]} same size, goto next file.')
-                raise NextFile()
-            else:
-                reponse_uploadId = response_check_upload
-
-                # 获取已上传partnumberList
-                partnumberList = checkPartnumberList(srcfile, reponse_uploadId)
-
-            # 获取索引列表，例如[0, 10, 20]
-            response_indexList = split(srcfile)
-
-            # 执行分片upload
-            upload_etag_full = uploadPart(reponse_uploadId, response_indexList, partnumberList, srcfile)
-
-            # 合并S3上的文件
-            response_complete = completeUpload(
-                reponse_uploadId, srcfile["Key"], len(response_indexList))
-            logger.info(f'FINISH: {srcfile["Key"]} TO {response_complete["Location"]}')
-
-            # 检查文件MD5
-            if ifVerifyMD5:
-                if response_complete["ETag"] == upload_etag_full:
-                    logger.info(f'MD5 ETag Matched - {srcfile["Key"]} - {response_complete["ETag"]}')
-                    break
-                else:  # ETag 不匹配，删除S3的文件，重试
-                    logger.warning(f'MD5 ETag NOT MATCHED {srcfile["Key"]}( Destination / Origin ): '
-                                   f'{response_complete["ETag"]} - {upload_etag_full}')
-                    s3_dest_client.delete_object(
+    if srcfile['Size'] >= ChunkSize_default:
+        try:
+            # 循环重试3次（如果MD5计算的ETag不一致）
+            for md5_retry in range(3):
+                # 检查文件是否已存在，存在不继续、不存在且没UploadID要新建、不存在但有UploadID得到返回的UploadID
+                response_check_upload = check_file_exist(srcfile, desFilelist, UploadIdList)
+                if response_check_upload == 'UPLOAD':
+                    logger.info(f'New upload: {srcfile["Key"]}')
+                    response_new_upload = s3_dest_client.create_multipart_upload(
                         Bucket=DesBucket,
-                        Key=prefix_and_key
+                        Key=prefix_and_key,
+                        StorageClass=StorageClass
                     )
-                    UploadIdList = []
-                    logger.warning('Deleted and retry upload {srcfile["Key"]}')
-                if md5_retry == 2:
-                    logger.warning('MD5 ETag NOT MATCHED Exceed Max Retries - {srcfile["Key"]}')
-            else:
-                break
-    except NextFile:
-        pass
+                    # logger.info("UploadId: "+response_new_upload["UploadId"])
+                    reponse_uploadId = response_new_upload["UploadId"]
+                    partnumberList = []
+                elif response_check_upload == 'NEXT':
+                    logger.info(f'Duplicated. {srcfile["Key"]} same size, goto next file.')
+                    raise NextFile()
+                else:
+                    reponse_uploadId = response_check_upload
+
+                    # 获取已上传partnumberList
+                    partnumberList = checkPartnumberList(srcfile, reponse_uploadId)
+
+                # 获取索引列表，例如[0, 10, 20]
+                response_indexList, ChunkSize_auto = split(srcfile, ChunkSize_default)
+
+                # 执行分片upload
+                upload_etag_full = uploadPart(reponse_uploadId, response_indexList, partnumberList, srcfile, ChunkSize_auto)
+
+                # 合并S3上的文件
+                response_complete = completeUpload(
+                    reponse_uploadId, srcfile["Key"], len(response_indexList))
+                logger.info(f'FINISH: {srcfile["Key"]} TO {response_complete["Location"]}')
+
+                # 检查文件MD5
+                if ifVerifyMD5:
+                    if response_complete["ETag"] == upload_etag_full:
+                        logger.info(f'MD5 ETag Matched - {srcfile["Key"]} - {response_complete["ETag"]}')
+                        break
+                    else:  # ETag 不匹配，删除S3的文件，重试
+                        logger.warning(f'MD5 ETag NOT MATCHED {srcfile["Key"]}( Destination / Origin ): '
+                                       f'{response_complete["ETag"]} - {upload_etag_full}')
+                        s3_dest_client.delete_object(
+                            Bucket=DesBucket,
+                            Key=prefix_and_key
+                        )
+                        UploadIdList = []
+                        logger.warning('Deleted and retry upload {srcfile["Key"]}')
+                    if md5_retry == 2:
+                        logger.warning('MD5 ETag NOT MATCHED Exceed Max Retries - {srcfile["Key"]}')
+                else:
+                    break
+        except NextFile:
+            pass
+
+    # Small file procedure
+    else:
+        # Check file exist
+        for f in desFilelist:
+            if f["Key"] == prefix_and_key and \
+                    (srcfile["Size"] == f["Size"]):
+                logger.info(f'Duplicated. {prefix_and_key} same size, goto next file.')
+                return
+        # 找不到文件，或文件Size不一致 Submit upload
+        if JobType == 'LOCAL_TO_S3':
+            uploadTheard_small(srcfile, prefix_and_key)
+        elif JobType == 'S3_TO_S3':
+            download_uploadThread_small(srcfile["Key"])
+        elif JobType == 'ALIOSS_TO_S3':
+            alioss_download_uploadThread_small(srcfile["Key"])
     return
 
 
@@ -605,22 +702,21 @@ def checkPartnumberList(srcfile, uploadId):
 
 
 # split the file into a virtual part list of index, each index is the start point of the file
-def split(srcfile):
+def split(srcfile, ChunkSize):
     partnumber = 1
     indexList = [0]
+    if int(srcfile["Size"] / ChunkSize) + 1 > 10000:
+        ChunkSize = int(srcfile["Size"] / 10000) + 1024  # 对于大于10000分片的大文件，自动调整Chunksize
+        logger.info(f'Size excess 10000 parts limit. Auto change ChunkSize to {ChunkSize}')
+
     while ChunkSize * partnumber < srcfile["Size"]:  # 如果刚好是"="，则无需再分下一part，所以这里不能用"<="
         indexList.append(ChunkSize * partnumber)
         partnumber += 1
-    if partnumber > 10000:
-        logger.error(f'PART NUMBER LIMIT 10,000. YOUR FILE HAS {partnumber}. ')
-        logger.error('PLEASE CHANGE THE chunksize IN CONFIG FILE AND TRY AGAIN')
-        input('PRESS ENTER TO QUIT')
-        sys.exit(0)
-    return indexList
+    return indexList, ChunkSize
 
 
 # upload parts in the list
-def uploadPart(uploadId, indexList, partnumberList, srcfile):
+def uploadPart(uploadId, indexList, partnumberList, srcfile, ChunkSize_auto):
     partnumber = 1  # 当前循环要上传的Partnumber
     total = len(indexList)
     md5list = [hashlib.md5(b'')] * total
@@ -636,13 +732,14 @@ def uploadPart(uploadId, indexList, partnumberList, srcfile):
             # upload 1 part/thread, or dryrun to only caculate md5
             if JobType == 'LOCAL_TO_S3':
                 pool.submit(uploadThread, uploadId, partnumber,
-                            partStartIndex, srcfile["Key"], total, md5list, dryrun, complete_list)
+                            partStartIndex, srcfile["Key"], total, md5list, dryrun, complete_list, ChunkSize_auto)
             elif JobType == 'S3_TO_S3':
                 pool.submit(download_uploadThread, uploadId, partnumber,
-                            partStartIndex, srcfile["Key"], total, md5list, dryrun, complete_list)
+                            partStartIndex, srcfile["Key"], total, md5list, dryrun, complete_list, ChunkSize_auto)
             elif JobType == 'ALIOSS_TO_S3':
                 pool.submit(alioss_download_uploadThread, uploadId, partnumber,
-                            partStartIndex, srcfile["Key"], srcfile["Size"], total, md5list, dryrun, complete_list)
+                            partStartIndex, srcfile["Key"], srcfile["Size"], total, md5list,
+                            dryrun, complete_list, ChunkSize_auto)
             partnumber += 1
     # 线程池End
     logger.info(f'All parts uploaded - {srcfile["Key"]} - size: {srcfile["Size"]}')
@@ -655,7 +752,7 @@ def uploadPart(uploadId, indexList, partnumberList, srcfile):
 
 
 # Single Thread Upload one part, from local to s3
-def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list):
+def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list, ChunkSize):
     prefix_and_key = str(PurePosixPath(S3Prefix) / srcfileKey)
     if not dryrun:
         print(f'\033[0;32;1m--->Uploading\033[0m {srcfileKey} - {partnumber}/{total}')
@@ -695,7 +792,7 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
 
 
 # download part from src. s3 and upload to dest. s3
-def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list):
+def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list, ChunkSize):
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -743,7 +840,7 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
                 logger.warning(f"UploadThreadFunc - {srcfileKey} - Exception log: {str(err)}")
                 logger.warning(f"Upload part fail, retry part: {partnumber} Attempts: {retryTime}")
                 if retryTime > MaxRetry:
-                    logger.error(f"Quit for Max Download retries: {retryTime}")
+                    logger.error(f"Quit for Max Upload retries: {retryTime}")
                     input('PRESS ENTER TO QUIT')
                     sys.exit(0)
                 time.sleep(5 * retryTime)  # 递增延迟重试
@@ -756,7 +853,7 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
 
 # download part from src. ali_oss and upload to dest. s3
 def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, srcfileSize, total, md5list, dryrun,
-                                 complete_list):
+                                 complete_list, ChunkSize):
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -926,7 +1023,7 @@ def compare_buckets():
 # Main
 if __name__ == '__main__':
     start_time = time.time()
-    set_config()
+    ChunkSize_default = set_config()
     logger, log_file_name = set_log()
 
     # Define s3 client
@@ -1001,7 +1098,7 @@ if __name__ == '__main__':
     # 对文件列表中的逐个文件进行上传操作
     with futures.ThreadPoolExecutor(max_workers=MaxParallelFile) as file_pool:
         for src_file in src_file_list:
-            file_pool.submit(upload_file, src_file, des_file_list, multipart_uploaded_list)
+            file_pool.submit(upload_file, src_file, des_file_list, multipart_uploaded_list, ChunkSize_default)
 
     # 再次获取源文件列表和目标文件夹现存文件列表进行比较，每个文件大小一致，输出比较结果
     spent_time = int(time.time() - start_time)

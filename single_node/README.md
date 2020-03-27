@@ -50,9 +50,10 @@ This is a trade-off for performance. It might be improved in the coming release,
 * S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. It might be improved in the coming release with seperated source and destination prefix.  
 S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。以后的版本考虑推出分别设置源和目的 Prefix.   
 
-### Version 1.5
+### Version 1.6
 * Support GUI for LOCAL_TO_S3 mode
 * Package binary version to Windows with GUI, no local python needed
+* Performance upgrade for small size file and support 0 size file for all mode.
 * Change config file to ini
 
 
