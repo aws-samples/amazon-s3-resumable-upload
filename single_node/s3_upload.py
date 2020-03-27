@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-# Python 3.7
-# Composed by Huang Zhuobin
-# This demo split file into multiparts and use s3 multipart upload to S3 with retry
-# install boto3 refer to https://github.com/boto/boto3
-
-
 import os
 import sys
 import json
@@ -12,90 +5,298 @@ import base64
 from boto3.session import Session
 from botocore.client import Config
 from concurrent import futures
-from configparser import ConfigParser
+from configparser import ConfigParser, RawConfigParser, NoOptionError
 import time
 import hashlib
 import logging
 from pathlib import PurePosixPath, Path
 
-#####
-# Read config.ini
-cfg = ConfigParser()
-try:
-    file_path = os.path.split(os.path.abspath(__file__))[0]
-    print(f'Reading config file: {file_path}/s3_upload_config.ini')
-    cfg.read(f'{file_path}/s3_upload_config.ini', encoding='utf-8-sig')
+# For ALIOSS_TO_S3
+import oss2
 
-    JobType = cfg.get('Basic', 'JobType')
-    SrcFileIndex = cfg.get('Basic', 'SrcFileIndex')
-    DesProfileName = cfg.get('Basic', 'DesProfileName')
-    DesBucket = cfg.get('Basic', 'DesBucket')
-    S3Prefix = cfg.get('Basic', 'S3Prefix')
+# For GUI
+from tkinter import Tk, Label, Button, Entry, filedialog, END, Spinbox, StringVar, Checkbutton, BooleanVar, messagebox
+from tkinter.ttk import Combobox
 
-    Megabytes = 1024*1024
-    ChunkSize = cfg.getint('Advanced', 'ChunkSize') * Megabytes
-    MaxRetry = cfg.getint('Advanced', 'MaxRetry')
-    MaxThread = cfg.getint('Advanced', 'MaxThread')
-    MaxParallelFile = cfg.getint('Advanced', 'MaxParallelFile')
-    IgnoreSmallFile = cfg.getboolean('Advanced', 'IgnoreSmallFile')
-    StorageClass = cfg.get('Advanced', 'StorageClass')
-    ifVerifyMD5 = cfg.getboolean('Advanced', 'ifVerifyMD5')
-    DontAskMeToClean = cfg.getboolean('Advanced', 'DontAskMeToClean')
-    LoggingLevel = cfg.get('Advanced', 'LoggingLevel')
-except Exception as e:
-    print("ERR loading s3_upload_config.ini", str(e))
-    sys.exit(0)
+global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, ChunkSize, MaxRetry, MaxThread, \
+    MaxParallelFile, IgnoreSmallFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
+    SrcDir, SrcBucket, SrcProfileName, ali_SrcBucket, ali_access_key_id, ali_access_key_secret, ali_endpoint
 
-try:
-    SrcDir = cfg.get('LOCAL_TO_S3', 'SrcDir')
-except Exception as e:
-    SrcDir = ''
 
-try:
-    SrcBucket = cfg.get('S3_TO_S3', 'SrcBucket')
-    SrcProfileName = cfg.get('S3_TO_S3', 'SrcProfileName')
-except Exception as e:
-    SrcBucket = ''
-    SrcProfileName = ''
+# Read config.ini with GUI
+def set_config():
+    sys_para = sys.argv
+    file_path = os.path.split(sys_para[0])[0]
+    gui = '--nogui' not in sys.argv
 
-if JobType == 'ALIOSS_TO_S3':
-    import oss2  # for Ali Cloud Oss storage download
-try:
-    ali_SrcBucket = cfg.get('ALIOSS_TO_S3', 'ali_SrcBucket')
-    ali_access_key_id = cfg.get('ALIOSS_TO_S3', 'ali_access_key_id')
-    ali_access_key_secret = cfg.get('ALIOSS_TO_S3', 'ali_access_key_secret')
-    ali_endpoint = cfg.get('ALIOSS_TO_S3', 'ali_endpoint')
-except Exception as e:
-    ali_SrcBucket = ""
-    ali_access_key_id = ""
-    ali_access_key_secret = ""
-    ali_endpoint = ""
+    JobType_list = ['LOCAL_TO_S3', 'S3_TO_S3', 'ALIOSS_TO_S3']
+    StorageClass_list = ['STANDARD', 'REDUCED_REDUNDANCY', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING',
+                         'GLACIER', 'DEEP_ARCHIVE']
+    config_file = os.path.join(file_path, 's3_upload_config.ini')
 
-#####
+    # If no config file, read the default config
+    if not os.path.exists(config_file):
+        config_file += '.default'
+        print("No customized config, use the default config")
+    cfg = ConfigParser()
+    print(f'Reading config file: {config_file}')
+
+    # Get local config value
+    try:
+        global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, ChunkSize, MaxRetry, MaxThread, \
+            MaxParallelFile, IgnoreSmallFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
+            SrcDir, SrcBucket, SrcProfileName, ali_SrcBucket, ali_access_key_id, ali_access_key_secret, ali_endpoint
+        cfg.read(config_file, encoding='utf-8-sig')
+        JobType = cfg.get('Basic', 'JobType')
+        SrcFileIndex = cfg.get('Basic', 'SrcFileIndex')
+        DesProfileName = cfg.get('Basic', 'DesProfileName')
+        DesBucket = cfg.get('Basic', 'DesBucket')
+        S3Prefix = cfg.get('Basic', 'S3Prefix')
+        Megabytes = 1024 * 1024
+        ChunkSize = cfg.getint('Advanced', 'ChunkSize') * Megabytes
+        MaxRetry = cfg.getint('Advanced', 'MaxRetry')
+        MaxThread = cfg.getint('Advanced', 'MaxThread')
+        MaxParallelFile = cfg.getint('Advanced', 'MaxParallelFile')
+        IgnoreSmallFile = cfg.getboolean('Advanced', 'IgnoreSmallFile')
+        StorageClass = cfg.get('Advanced', 'StorageClass')
+        ifVerifyMD5 = cfg.getboolean('Advanced', 'ifVerifyMD5')
+        DontAskMeToClean = cfg.getboolean('Advanced', 'DontAskMeToClean')
+        LoggingLevel = cfg.get('Advanced', 'LoggingLevel')
+        try:
+            SrcDir = cfg.get('LOCAL_TO_S3', 'SrcDir')
+        except NoOptionError:
+            SrcDir = ''
+        try:
+            SrcBucket = cfg.get('S3_TO_S3', 'SrcBucket')
+            SrcProfileName = cfg.get('S3_TO_S3', 'SrcProfileName')
+        except NoOptionError:
+            SrcBucket = ''
+            SrcProfileName = ''
+        try:
+            ali_SrcBucket = cfg.get('ALIOSS_TO_S3', 'ali_SrcBucket')
+            ali_access_key_id = cfg.get('ALIOSS_TO_S3', 'ali_access_key_id')
+            ali_access_key_secret = cfg.get('ALIOSS_TO_S3', 'ali_access_key_secret')
+            ali_endpoint = cfg.get('ALIOSS_TO_S3', 'ali_endpoint')
+        except NoOptionError:
+            ali_SrcBucket = ""
+            ali_access_key_id = ""
+            ali_access_key_secret = ""
+            ali_endpoint = ""
+    except Exception as e:
+        print("ERR loading s3_upload_config.ini", str(e))
+        input('PRESS ENTER TO QUIT')
+        sys.exit(0)
+
+    # GUI windows if there is not 'nogui' option in start para
+    # GUI only well support LOCAL_TO_S3 mode
+    # For other JobTpe, GUI is not a prefer option since it's better run on EC2 Linux
+    if gui:
+        # get profile name list in ./aws/credentials
+        pro_conf = RawConfigParser()
+        pro_path = os.path.join(os.path.expanduser("~"), ".aws")
+        cre_path = os.path.join(pro_path, "credentials")
+        if os.path.exists(cre_path):
+            pro_conf.read(cre_path)
+            profile_list = pro_conf.sections()
+        else:
+            print(f"There is no aws_access_key in {cre_path}, please input for Destination S3 Bucket: ")
+            aws_access_key_id = input('aws_access_key_id: ')
+            aws_secret_access_key = input('aws_secret_access_key: ')
+            region = input('region: ')
+            pro_conf.add_section('default')
+            pro_conf['default']['aws_access_key_id'] = aws_access_key_id
+            pro_conf['default']['aws_secret_access_key'] = aws_secret_access_key
+            pro_conf['default']['region'] = region
+            profile_list = ['default']
+            with open(cre_path, 'w') as f:
+                print(f"Saving credentials to {cre_path}")
+                pro_conf.write(f)
+
+        # Broswe dir
+        def browse():
+            local_dir = filedialog.askdirectory(initialdir=os.path.dirname(__file__))
+            url_txt.delete(0, END)
+            url_txt.insert(0, local_dir)
+            pass
+
+        def ListBuckets(*args):
+            DesProfileName = DesProfileName_txt.get()
+            client = Session(profile_name=DesProfileName).client('s3')
+            bucket_list = []
+            try:
+                response = client.list_buckets()
+                if 'Buckets' in response:
+                    bucket_list = [b['Name'] for b in response['Buckets']]
+            except Exception as e:
+                messagebox.showerror('Error', f'Failt to List buckets. \n'
+                                              f'Please verify your aws_access_key of profile: [{DesProfileName}]\n'
+                                              f'{str(e)}')
+                bucket_list = ['CAN_NOT_GET_BUCKET_LIST']
+            DesBucket_txt['values'] = bucket_list
+            DesBucket_txt.current(0)
+            # Finish ListBuckets
+
+
+        def job_change(*args):
+            if JobType_mode.get() != 'LOCAL_TO_S3':
+                messagebox.showinfo('Notice', 'S3_TO_S3 or OSS_TO_S3. \n'
+                                    'Please config the rest hidden parameter in s3_upload_config.ini')
+
+
+        # Start GUI
+        window = Tk()
+        window.title("Amazon S3 Resumable Upload Tool v1.5 - example")
+        window.geometry('700x350')
+        window.protocol("WM_DELETE_WINDOW", sys.exit)
+
+        Label(window, text='Job Type').grid(column=0, row=0, sticky='w', padx=2, pady=2)
+        JobType_mode = Combobox(window, width=15, state="readonly")
+        JobType_mode['values'] = tuple(JobType_list)
+        JobType_mode.grid(column=1, row=0, sticky='w', padx=2, pady=2)
+        if JobType in JobType_list:
+            position = JobType_list.index(JobType)
+            JobType_mode.current(position)
+        else:
+            JobType_mode.current(0)
+        JobType_mode.bind("<<ComboboxSelected>>", job_change)
+
+        Label(window, text="Local Folder").grid(column=0, row=1, sticky='w', padx=2, pady=2)
+        url_txt = Entry(window, width=50)
+        url_txt.grid(column=1, row=1, sticky='w', padx=2, pady=2)
+        url_btn = Button(window, text="Browse", bg="white", fg="red", command=browse)
+        url_btn.grid(column=2, row=1, sticky='w', padx=2, pady=2)
+        url_txt.insert(0, SrcDir)
+
+        Label(window, text="AWS Profile").grid(column=0, row=2, sticky='w', padx=2, pady=2)
+        DesProfileName_txt = Combobox(window, width=15, state="readonly")
+        DesProfileName_txt['values'] = tuple(profile_list)
+        DesProfileName_txt.grid(column=1, row=2, sticky='w', padx=2, pady=2)
+        if DesProfileName in profile_list:
+            position = profile_list.index(DesProfileName)
+            DesProfileName_txt.current(position)
+        else:
+            DesProfileName_txt.current(0)
+        DesProfileName = DesProfileName_txt.get()
+        DesProfileName_txt.bind("<<ComboboxSelected>>", ListBuckets)
+
+        Label(window, text="S3 Bucket").grid(column=0, row=3, sticky='w', padx=2, pady=2)
+        DesBucket_txt = Combobox(window, width=48)
+        DesBucket_txt.grid(column=1, row=3, sticky='w', padx=2, pady=2)
+        DesBucket_txt['values'] = DesBucket
+        DesBucket_txt.current(0)
+        Button(window, text="List Buckets", bg="white", fg="red", command=ListBuckets) \
+            .grid(column=2, row=3, sticky='w', padx=2, pady=2)
+
+        Label(window, text="S3 Prefix").grid(column=0, row=4, sticky='w', padx=2, pady=2)
+        S3Prefix_txt = Entry(window, width=50)
+        S3Prefix_txt.grid(column=1, row=4, sticky='w', padx=2, pady=2)
+        S3Prefix_txt.insert(0, S3Prefix)
+
+        Label(window, text="MaxThread/File").grid(column=0, row=5, sticky='w', padx=2, pady=2)
+        if MaxThread < 1 or MaxThread > 100:
+            MaxThread = 5
+        var = StringVar()
+        var.set(str(MaxThread))
+        MaxThread_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var)
+        MaxThread_txt.grid(column=1, row=5, sticky='w', padx=2, pady=2)
+
+        Label(window, text="MaxParallelFile").grid(column=0, row=6, sticky='w', padx=2, pady=2)
+        if MaxParallelFile < 1 or MaxParallelFile > 100:
+            MaxParallelFile = 5
+        var = StringVar()
+        var.set(str(MaxParallelFile))
+        MaxParallelFile_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var)
+        MaxParallelFile_txt.grid(column=1, row=6, sticky='w', padx=2, pady=2)
+
+        Label(window, text="S3 StorageClass").grid(column=0, row=7, sticky='w', padx=2, pady=2)
+        StorageClass_txt = Combobox(window, width=15, state="readonly")
+        StorageClass_txt['values'] = tuple(StorageClass_list)
+        StorageClass_txt.grid(column=1, row=7, sticky='w', padx=2, pady=2)
+        if StorageClass in StorageClass_list:
+            position = StorageClass_list.index(StorageClass)
+            StorageClass_txt.current(position)
+        else:
+            StorageClass_txt.current(0)
+
+        save_config = BooleanVar()
+        save_config.set(True)
+        save_config_txt = Checkbutton(window, text="Save to s3_upload_config.ini", var=save_config)
+        save_config_txt.grid(column=1, row=8, padx=2, pady=2)
+
+        def close():
+            window.withdraw()
+            ok = messagebox.askokcancel('Start uploading job',
+                                   f'Upload from Local to \ns3://{DesBucket_txt.get()}/{S3Prefix_txt.get()}\n'
+                                   f'Click OK to START')
+            if not ok:
+                window.deiconify()
+                return
+            window.quit()
+
+        Button(window, text=" Start Upload ", bg="white", fg="red", command=close).grid(column=1, row=10, padx=5,
+                                                                                        pady=5)
+        window.mainloop()
+
+        JobType = JobType_mode.get()
+        SrcDir = url_txt.get()
+        DesBucket = DesBucket_txt.get()
+        S3Prefix = S3Prefix_txt.get()
+        DesProfileName = DesProfileName_txt.get()
+        StorageClass = StorageClass_txt.get()
+        MaxThread = int(MaxThread_txt.get())
+        MaxParallelFile = int(MaxParallelFile_txt.get())
+
+        if save_config:
+            cfg['Basic']['JobType'] = JobType
+            cfg['Basic']['DesProfileName'] = DesProfileName
+            cfg['Basic']['DesBucket'] = DesBucket
+            cfg['Basic']['S3Prefix'] = S3Prefix
+            cfg['Advanced']['MaxThread'] = str(MaxThread)
+            cfg['Advanced']['MaxParallelFile'] = str(MaxParallelFile)
+            cfg['Advanced']['StorageClass'] = StorageClass
+            cfg['LOCAL_TO_S3']['SrcDir'] = SrcDir
+            config_file = os.path.join(file_path, 's3_upload_config.ini')
+            with open(config_file, 'w') as f:
+                cfg.write(f)
+                print(f"Save config to {config_file}")
+        # GUI window finish
+
+    # 校验
+    if JobType not in JobType_list:
+        print(f'ERR JobType: {JobType}, check config file: {config_file}')
+        input('PRESS ENTER TO QUIT')
+        sys.exit(0)
+    # Finish set_config()
+
+
 # Configure logging
-logger = logging.getLogger()
-# File logging
-os.system("mkdir log")
-this_file_name = os.path.splitext(os.path.basename(__file__))[0]
-t = time.localtime()
-file_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
-log_file_name = './log/'+this_file_name+'-'+file_time+'.log'
-print('Logging to file:', os.path.abspath(log_file_name), 'Logging level:', LoggingLevel)
-fileHandler = logging.FileHandler(filename=log_file_name)
-fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
-logger.addHandler(fileHandler)
-# Screen stream logging
-streamHandler = logging.StreamHandler()
-streamHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
-logger.addHandler(streamHandler)
-# Loggin Level
-logger.setLevel(logging.WARNING)
-if LoggingLevel == 'INFO':
-    logger.setLevel(logging.INFO)
-elif LoggingLevel == 'DEBUG':
-    logger.setLevel(logging.DEBUG)
+def set_log():
+    logger = logging.getLogger()
+    # File logging
+    os.system("mkdir log")
+    this_file_name = os.path.splitext(os.path.basename(__file__))[0]
+    t = time.localtime()
+    file_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
+    log_file_name = './log/' + this_file_name + '-' + file_time + '.log'
+    print('Logging to file:', os.path.abspath(log_file_name))
+    print('Logging level:', LoggingLevel)
+    fileHandler = logging.FileHandler(filename=log_file_name)
+    fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
+    logger.addHandler(fileHandler)
+    # Screen stream logging
+    streamHandler = logging.StreamHandler()
+    streamHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
+    logger.addHandler(streamHandler)
+    # Loggin Level
+    logger.setLevel(logging.WARNING)
+    if LoggingLevel == 'INFO':
+        logger.setLevel(logging.INFO)
+    elif LoggingLevel == 'DEBUG':
+        logger.setLevel(logging.DEBUG)
+    return logger
 
 
+# Get local file list
 def get_local_file_list():
     __src_file_list = []
     try:
@@ -103,7 +304,7 @@ def get_local_file_list():
             for parent, dirnames, filenames in os.walk(SrcDir):
                 for filename in filenames:  # 遍历输出文件信息
                     file_absPath = os.path.join(parent, filename)
-                    file_relativePath = file_absPath[len(SrcDir)+1:]
+                    file_relativePath = file_absPath[len(SrcDir) + 1:]
                     file_size = os.path.getsize(file_absPath)
                     if file_size >= ChunkSize or not IgnoreSmallFile:
                         if file_size != 0:
@@ -120,16 +321,19 @@ def get_local_file_list():
                 "Size": file_size
             }]
     except Exception as err:
-        logger.error('Can not get source files. ERR: '+str(err))
+        logger.error('Can not get source files. ERR: ' + str(err))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     if not __src_file_list:
         logger.error('Source file empty.')
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return __src_file_list
 
 
+# Get object list on S3
 def get_s3_file_list(s3_client, bucket):
-    logger.info('Get s3 file list '+bucket)
+    logger.info('Get s3 file list ' + bucket)
     __des_file_list = []
     try:
         response_fileList = s3_client.list_objects_v2(
@@ -140,7 +344,7 @@ def get_s3_file_list(s3_client, bucket):
         if response_fileList["KeyCount"] != 0:
             for n in response_fileList["Contents"]:
                 if n["Size"] >= ChunkSize or not IgnoreSmallFile:
-                    if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
+                    if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
                         __des_file_list.append({
                             "Key": n["Key"],
                             "Size": n["Size"]
@@ -156,7 +360,7 @@ def get_s3_file_list(s3_client, bucket):
                 )
                 for n in response_fileList["Contents"]:
                     if n["Size"] >= ChunkSize or not IgnoreSmallFile:
-                        if n["Size"] != 0:      # 子目录或 0 size 文件，不处理
+                        if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
                             __des_file_list.append({
                                 "Key": n["Key"],
                                 "Size": n["Size"]
@@ -167,43 +371,49 @@ def get_s3_file_list(s3_client, bucket):
             logger.info('File list is empty in the s3 bucket')
     except Exception as err:
         logger.error(str(err))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return __des_file_list
 
 
+# Check single file on S3
 def head_s3_single_file(s3_client, bucket):
     try:
         response_fileList = s3_client.head_object(
             Bucket=bucket,
-            Key=S3Prefix+SrcFileIndex
+            Key=S3Prefix + SrcFileIndex
         )
         file = [{
-            "Key": S3Prefix+SrcFileIndex,
+            "Key": S3Prefix + SrcFileIndex,
             "Size": response_fileList["ContentLength"]
         }]
     except Exception as err:
         logger.error(str(err))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return file
 
 
+# Check single file on OSS
 def head_oss_single_file(__ali_bucket):
     try:
         response_fileList = __ali_bucket.head_object(
-            key=S3Prefix+SrcFileIndex
+            key=S3Prefix + SrcFileIndex
         )
         file = [{
-            "Key": S3Prefix+SrcFileIndex,
+            "Key": S3Prefix + SrcFileIndex,
             "Size": response_fileList.content_length
         }]
     except Exception as err:
         logger.error(str(err))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return file
 
 
+# Get object list on OSS
 def get_ali_oss_file_list(__ali_bucket):
-    logger.info('Get oss file list '+ali_SrcBucket)
+    logger.info('Get oss file list ' + ali_SrcBucket)
     __des_file_list = []
     try:
         response_fileList = __ali_bucket.list_objects(
@@ -213,7 +423,7 @@ def get_ali_oss_file_list(__ali_bucket):
 
         if len(response_fileList.object_list) != 0:
             for n in response_fileList.object_list:
-                if n.size != 0:      # 子目录或 0 size 数据，不处理
+                if n.size != 0:  # 子目录或 0 size 数据，不处理
                     __des_file_list.append({
                         "Key": n.key,
                         "Size": n.size
@@ -238,10 +448,12 @@ def get_ali_oss_file_list(__ali_bucket):
             logger.info('File list is empty in the ali_oss bucket')
     except Exception as err:
         logger.error(str(err))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return __des_file_list
 
 
+# Get all exist object list on S3
 def get_uploaded_list(s3_client):
     logger.info('Get unfinished multipart upload')
     NextKeyMarker = ''
@@ -267,11 +479,13 @@ def get_uploaded_list(s3_client):
     return __multipart_uploaded_list
 
 
+# Jump to handle next file
 class NextFile(Exception):
     pass
 
 
-def upload_file(srcfile, desFilelist, UploadIdList): # UploadIdList就是multipart_uploaded_list
+# Upload file to S3
+def upload_file(srcfile, desFilelist, UploadIdList):  # UploadIdList就是multipart_uploaded_list
     logger.info(f'Start file: {srcfile["Key"]}')
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
@@ -334,6 +548,7 @@ def upload_file(srcfile, desFilelist, UploadIdList): # UploadIdList就是multipa
     return
 
 
+# Compare file exist on desination bucket
 def check_file_exist(srcfile, desFilelist, UploadIdList):
     # 检查源文件是否在目标文件夹中
     prefix_and_key = srcfile["Key"]
@@ -360,6 +575,7 @@ def check_file_exist(srcfile, desFilelist, UploadIdList):
     return UploadID_latest["UploadId"]
 
 
+# Check parts number exist on S3
 def checkPartnumberList(srcfile, uploadId):
     try:
         prefix_and_key = srcfile["Key"]
@@ -383,9 +599,10 @@ def checkPartnumberList(srcfile, uploadId):
                     partnumberList.append(partnumberObject["PartNumber"])
             PartNumberMarker = NextPartNumberMarker
         if partnumberList:  # 如果为0则表示没有查到已上传的Part
-            logger.info("Found uploaded partnumber: "+json.dumps(partnumberList))
+            logger.info("Found uploaded partnumber: " + json.dumps(partnumberList))
     except Exception as checkPartnumberList_err:
-        logger.error("checkPartnumberList_err"+json.dumps(checkPartnumberList_err))
+        logger.error("checkPartnumberList_err" + json.dumps(checkPartnumberList_err))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return partnumberList
 
@@ -400,6 +617,7 @@ def split(srcfile):
     if partnumber > 10000:
         logger.error(f'PART NUMBER LIMIT 10,000. YOUR FILE HAS {partnumber}. ')
         logger.error('PLEASE CHANGE THE chunksize IN CONFIG FILE AND TRY AGAIN')
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     return indexList
 
@@ -408,7 +626,7 @@ def split(srcfile):
 def uploadPart(uploadId, indexList, partnumberList, srcfile):
     partnumber = 1  # 当前循环要上传的Partnumber
     total = len(indexList)
-    md5list = [hashlib.md5(b'')]*total
+    md5list = [hashlib.md5(b'')] * total
     complete_list = []
     # 线程池Start
     with futures.ThreadPoolExecutor(max_workers=MaxThread) as pool:
@@ -451,7 +669,7 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
                 data.seek(partStartIndex)
                 chunkdata = data.read(ChunkSize)
                 chunkdata_md5 = hashlib.md5(chunkdata)
-                md5list[partnumber-1] = chunkdata_md5
+                md5list[partnumber - 1] = chunkdata_md5
                 if not dryrun:
                     s3_dest_client.upload_part(
                         Body=chunkdata,
@@ -469,12 +687,13 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
                 logger.info(f'Upload Fail - {srcfileKey} - Retry part - {partnumber} - Attempt - {retryTime}')
                 if retryTime > MaxRetry:
                     logger.error(f'Quit for Max retries: {retryTime}')
+                    input('PRESS ENTER TO QUIT')
                     sys.exit(0)
-                time.sleep(5*retryTime)  # 递增延迟重试
+                time.sleep(5 * retryTime)  # 递增延迟重试
     complete_list.append(partnumber)
     if not dryrun:
         print(f'\033[0;34;1m    --->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list)/total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
     return
 
 
@@ -492,11 +711,11 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
                 response_get_object = s3_src_client.get_object(
                     Bucket=SrcBucket,
                     Key=srcfileKey,
-                    Range="bytes="+str(partStartIndex)+"-"+str(partStartIndex+ChunkSize-1)
-                    )
+                    Range="bytes=" + str(partStartIndex) + "-" + str(partStartIndex + ChunkSize - 1)
+                )
                 getBody = response_get_object["Body"].read()
                 chunkdata_md5 = hashlib.md5(getBody)
-                md5list[partnumber-1] = chunkdata_md5
+                md5list[partnumber - 1] = chunkdata_md5
                 break
             except Exception as err:
                 retryTime += 1
@@ -504,8 +723,9 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
                 logger.warning(f"Download part fail, retry part: {partnumber} Attempts: {retryTime}")
                 if retryTime > MaxRetry:
                     logger.error(f"Quit for Max Download retries: {retryTime}")
+                    input('PRESS ENTER TO QUIT')
                     sys.exit(0)
-                time.sleep(5*retryTime)  # 递增延迟重试
+                time.sleep(5 * retryTime)  # 递增延迟重试
     if not dryrun:
         # 上传文件
         print(f'\033[0;32;1m    --->Uploading\033[0m {srcfileKey} - {partnumber}/{total}')
@@ -527,17 +747,19 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
                 logger.warning(f"Upload part fail, retry part: {partnumber} Attempts: {retryTime}")
                 if retryTime > MaxRetry:
                     logger.error(f"Quit for Max Download retries: {retryTime}")
+                    input('PRESS ENTER TO QUIT')
                     sys.exit(0)
-                time.sleep(5*retryTime)  # 递增延迟重试
+                time.sleep(5 * retryTime)  # 递增延迟重试
     complete_list.append(partnumber)
     if not dryrun:
         print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list)/total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
     return
 
 
 # download part from src. ali_oss and upload to dest. s3
-def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, srcfileSize, total, md5list, dryrun, complete_list):
+def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, srcfileSize, total, md5list, dryrun,
+                                 complete_list):
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -547,20 +769,20 @@ def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKe
         retryTime = 0
         while retryTime <= MaxRetry:
             try:
-                partEndIndex = partStartIndex+ChunkSize-1
+                partEndIndex = partStartIndex + ChunkSize - 1
                 if partEndIndex > srcfileSize:
-                    partEndIndex = srcfileSize-1
+                    partEndIndex = srcfileSize - 1
                 # Ali OSS 如果range结尾超出范围会变成从头开始下载全部(什么脑子？)，所以必须人工修改为FileSize-1
                 # 而S3或本地硬盘超出范围只会把结尾指针改为最后一个字节
                 response_get_object = ali_bucket.get_object(
                     key=srcfileKey,
                     byte_range=(partStartIndex, partEndIndex)
-                    )
+                )
                 getBody = b''
                 for chunk in response_get_object:
                     getBody += chunk
                 chunkdata_md5 = hashlib.md5(getBody)
-                md5list[partnumber-1] = chunkdata_md5
+                md5list[partnumber - 1] = chunkdata_md5
                 break
             except Exception as err:
                 retryTime += 1
@@ -568,8 +790,9 @@ def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKe
                 logger.warning(f"Download part fail, retry part: {partnumber} Attempts: {retryTime}")
                 if retryTime > MaxRetry:
                     logger.error(f"Quit for Max Download retries: {retryTime}")
+                    input('PRESS ENTER TO QUIT')
                     sys.exit(0)
-                time.sleep(5*retryTime)  # 递增延迟重试
+                time.sleep(5 * retryTime)  # 递增延迟重试
     if not dryrun:
         # 上传文件
         print(f'\033[0;32;1m    --->Uploading\033[0m {srcfileKey} - {partnumber}/{total}')
@@ -591,17 +814,17 @@ def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKe
                 logger.warning(f"Upload part fail, retry part: {partnumber} Attempts: {retryTime}")
                 if retryTime > MaxRetry:
                     logger.error(f"Quit for Max Download retries: {retryTime}")
+                    input('PRESS ENTER TO QUIT')
                     sys.exit(0)
-                time.sleep(5*retryTime)  # 递增延迟重试
+                time.sleep(5 * retryTime)  # 递增延迟重试
     complete_list.append(partnumber)
     if not dryrun:
         print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list)/total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
     return
 
 
-# Complete multipart upload
-# 通过查询回来的所有Part列表uploadedListParts来构建completeStructJSON
+# Complete multipart upload, get uploadedListParts from S3 and construct completeStructJSON
 def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
     # 查询S3的所有Part列表uploadedListParts构建completeStructJSON
     prefix_and_key = srcfileKey
@@ -632,6 +855,7 @@ def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
         PartNumberMarker = NextPartNumberMarker
     if len(uploadedListPartsClean) != len_indexList:
         logger.warning(f'Uploaded parts size not match - {srcfileKey}')
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
     completeStructJSON = {"Parts": uploadedListPartsClean}
 
@@ -646,6 +870,7 @@ def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
     return response_complete
 
 
+# Compare local file list and s3 list
 def compare_local_to_s3():
     logger.info('Comparing destination and source ...')
     fileList = get_local_file_list()
@@ -669,6 +894,7 @@ def compare_local_to_s3():
     return
 
 
+# Compare S3 buckets
 def compare_buckets():
     logger.info('Comparing destination and source ...')
     if JobType == 'S3_TO_S3':
@@ -702,30 +928,28 @@ def compare_buckets():
 
 # Main
 if __name__ == '__main__':
-    start_time = time.time()
-    # 校验输入
-    if JobType not in ['LOCAL_TO_S3', 'S3_TO_S3', 'ALIOSS_TO_S3']:
-        logger.warning('ERR JobType, check config file')
-        sys.exit(0)
+    set_config()
+    logger = set_log()
 
-    # 定义 s3 client
-    s3_config = Config(max_pool_connections=50)
+    # Define s3 client
+    s3_config = Config(max_pool_connections=100)
     s3_dest_client = Session(profile_name=DesProfileName).client('s3', config=s3_config)
     if JobType == 'S3_TO_S3':
         s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
     elif JobType == 'ALIOSS_TO_S3':
         ali_bucket = oss2.Bucket(oss2.Auth(ali_access_key_id, ali_access_key_secret), ali_endpoint, ali_SrcBucket)
 
-    # 检查目标S3能否写入
+    # Check destination S3 writable
     try:
-        logger.info('Checking write permission for dest. S3 bucket')
+        logger.info(f'Checking write permission for: {DesBucket}')
         s3_dest_client.put_object(
             Bucket=DesBucket,
             Key=str(PurePosixPath(S3Prefix) / 'access_test'),
             Body='access_test_content'
         )
     except Exception as e:
-        logger.error('Can not write to dest. bucket/prefix. ERR: '+str(e))
+        logger.error('Can not write to dest. bucket/prefix. ERR: ' + str(e))
+        input('PRESS ENTER TO QUIT')
         sys.exit(0)
 
     # 获取源文件列表
@@ -757,7 +981,8 @@ if __name__ == '__main__':
         logger.warning(f'{len(multipart_uploaded_list)} Unfinished upload, clean them and restart?')
         logger.warning('NOTICE: IF CLEAN, YOU CANNOT RESUME ANY UNFINISHED UPLOAD')
         if not DontAskMeToClean:
-            keyboard_input = input("CLEAN unfinished upload and restart(input CLEAN) or resume loading(press enter)? Please confirm: (n/CLEAN)")
+            keyboard_input = input(
+                "CLEAN unfinished upload and restart(input CLEAN) or resume loading(press enter)? Please confirm: (n/CLEAN)")
         else:
             keyboard_input = 'no'
         if keyboard_input == 'CLEAN':
@@ -795,3 +1020,4 @@ if __name__ == '__main__':
             f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_h}H:{time_m}M:{time_s}S \033[0m- FROM: {SrcDir} TO {DesBucket}/{S3Prefix}')
         compare_local_to_s3()
     print('Logged to file:', os.path.abspath(log_file_name))
+    input('PRESS ENTER TO QUIT')

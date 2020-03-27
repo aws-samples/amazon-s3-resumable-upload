@@ -50,9 +50,11 @@ This is a trade-off for performance. It might be improved in the coming release,
 * S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. It might be improved in the coming release with seperated source and destination prefix.  
 S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。以后的版本考虑推出分别设置源和目的 Prefix.   
 
-### Version 1.3
+### Version 1.5
+* Support GUI for LOCAL_TO_S3 mode
+* Package binary version to Windows with GUI, no local python needed
 * Change config file to ini
-* Package binary version to OS X, Windows and Linux
+
 
 ## Architecture 架构图  
 1. Local upload to S3  
@@ -63,14 +65,14 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
 ![Architecture](./img/img03.png)
   
 ## Installation  安装  
-**This tool runs under Python3, if you can't install python3, you can use below package version and skip the section of Install Python3 and SDK**  
-**本工具在Python3运行，如果不方便安装Python，可以直接使用以下打包版本，并跳过 Install Python3 and SDK 小节**  
+**GUI only well support LOCAL_TO_S3 mode.**  
+**This tool runs under Python3, if you are can't install python3, and you are WINDOWS SYSTEM, you can run package version and skip the section of Install Python3 &  SDK part.** 
+**GUI界面只对 LOCAL_TO_S3 较好支持**
+**本工具在Python3运行，如果不方便安装Python，并且是 Windows 系统，可以直接使用以下打包版本，并跳过 Install Python3 & SDK 说明小节。**  
 [Windows版本 s3_upload.zip](./windows/s3_upload.zip)  
-[OS_X版本 s3_upload.zip](./os_x/s3_upload.zip)  
-[Linux版本 s3_upload.zip](./linux/s3_upload.zip)  
 Download and unzip the s3_upload.zip file into a folder  
   
-### Install Python3 and SDK 
+### Install Python3 & SDK 
 1. Install [Python](https://www.python.org/downloads/) 3.6 or above  
   
 
@@ -125,8 +127,9 @@ ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS 区域 endpoint，在OSS控�
 ```
 
 ## Application Configure - 应用配置
-
-Config `s3_upload_config.ini`
+### **If run with GUI, you can setup these on GUI**  
+**如果运行GUI界面模式，你可以直接在界面做以下的设置**  
+### Config `s3_upload_config.ini`
 * 上面配置的 profile name 填入对应源和目的 profile name 项，例如：  
 ```
 SrcProfileName = beijing
@@ -138,25 +141,25 @@ DesProfileName = oregon
 JobType = LOCAL_TO_S3
 ```
 * Setup URI  
-设置源文件路径和上传的目的地址，以及其他可选配置
+设置源文件路径和上传的目的地址，以及其他可选配置  
 
-## Run the app - 运行应用
-* Python3 环境：
+## Start the app - 运行应用
+* Python3 Environment and don't want to run with GUI. Linux/MacOS/Win  
+Python3 环境，且不需要GUI界面运行在 Linux/MacOS/Win：
+```bash
+python3 s3_upload.py --nogui
+```
+* Python3 Environment and run with GUI. Linux/MacOS/Win  
+Python3 环境，且带GUI运行在 Linux/MacOS/Win：
 ```bash
 python3 s3_upload.py
 ```
-* Window 非 Python 环境运行打包版本：
-命令行界面 **CD 到解压的目录下**，并执行：  
-```bash
-s3_upload.exe  
-```
-
-* Linux/OSX 非 Python 环境运行打包版本：
-命令行界面 **CD 到解压的目录下**，并执行：
-```bash
-./s3_upload   
-```
-
+* Windows non-Python Environment, and to run LOCAL_TO_S3 job  
+Unzip s3_upload.zip and double-click s3_upload.exe  
+Windows 非 Python 环境运行本地上传任务： 
+解压缩 s3_upload.zip 后，运行 s3_upload.exe  
+![GUI Config Snapshot](./img/img04.png)
+  
   
 ## TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   

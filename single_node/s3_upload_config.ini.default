@@ -1,0 +1,81 @@
+
+[Basic]
+JobType = LOCAL_TO_S3
+# 'LOCAL_TO_S3' | 'S3_TO_S3' | 'ALIOSS_TO_S3'
+
+DesBucket = my-bucket
+# Destination S3 bucket name
+# 目标文件bucket, type = str
+
+S3Prefix = my-prefix
+# S3_TO_S3 mode Src. S3 Prefix, and same as Des. S3 Prefix; LOCAL_TO_S3 mode, this is Des. S3 Prefix.  
+# S3_TO_S3 源S3的Prefix(与目标S3一致)，LOCAL_TO_S3 则为目标S3的Prefix, type = str
+
+SrcFileIndex = *
+# Specify the file name to upload. Wildcard "*" to upload all.
+# 指定要上传的文件的文件名, type = str，Upload全部文件则用 "*"
+
+DesProfileName = default
+# Profile name config in ~/.aws credentials. It is the destination account profile.
+# 在~/.aws 中配置的能访问目标S3的 profile name
+
+[LOCAL_TO_S3]
+SrcDir = /home/ec2-user/mydir
+# Source file directory. It is useless in S3_TO_S3 mode
+# 原文件本地存放目录，S3_TO_S3 则该字段无效 type = str
+
+[S3_TO_S3]
+SrcBucket = my-src-bucket
+# Source bucket name. It is useless in LOCAL_TO_S3 mode.
+# 源Bucket，LOCAL_TO_S3 则本字段无效
+
+SrcProfileName = iad
+# Profile name config in ~/.aws credentials. It is the source account profile. Useless for LOCAL_TO_S3 mode.
+# 在~/.aws 中配置的能访问源S3的 profile name，LOCAL_TO_S3 则本字段无效
+
+[ALIOSS_TO_S3]
+ali_SrcBucket = img-process
+ali_access_key_id = xxxx
+ali_access_key_secret = xxx
+ali_endpoint = oss-cn-beijing.aliyuncs.com
+
+[Advanced]
+ChunkSize = 10
+# File chunksize, unit MBytes, not less than 5MB. Single file parts number < 10,000, limited by S3 mulitpart upload API.
+# 文件分片大小，单位为MB，不小于5M，单文件分片总数不能超过10000, type = int
+
+MaxRetry = 20
+# Max retry times while S3 API call fail.
+# S3 API call 失败，最大重试次数, type = int
+
+MaxThread = 5
+# Max threads for ONE file.
+# 单文件同时上传的进程数量, type = int
+
+MaxParallelFile = 5
+# Max paralle running file, i.e. concurrency threads = MaxParallelFile * MaxThread
+# 并行操作文件数量, type = int, 即同时并发的进程数 = MaxParallelFile * MaxThread
+
+IgnoreSmallFile = False
+# Ignore file size small than Chunksize
+# 是否跳过小于chunksize的小文件, type = bool
+
+StorageClass = STANDARD
+# 'STANDARD'|'REDUCED_REDUNDANCY'|'STANDARD_IA'|'ONEZONE_IA'|'INTELLIGENT_TIERING'|'GLACIER'|'DEEP_ARCHIVE'
+
+ifVerifyMD5 = False
+# Practice for twice MD5 for whole file.
+# If True, then after merge file, will do the second time of Etag MD5 for the whole file.
+# In S3_TO_S3 mode, this True will force to re-download all parts while break-point resume for calculating MD5, but not reupload the parts which already uploaded.
+# This switch will not affect the MD5 verification of every part upload, even False, it still verify very part's MD5.
+# 是否做这个文件的二次的MD5校验
+# 为True则一个文件完成上传合并分片之后再次进行整个文件的ETag校验MD5。
+# 对于 S3_TO_S3，该开关True会在断点续传的时候重新下载所有已传过的分片来计算MD5。
+# 该开关不影响每个分片上传时候的校验，即使为False也会校验每个分片MD5。
+
+DontAskMeToClean = True
+# If True: While there is unfinished upload, it will not ask you to clean the unfinished parts on Des. S3 or not. It will move on and resume break-point upload.
+# If True: 遇到存在现有的未完成upload时，不再询问是否Clean，默认不Clean，自动续传
+
+LoggingLevel = INFO
+# 'WARNING' | 'INFO' | 'DEBUG'
