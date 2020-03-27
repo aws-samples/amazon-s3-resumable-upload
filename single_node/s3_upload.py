@@ -11,13 +11,6 @@ import hashlib
 import logging
 from pathlib import PurePosixPath, Path
 
-# For ALIOSS_TO_S3
-import oss2
-
-# For GUI
-from tkinter import Tk, Label, Button, Entry, filedialog, END, Spinbox, StringVar, Checkbutton, BooleanVar, messagebox
-from tkinter.ttk import Combobox
-
 global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, ChunkSize, MaxRetry, MaxThread, \
     MaxParallelFile, IgnoreSmallFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
     SrcDir, SrcBucket, SrcProfileName, ali_SrcBucket, ali_access_key_id, ali_access_key_secret, ali_endpoint
@@ -91,6 +84,10 @@ def set_config():
     # GUI only well support LOCAL_TO_S3 mode
     # For other JobTpe, GUI is not a prefer option since it's better run on EC2 Linux
     if gui:
+        # For GUI
+        from tkinter import Tk, Label, Button, Entry, filedialog, END, Spinbox, StringVar, Checkbutton, BooleanVar, \
+            messagebox
+        from tkinter.ttk import Combobox
         # get profile name list in ./aws/credentials
         pro_conf = RawConfigParser()
         pro_path = os.path.join(os.path.expanduser("~"), ".aws")
@@ -117,7 +114,7 @@ def set_config():
             local_dir = filedialog.askdirectory(initialdir=os.path.dirname(__file__))
             url_txt.delete(0, END)
             url_txt.insert(0, local_dir)
-            pass
+            # Finsih browse folder
 
         def ListBuckets(*args):
             DesProfileName = DesProfileName_txt.get()
@@ -293,7 +290,7 @@ def set_log():
         logger.setLevel(logging.INFO)
     elif LoggingLevel == 'DEBUG':
         logger.setLevel(logging.DEBUG)
-    return logger
+    return logger, log_file_name
 
 
 # Get local file list
@@ -928,8 +925,9 @@ def compare_buckets():
 
 # Main
 if __name__ == '__main__':
+    start_time = time.time()
     set_config()
-    logger = set_log()
+    logger, log_file_name = set_log()
 
     # Define s3 client
     s3_config = Config(max_pool_connections=100)
@@ -937,6 +935,8 @@ if __name__ == '__main__':
     if JobType == 'S3_TO_S3':
         s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
     elif JobType == 'ALIOSS_TO_S3':
+        # For ALIOSS_TO_S3
+        import oss2
         ali_bucket = oss2.Bucket(oss2.Auth(ali_access_key_id, ali_access_key_secret), ali_endpoint, ali_SrcBucket)
 
     # Check destination S3 writable
