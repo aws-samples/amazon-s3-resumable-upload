@@ -10,6 +10,7 @@ import time
 import hashlib
 import logging
 from pathlib import PurePosixPath, Path
+import platform
 
 global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, MaxThread, \
     MaxParallelFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
@@ -20,7 +21,15 @@ global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, Max
 def set_config():
     sys_para = sys.argv
     file_path = os.path.split(sys_para[0])[0]
-    gui = '--gui' in sys.argv
+    gui = False
+    if platform.uname()[0] == 'Windows':  # Win默认打开
+        gui = True
+    if platform.uname()[0] == 'Linux':  # Linux 默认关闭
+        gui = False
+    if '--gui' in sys.argv:  # 指定 gui 模式
+        gui = True
+    if '--nogui' in sys.argv:  # 带 nogui 就覆盖前面Win打开要求
+        gui = False
 
     JobType_list = ['LOCAL_TO_S3', 'S3_TO_S3', 'ALIOSS_TO_S3']
     StorageClass_list = ['STANDARD', 'REDUCED_REDUNDANCY', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING',
@@ -79,14 +88,12 @@ def set_config():
         input('PRESS ENTER TO QUIT')
         sys.exit(0)
 
-    # GUI windows if there is not 'nogui' option in start para
-    # GUI only well support LOCAL_TO_S3 mode
+    # GUI only well support LOCAL_TO_S3 mode, start with --gui option
     # For other JobTpe, GUI is not a prefer option since it's better run on EC2 Linux
     if gui:
         # For GUI
-        from tkinter import Tk, Label, Button, Entry, filedialog, END, Spinbox, StringVar, Checkbutton, BooleanVar, \
-            messagebox
-        from tkinter.ttk import Combobox
+        from tkinter import Tk, filedialog, END, StringVar, BooleanVar, messagebox
+        from tkinter.ttk import Combobox, Label, Button, Entry, Spinbox, Checkbutton
         # get profile name list in ./aws/credentials
         pro_conf = RawConfigParser()
         pro_path = os.path.join(os.path.expanduser("~"), ".aws")
@@ -108,13 +115,25 @@ def set_config():
                 print(f"Saving credentials to {cre_path}")
                 pro_conf.write(f)
 
-        # Broswe dir
-        def browse():
+        # Click Select Folder
+        def browse_folder():
             local_dir = filedialog.askdirectory(initialdir=os.path.dirname(__file__))
             url_txt.delete(0, END)
             url_txt.insert(0, local_dir)
+            file_txt.delete(0, END)
+            file_txt.insert(0, "*")
             # Finsih browse folder
 
+        # Click Select File
+        def browse_file():
+            local_file = filedialog.askopenfilename()
+            url_txt.delete(0, END)
+            url_txt.insert(0, os.path.split(local_file)[0])
+            file_txt.delete(0, END)
+            file_txt.insert(0, os.path.split(local_file)[1])
+            # Finsih browse file
+
+        # Click List Buckets
         def ListBuckets(*args):
             DesProfileName = DesProfileName_txt.get()
             client = Session(profile_name=DesProfileName).client('s3')
@@ -132,17 +151,54 @@ def set_config():
             DesBucket_txt.current(0)
             # Finish ListBuckets
 
+        # Click List Prefix
+        def ListPrefix(*args):
+            client = Session(profile_name=DesProfileName).client('s3')
+            prefix_list = []
+            this_bucket = DesBucket_txt.get()
+            max_get = 100
+            try:
+                response = client.list_objects_v2(
+                    Bucket=this_bucket,
+                    Delimiter='/'
+                )  # Only get the max 1000 prefix for simply list
+                if 'CommonPrefixes' in response:
+                    prefix_list = [c['Prefix'] for c in response['CommonPrefixes']]
+                if not prefix_list:
+                    messagebox.showinfo('Message', f'There is no "/" Prefix in: {this_bucket}')
+                if response['IsTruncated']:
+                    messagebox.showinfo('Message', f'More than {max_get} Prefix, cannot fully list here.')
+            except Exception as e:
+                messagebox.showinfo('Error', f'Cannot get prefix list from bucket: {this_bucket}, {str(e)}')
+            S3Prefix_txt['values'] = prefix_list
+            S3Prefix_txt.current(1)
+            # Finish list prefix
 
+        # Change JobType
         def job_change(*args):
             if JobType_mode.get() != 'LOCAL_TO_S3':
                 messagebox.showinfo('Notice', 'S3_TO_S3 or OSS_TO_S3. \n'
-                                    'Please config the rest hidden parameter in s3_upload_config.ini')
+                                              'Please config the rest hidden parameter in s3_upload_config.ini')
+            # Finish JobType change message
 
+        # Click START button
+        def close():
+            window.withdraw()
+            ok = messagebox.askokcancel('Start uploading job',
+                                        f'Upload from Local to \ns3://{DesBucket_txt.get()}/{S3Prefix_txt.get()}\n'
+                                        f'Click OK to START')
+            if not ok:
+                window.deiconify()
+                return
+            window.quit()
+            return
+            # Finish close()
 
         # Start GUI
         window = Tk()
         window.title("Amazon S3 Resumable Upload Tool v1.5 - example")
-        window.geometry('700x350')
+        window.geometry('705x350')
+        window.configure(background='#ECECEC')
         window.protocol("WM_DELETE_WINDOW", sys.exit)
 
         Label(window, text='Job Type').grid(column=0, row=0, sticky='w', padx=2, pady=2)
@@ -156,17 +212,24 @@ def set_config():
             JobType_mode.current(0)
         JobType_mode.bind("<<ComboboxSelected>>", job_change)
 
-        Label(window, text="Local Folder").grid(column=0, row=1, sticky='w', padx=2, pady=2)
+        Label(window, text="Folder").grid(column=0, row=1, sticky='w', padx=2, pady=2)
         url_txt = Entry(window, width=50)
         url_txt.grid(column=1, row=1, sticky='w', padx=2, pady=2)
-        url_btn = Button(window, text="   Browse   ", bg="white", fg="red", command=browse)
+        url_btn = Button(window, text="Select Folder", width=10, command=browse_folder)
         url_btn.grid(column=2, row=1, sticky='w', padx=2, pady=2)
         url_txt.insert(0, SrcDir)
 
-        Label(window, text="AWS Profile").grid(column=0, row=2, sticky='w', padx=2, pady=2)
+        Label(window, text="Filename or *").grid(column=0, row=2, sticky='w', padx=2, pady=2)
+        file_txt = Entry(window, width=50)
+        file_txt.grid(column=1, row=2, sticky='w', padx=2, pady=2)
+        file_btn = Button(window, text="Select File", width=10, command=browse_file)
+        file_btn.grid(column=2, row=2, sticky='w', padx=2, pady=2)
+        file_txt.insert(0, SrcFileIndex)
+
+        Label(window, text="AWS Profile").grid(column=0, row=3, sticky='w', padx=2, pady=2)
         DesProfileName_txt = Combobox(window, width=15, state="readonly")
         DesProfileName_txt['values'] = tuple(profile_list)
-        DesProfileName_txt.grid(column=1, row=2, sticky='w', padx=2, pady=2)
+        DesProfileName_txt.grid(column=1, row=3, sticky='w', padx=2, pady=2)
         if DesProfileName in profile_list:
             position = profile_list.index(DesProfileName)
             DesProfileName_txt.current(position)
@@ -175,39 +238,42 @@ def set_config():
         DesProfileName = DesProfileName_txt.get()
         DesProfileName_txt.bind("<<ComboboxSelected>>", ListBuckets)
 
-        Label(window, text="S3 Bucket").grid(column=0, row=3, sticky='w', padx=2, pady=2)
+        Label(window, text="S3 Bucket").grid(column=0, row=4, sticky='w', padx=2, pady=2)
         DesBucket_txt = Combobox(window, width=48)
-        DesBucket_txt.grid(column=1, row=3, sticky='w', padx=2, pady=2)
+        DesBucket_txt.grid(column=1, row=4, sticky='w', padx=2, pady=2)
         DesBucket_txt['values'] = DesBucket
         DesBucket_txt.current(0)
-        Button(window, text="List Buckets", bg="white", fg="red", command=ListBuckets) \
-            .grid(column=2, row=3, sticky='w', padx=2, pady=2)
+        Button(window, text="List Buckets", width=10, command=ListBuckets) \
+            .grid(column=2, row=4, sticky='w', padx=2, pady=2)
 
-        Label(window, text="S3 Prefix").grid(column=0, row=4, sticky='w', padx=2, pady=2)
-        S3Prefix_txt = Entry(window, width=50)
-        S3Prefix_txt.grid(column=1, row=4, sticky='w', padx=2, pady=2)
-        S3Prefix_txt.insert(0, S3Prefix)
+        Label(window, text="S3 Prefix").grid(column=0, row=5, sticky='w', padx=2, pady=2)
+        S3Prefix_txt = Combobox(window, width=48)
+        S3Prefix_txt.grid(column=1, row=5, sticky='w', padx=2, pady=2)
+        S3Prefix_txt['values'] = S3Prefix
+        S3Prefix_txt.current(0)
+        Button(window, text="List Prefix", width=10, command=ListPrefix) \
+            .grid(column=2, row=5, sticky='w', padx=2, pady=2)
 
-        Label(window, text="MaxThread/File").grid(column=0, row=5, sticky='w', padx=2, pady=2)
+        Label(window, text="MaxThread/File").grid(column=0, row=6, sticky='w', padx=2, pady=2)
         if MaxThread < 1 or MaxThread > 100:
             MaxThread = 5
-        var = StringVar()
-        var.set(str(MaxThread))
-        MaxThread_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var)
-        MaxThread_txt.grid(column=1, row=5, sticky='w', padx=2, pady=2)
+        var_t = StringVar()
+        var_t.set(str(MaxThread))
+        MaxThread_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var_t)
+        MaxThread_txt.grid(column=1, row=6, sticky='w', padx=2, pady=2)
 
-        Label(window, text="MaxParallelFile").grid(column=0, row=6, sticky='w', padx=2, pady=2)
+        Label(window, text="MaxParallelFile").grid(column=0, row=7, sticky='w', padx=2, pady=2)
         if MaxParallelFile < 1 or MaxParallelFile > 100:
             MaxParallelFile = 5
-        var = StringVar()
-        var.set(str(MaxParallelFile))
-        MaxParallelFile_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var)
-        MaxParallelFile_txt.grid(column=1, row=6, sticky='w', padx=2, pady=2)
+        var_f = StringVar()
+        var_f.set(str(MaxParallelFile))
+        MaxParallelFile_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var_f)
+        MaxParallelFile_txt.grid(column=1, row=7, sticky='w', padx=2, pady=2)
 
-        Label(window, text="S3 StorageClass").grid(column=0, row=7, sticky='w', padx=2, pady=2)
+        Label(window, text="S3 StorageClass").grid(column=0, row=8, sticky='w', padx=2, pady=2)
         StorageClass_txt = Combobox(window, width=15, state="readonly")
         StorageClass_txt['values'] = tuple(StorageClass_list)
-        StorageClass_txt.grid(column=1, row=7, sticky='w', padx=2, pady=2)
+        StorageClass_txt.grid(column=1, row=8, sticky='w', padx=2, pady=2)
         if StorageClass in StorageClass_list:
             position = StorageClass_list.index(StorageClass)
             StorageClass_txt.current(position)
@@ -217,24 +283,14 @@ def set_config():
         save_config = BooleanVar()
         save_config.set(True)
         save_config_txt = Checkbutton(window, text="Save to s3_upload_config.ini", var=save_config)
-        save_config_txt.grid(column=1, row=8, padx=2, pady=2)
+        save_config_txt.grid(column=1, row=9, padx=2, pady=2)
 
-        def close():
-            window.withdraw()
-            ok = messagebox.askokcancel('Start uploading job',
-                                   f'Upload from Local to \ns3://{DesBucket_txt.get()}/{S3Prefix_txt.get()}\n'
-                                   f'Click OK to START')
-            if not ok:
-                window.deiconify()
-                return
-            window.quit()
-
-        Button(window, text=" Start Upload ", bg="white", fg="red", command=close).grid(column=1, row=10, padx=5,
-                                                                                        pady=5)
+        Button(window, text="Start Upload", width=15, command=close).grid(column=1, row=10, padx=5, pady=5)
         window.mainloop()
 
         JobType = JobType_mode.get()
         SrcDir = url_txt.get()
+        SrcFileIndex = file_txt.get()
         DesBucket = DesBucket_txt.get()
         S3Prefix = S3Prefix_txt.get()
         DesProfileName = DesProfileName_txt.get()
@@ -251,6 +307,7 @@ def set_config():
             cfg['Advanced']['MaxParallelFile'] = str(MaxParallelFile)
             cfg['Advanced']['StorageClass'] = StorageClass
             cfg['LOCAL_TO_S3']['SrcDir'] = SrcDir
+            cfg['Basic']['SrcFileIndex'] = SrcFileIndex
             config_file = os.path.join(file_path, 's3_upload_config.ini')
             with open(config_file, 'w') as f:
                 cfg.write(f)
@@ -463,6 +520,7 @@ def get_uploaded_list(s3_client):
 class NextFile(Exception):
     pass
 
+
 def uploadTheard_small(srcfile, prefix_and_key):
     print(f'\033[0;32;1m--->Uploading\033[0m {srcfile["Key"]} - small file')
     with open(os.path.join(SrcDir, srcfile["Key"]), 'rb') as data:
@@ -491,7 +549,7 @@ def uploadTheard_small(srcfile, prefix_and_key):
 
 
 def download_uploadThread_small(srcfileKey):
-    for retryTime in range(MaxRetry+1):
+    for retryTime in range(MaxRetry + 1):
         try:
             # Get object
             print(f"\033[0;33;1m--->Downloading\033[0m {srcfileKey} - small file")
@@ -527,7 +585,7 @@ def download_uploadThread_small(srcfileKey):
 
 
 def alioss_download_uploadThread_small(srcfileKey):
-    for retryTime in range(MaxRetry+1):
+    for retryTime in range(MaxRetry + 1):
         try:
             # Get Objcet
             print(f"\033[0;33;1m--->Downloading\033[0m {srcfileKey} - small file")
@@ -596,7 +654,8 @@ def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # Uploa
                 response_indexList, ChunkSize_auto = split(srcfile, ChunkSize_default)
 
                 # 执行分片upload
-                upload_etag_full = uploadPart(reponse_uploadId, response_indexList, partnumberList, srcfile, ChunkSize_auto)
+                upload_etag_full = uploadPart(reponse_uploadId, response_indexList, partnumberList, srcfile,
+                                              ChunkSize_auto)
 
                 # 合并S3上的文件
                 response_complete = completeUpload(
@@ -792,7 +851,8 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
 
 
 # download part from src. s3 and upload to dest. s3
-def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list, ChunkSize):
+def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list,
+                          ChunkSize):
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -1034,6 +1094,7 @@ if __name__ == '__main__':
     elif JobType == 'ALIOSS_TO_S3':
         # For ALIOSS_TO_S3
         import oss2
+
         ali_bucket = oss2.Bucket(oss2.Auth(ali_access_key_id, ali_access_key_secret), ali_endpoint, ali_SrcBucket)
 
     # Check destination S3 writable
@@ -1045,7 +1106,7 @@ if __name__ == '__main__':
             Body='access_test_content'
         )
     except Exception as e:
-        logger.error('Can not write to dest. bucket/prefix. ERR: ' + str(e))
+        logger.error(f'Can not write to {DesBucket}/{S3Prefix}, {str(e)}')
         input('PRESS ENTER TO QUIT')
         sys.exit(0)
 

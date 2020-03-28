@@ -33,22 +33,6 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 * Can setup ouput info level  
 可设置输出消息级别，如设置WARNING级别，则只输出你最关注的信息。
 --------  
-### Known Issue  注意: 
-* ChunkSize setting. Because Amazon S3 only support 10,000 parts for one single file, so e.g. ChunkSize 5MB can only support single file max 50GB, if you need to upload single file size 500GB, then you need ChunkSize at least 50MB  
- ChunkSize 的大小设置。由于 Amazon S3 API 最大只支持单文件10,000个分片。例如设置 ChunkSize 5MB 最大只能支持单个文件 50GB，如果要传单个文件 500GB，则需要设置 ChunkSize 至少为 50MB。以上只针对单机版，而集群和Serverless版本已经有自动调整 ChunkSize 机制，无需人工干预。  
-
-* For transfering data between Global and China, please setup tcp_congestion_control BBR to improve networking performance.   
-对于Global与国内传输数据的场景，请设置 TCP 拥塞控制为 BBR，详见后文小节：TCP BBR improve Network performance  
-
-* If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
-如果某个文件传输到一半，你要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
-
-* While same file prefix/name with same size, it will be considered as duplicated file and this file will be ignore.
-This is a trade-off for performance. It might be improved in the coming release, with Verification Option.  
-相同的文件前缀和文件名，并且文件大小相同的，则会被认为是重复文件不再传输。这是为性能考虑的折中。以后的版本考虑推出可选择是否校验文件的选项。  
-
-* S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. It might be improved in the coming release with seperated source and destination prefix.  
-S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。以后的版本考虑推出分别设置源和目的 Prefix.   
 
 ### Version 1.6
 * Support GUI for LOCAL_TO_S3 mode
@@ -163,7 +147,27 @@ Windows 非 Python 环境运行本地上传任务：
 解压缩 s3_upload.zip 后，运行 s3_upload.exe  
 ![GUI Config Snapshot](./img/img04.png)
   
+## Trouble Shooting
+* 部分 MacOS 版本的 Python 运行 GUI（ tkinter ）会出现 Mac WindowServer 端口冲突，导致 Mac 退出用户重新启动的情况。目前受限于 Python tkinter 与 MacOS，遇到这种情况，需要升级或降级 Python/tkinter 解决。参考：  
+https://bugs.python.org/issue37833  
+https://stackoverflow.com/questions/57400301/how-to-fix-tkinter-every-code-with-gui-crashes-mac-os-with-respring    
+或不使用 GUI 来运行 python3 s3_upload.py --nogui。Windows 操作系统没有该问题。  
   
+### Known Issue  注意:  
+
+* While same file prefix/name with same size, it will be considered as duplicated file and this file will be ignore.
+This is a trade-off for performance. It might be improved in the coming release, with Verification Option.  
+相同的文件前缀和文件名，并且文件大小相同的，则会被认为是重复文件不再传输。这是为性能考虑的折中。以后的版本考虑推出可选择是否校验文件的选项。  
+
+* Amazon S3 only support 10,000 parts for one single file. Now the application can auto tuning Chunksize for big file, you don't need to change it manually.  
+由于 Amazon S3 API 最大只支持单文件10,000个分片。目前程序已经有自动调整 ChunkSize 机制，无需人工干预。  
+
+* If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
+如果某个文件传输到一半，要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
+
+* S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. If you need more flexible prefix setting, please use s3_migrate Cluster version.  
+S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。如果需要更灵活的设置，请使用s3_migrate集群版本.   
+
 ## TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
 如果是跨 AWS Global 和中国区，推荐启用 TCP BBR: Congestion-Based Congestion Control，可以提高传输效率  
