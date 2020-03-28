@@ -6,10 +6,7 @@ Breaking-point resume supported, suitable for large files
 Upload from local server, migrate files between Global AWS and China AWS S3, or migrate from AliCloud OSS to Amazon S3. Now support Single Node Version, Cluster Servers Version and Serverless AWS Lambda Version.  
 从本地服务器上传，或海外与中国区 Amazon S3 之间互相拷贝，或从阿里云 OSS 迁移到 Amazon S3。现已支持单机版，多台服务器的集群版和无服务器 AWS Lambda 版本。  
   
-Single Node Version 1.3  
-Cluster & Serverless Version 0.94
-  
-### Features 功能：  
+## Features 功能：  
 
 * Split multipart and get from source, multi-thread upload to S3 and merge, support resume upload (Part level).   
 源文件的自动分片获取，多线程并发上传到目的S3再合并文件，断点续传(分片级别)，自动重传。  
@@ -28,9 +25,28 @@ Cluster and Serverless version support source: Amazon S3
 * Support setup S3 storage class, such as: standard, S3-IA, Glacier or Deep Archive  
 可设置S3存储级别，如：标准、S3-IA、Glacier或深度归档。  
 
-### Single Node Version 单机版  
+## Version Selection - 版本选择
+
+### Single Node:  
+Single Python file can run anywhere - 单个 Python 文件可在任何地方运行  
+* LOCAL_TO_S3: - 本地上传   
+* S3_TO_S3: In one batch - 轻中量级，一次性运行的   
+* ALIOSS_TO_S3: - 阿里云OSS到S3  
+### Serverless:  
+AWS Lambda + Amazon SQS  
+* S3_TO_S3: Unpredictable, instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB )  
+轻中量(建议单文件< 50GB)，不定期，即时同步  
+### Cluster:  
+Amazon EC2 Autoscaling + Amazon SQS 
+* S3_TO_S3: Mass of files with single size from 0 to TByte. Cron task or instantly sync data.  
+大量文件，单文件从0到TB级别。定时任务或即时数据同步。  
+### Jobsender:  
+* Scan S3 exist objects, create delta job list to trigger SQS. Can work with Cluster or Serverless  
+扫描S3现有文件，生成差异列表发任务到SQS。可以与Cluster或Serverless一起工作。
+
+### Single Node Version - 单机版  
 * Single node: It can run on any place which can run AWS CLI. Even no Python environment, can use package version.  
-单机运行：能运行 AWS 命令行的地方都能运行，无Python环境也可使用打包版本。  
+单机运行：能运行 Python 的地方都能运行，无 Python 环境也可使用打包版本。  
 * Auto traversal: Auto traversal sub-directory, can also specify to just one file copying  
 自动遍历： 自动遍历下级子目录，也可以指定单一文件拷贝  
 * Break-point resume upload, no worry of network breaken or server crash.  
@@ -70,15 +86,16 @@ Amazon EC2 自动扩展集群版本和无服务器 AWS Lambda版本，可以分�
   
 ![Cluster Diagram](./img/02.png)  
   
-### Limitation 局限
+
+### Limitation - 局限
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 
 * Don't change the chunksize while start data copying.  
 不要在开始数据复制之后修改Chunksize。其实程序会自动根据文件调整，一般你无需调整该值。  
 
-* It only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node uploader.  
-本项目只对比文件Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
+* It only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node uploader. If it is trigger by new object created on S3, then it will alway copy and overwrite.  
+本项目只对比文件Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做判断，直接复制并覆盖。  
 
 ### TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
