@@ -155,7 +155,7 @@ python3 s3_upload.py --nogui
 * Python3 Environment and run with GUI. Linux/MacOS/Win  
 Python3 环境，且带GUI运行在 Linux/MacOS/Win：
 ```bash
-python3 s3_upload.py
+python3 s3_upload.py --gui
 ```
 * Windows non-Python Environment, and to run LOCAL_TO_S3 job  
 Unzip s3_upload.zip and double-click s3_upload.exe  

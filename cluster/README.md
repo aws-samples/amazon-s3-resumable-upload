@@ -197,7 +197,7 @@ API Call在应用层面的最大重试次数
 * 以上 Autoscaling 和 Alarm 都会在 CDK 中创建。请在 cdk_ec2_stack 中设置告警的 EMAIL 地址   
 * Amazon DynamoDB 表可以监控每个文件传输任务的完成情况，启动时间，重试次数等  
 
-## 其他说明  
+## 文件过滤模式   
 * Jobsender 比对S3 Bucket时候可以设置忽略某个文件，或某前缀/某后缀的一批文件，编辑 s3_migration_ignore_list.txt 增加你要忽略对象的 bucket/key，一个文件一行，最后一个字符如果是" * "则为通配前缀，第一个字符是" * "则为通配后缀，例如：  
 ```
 your_src_bucket/your_exact_key.mp4

@@ -196,7 +196,7 @@ If not empty, means there is still jobs not finish on last cron, it will stop, a
 * Amazon DynamoDB Table to monitor detail of each jobs  
 
 
-## Others  
+## Objects List Filter mode  
 * Jobsender support ignore some objects while comparing bucket. Edit s3_migration_ignore_list.txt, add the file bucket/key as one file one line. Or The last character " * " means wildcard prefix, or the first character " * " means wildcard suffix. E.g.  
 ```
 your_src_bucket/your_exact_key.mp4

@@ -20,7 +20,7 @@ global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, Max
 def set_config():
     sys_para = sys.argv
     file_path = os.path.split(sys_para[0])[0]
-    gui = '--nogui' not in sys.argv
+    gui = '--gui' in sys.argv
 
     JobType_list = ['LOCAL_TO_S3', 'S3_TO_S3', 'ALIOSS_TO_S3']
     StorageClass_list = ['STANDARD', 'REDUCED_REDUNDANCY', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING',
