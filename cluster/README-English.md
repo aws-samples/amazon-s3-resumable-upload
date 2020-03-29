@@ -206,6 +206,32 @@ your_src_bucket/your_*
 */readme.md
 ```
 
+## TCP BBR improve Network performance
+If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
+
+[Amazon Linux AMI 2017.09.1 Kernel 4.9.51](https://aws.amazon.com/cn/amazon-linux-ami/2017.09-release-notes/) or later version supported TCP Bottleneck Bandwidth and RTT (BBR) .  
+
+BBR is `NOT` enabled by default. You can enable it on your EC2 Instance via:：
+```
+$ sudo modprobe tcp_bbr
+$ sudo modprobe sch_fq
+$ sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
+```
+Persistent configuration should look like:
+```
+$ sudo su -
+
+# cat <<EOF>> /etc/sysconfig/modules/tcpcong.modules
+>#!/bin/bash
+> exec /sbin/modprobe tcp_bbr >/dev/null 2>&1
+> exec /sbin/modprobe sch_fq >/dev/null 2>&1
+> EOF
+
+# chmod 755 /etc/sysconfig/modules/tcpcong.modules
+
+# echo "net.ipv4.tcp_congestion_control = bbr" >> /etc/sysctl.d/00-tcpcong.conf
+```
+
 ## Limitation 
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 

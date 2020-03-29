@@ -1,4 +1,4 @@
-# Amazon S3 MultiThread Resume Upload Tool v1.3 - Single Node Version (Amazon S3多线程断点续传 - 单机版)   
+# Amazon S3 MultiThread Resume Upload Tool - Single Node (Amazon S3多线程断点续传 - 单机版)   
 
 Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable for large files  
 多线程断点续传到 Amazon S3，适合批量的大文件  
@@ -38,8 +38,6 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 * Support GUI for LOCAL_TO_S3 mode
 * Package binary version to Windows with GUI, no local python needed
 * Performance upgrade for small size file and support 0 size file for all mode.
-* Change config file to ini
-
 
 ## Architecture 架构图  
 1. Local upload to S3  
@@ -50,12 +48,12 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 ![Architecture](./img/img03.png)
   
 ## Installation  安装  
-**GUI only well support LOCAL_TO_S3 mode.**  
+#  
 **This tool runs under Python3, if you can't install python3, and are WINDOWS SYSTEM, you can run package version and skip the section of Install Python3 &  SDK part.**   
-**GUI界面只对 LOCAL_TO_S3 较好支持**  
+  
 **本工具在Python3运行，如果不方便安装Python，并且是 Windows 系统，可以直接使用以下打包版本，并跳过 Install Python3 & SDK 说明小节。**  
-#
-[Win64 Package version: s3_upload.zip](./win64/s3_upload.zip)  
+
+[Win64 Package with GUI **s3_upload.zip** No python installation needed](./win64/s3_upload.zip)  
 Download and unzip the s3_upload.zip then run **s3_upload.exe** , no python needed   
 #
 
@@ -77,9 +75,7 @@ You need to make sure the credentials you're using have the correct permissions 
 service. If you run into 'Access Denied' errors while running this sample, please follow the steps below.  
 确认你的 IAM user 有权限访问对应的S3.  
 
-* Log into the [AWS IAM Console](https://console.aws.amazon.com/iam/home)
-* Navigate to the Users page. Find the AWS IAM user whose credentials you're using.
-* Under the 'Permissions' section, attach the policy called 'AmazonS3FullAccess'
+* Log into the [AWS IAM Console](https://console.aws.amazon.com/iam/home) Navigate to the Users page. Find the AWS IAM user whose credentials you're using. Under the 'Permissions' section, attach the policy called 'AmazonS3FullAccess'
 * Copy aws_access_key_id and aws_secret_access_key of this user for below setting
 * Create file `"credentials"` in ~/.aws/ (`C:\Users\USER_NAME\.aws\` for Windows users) and save below content:  
 创建文件名为 `"credentials"` 于 ~/.aws/ 目录(`C:\Users\USER_NAME\.aws\` for Windows users) 并保存以下内容:
@@ -89,8 +85,9 @@ region = <your region>
 aws_access_key_id = <your access key id>
 aws_secret_access_key = <your secret key>
 ```
-上面 "default" 是默认 profle name，如果是S3 copy to S3你需要配置两个 profile ，一个是访问源 S3，一个是访问目的 S3。
-
+* If S3_TO_S3 mode, you need two profile for source and destination S3  
+如果是S3 copy to S3你需要配置两个 profile，以便访问源和目的S3  
+See the [AWS document Security Credentials](http://aws.amazon.com/security-credentials) page for more detail  
 For example：
 ```
 [beijing]
@@ -103,9 +100,8 @@ region=us-west-2
 aws_access_key_id=XXXXXXXXXXXXXXX
 aws_secret_access_key=XXXXXXXXXXXXXXXXXXXXXX
 ```
-See the [Security Credentials](http://aws.amazon.com/security-credentials) page for more detail
 
-2. If you need to copy from AliCloud OSS, you need AliCloud credentials to setup in s3_upload_config.py  
+2. If ALIOSS_TO_S3 mode, setup AliCloud credentials in s3_upload_config.ini  
 ```
 ali_SrcBucket = "your bucket name"  # 阿里云OSS 源Bucket，对于 LOCAL_TO_S3/S3_TO_S3 则本字段无效
 ali_access_key_id = "xxxxxxxxxxx"  # 阿里云 RAM 用户访问密钥
@@ -114,59 +110,62 @@ ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS 区域 endpoint，在OSS控�
 ```
 
 ## Application Configure - 应用配置
-### **If run with GUI, you can setup these on GUI**  
-**如果运行GUI界面模式，你可以直接在界面做以下的设置**  
+**For local upload to S3, you can run with GUI and config on GUI**  
+**如果是本地上传，运行图形界面模式，你可以直接在界面做这些应用设置**  
 ### Config `s3_upload_config.ini`
 * 上面配置的 profile name 填入对应源和目的 profile name 项，例如：  
 ```
 SrcProfileName = beijing
 DesProfileName = oregon
 ```
-* Setup source type  
+* Setup Job Type  
 'LOCAL_TO_S3' or 'S3_TO_S3' or 'ALIOSS_TO_S3'   
 ```
 JobType = LOCAL_TO_S3
 ```
-* Setup URI  
-设置源文件路径和上传的目的地址，以及其他可选配置  
+* Setup folder, destination buckets and other optional config  
+设置源文件路径和上传S3，以及其他可选配置  
 
 ## Start the app - 运行应用
-* Python3 Environment and don't want to run with GUI. Linux/MacOS/Win  
-Python3 环境，且不需要GUI界面运行在 Linux/MacOS/Win：
+* Python3 Environment and don't want to run with GUI, Linux/MacOS/Win  
+Python3 环境，且不需要GUI界面，运行在 Linux/MacOS/Win
 ```bash
 python3 s3_upload.py --nogui
 ```
+
 * Python3 Environment and run with GUI. Linux/MacOS/Win  
-Python3 环境，且带GUI运行在 Linux/MacOS/Win：
+Python3 环境，且带GUI界面，运行在 Linux/MacOS/Win：
 ```bash
 python3 s3_upload.py --gui
 ```
-* Windows non-Python Environment, and to run LOCAL_TO_S3 job  
-Unzip s3_upload.zip and double-click s3_upload.exe  
-Windows 非 Python 环境运行本地上传任务： 
-解压缩 s3_upload.zip 后，运行 s3_upload.exe  
-![GUI Config Snapshot](./img/img04.png)
-  
-## Trouble Shooting
-* 部分 MacOS 版本的 Python 运行 GUI（ tkinter ）会出现 Mac WindowServer 端口冲突，导致 Mac 退出用户重新启动的情况。目前受限于 Python tkinter 与 MacOS，遇到这种情况，需要升级或降级 Python/tkinter 解决。参考：  
+![GUI Config](./img/img04.png)
+部分 MacOS 版本的 Python 运行 GUI（ tkinter ）会出现 Mac WindowServer 端口冲突，导致 Mac 退出用户重新启动的情况。目前受限于 Python tkinter 与 MacOS，遇到这种情况，需要升级或降级 Python/tkinter 解决。参考：  
 https://bugs.python.org/issue37833  
 https://stackoverflow.com/questions/57400301/how-to-fix-tkinter-every-code-with-gui-crashes-mac-os-with-respring    
-或不使用 GUI 来运行 python3 s3_upload.py --nogui。Windows 操作系统没有该问题。  
+或不带 GUI 来运行 python3 s3_upload.py --nogui。Windows 操作系统没有反馈有该问题。  
   
+* Windows non-Python Environment, and to run LOCAL_TO_S3 job, Run s3_upload.exe  
+Windows 非 Python 环境运行本地上传任务，运行 s3_upload.exe  
+
+![GUI Config](./img/img05.png)
+
+
 ### Known Issue  注意:  
 
 * While same file prefix/name with same size, it will be considered as duplicated file and this file will be ignore.
 This is a trade-off for performance. It might be improved in the coming release, with Verification Option.  
-相同的文件前缀和文件名，并且文件大小相同的，则会被认为是重复文件不再传输。这是为性能考虑的折中。以后的版本考虑推出可选择是否校验文件的选项。  
+相同的文件前缀和文件名，并且文件大小相同的，则会被认为是重复文件不再传输。  
 
 * Amazon S3 only support 10,000 parts for one single file. Now the application can auto tuning Chunksize for big file, you don't need to change it manually.  
+If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.   
 由于 Amazon S3 API 最大只支持单文件10,000个分片。目前程序已经有自动调整 ChunkSize 机制，无需人工干预。  
-
-* If you need to change ChunkSize when files are transmitting, please stop application and restart, then select "CLEAN unfinished upload". Application will clean and re-upload all unfinished files.  
 如果某个文件传输到一半，要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
 
 * S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. If you need more flexible prefix setting, please use s3_migrate Cluster version.  
 S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。如果需要更灵活的设置，请使用s3_migrate集群版本.   
+
+* It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
+本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。  
 
 ## TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   

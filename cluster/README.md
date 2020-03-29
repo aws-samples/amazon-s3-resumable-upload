@@ -207,6 +207,32 @@ your_src_bucket/your_*
 */readme.md
 ```
 
+## TCP BBR 提高网络性能
+如果是跨 AWS Global 和中国区，推荐启用 Amazon EC2 服务器上的 TCP BBR: Congestion-Based Congestion Control，可以提高传输效率  
+
+[Amazon Linux AMI 2017.09.1 Kernel 4.9.51](https://aws.amazon.com/cn/amazon-linux-ami/2017.09-release-notes/) or later version supported TCP Bottleneck Bandwidth and RTT (BBR) .  
+
+BBR 默认是没有启用的，需要执行：
+```
+$ sudo modprobe tcp_bbr
+$ sudo modprobe sch_fq
+$ sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
+```
+为使重启动后仍然有效：
+```
+$ sudo su -
+
+# cat <<EOF>> /etc/sysconfig/modules/tcpcong.modules
+>#!/bin/bash
+> exec /sbin/modprobe tcp_bbr >/dev/null 2>&1
+> exec /sbin/modprobe sch_fq >/dev/null 2>&1
+> EOF
+
+# chmod 755 /etc/sysconfig/modules/tcpcong.modules
+
+# echo "net.ipv4.tcp_congestion_control = bbr" >> /etc/sysctl.d/00-tcpcong.conf
+```
+
 ## Limitation 局限
 * 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 

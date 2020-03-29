@@ -1,51 +1,53 @@
 # Amazon S3 MultiThread Resume Migration Solution  (Amazon S3多线程断点续传迁移)   
 
-Breaking-point resume supported, suitable for large files  
+Breaking-point resume supported, suitable for mass files transimission to Amazon S3  
 多线程断点续传，充分利用带宽，适合批量的大文件迁移到S3。  
 
-Upload from local server, migrate files between Global AWS and China AWS S3, or migrate from AliCloud OSS to Amazon S3. Now support Single Node Version, Cluster Servers Version and Serverless AWS Lambda Version.  
+Upload from local server, migrate files between Global and China Amazon S3, or migrate from AliCloud OSS to Amazon S3. Now support Single Node Version, Cluster Version and Serverless AWS Lambda Version.  
 从本地服务器上传，或海外与中国区 Amazon S3 之间互相拷贝，或从阿里云 OSS 迁移到 Amazon S3。现已支持单机版，多台服务器的集群版和无服务器 AWS Lambda 版本。  
   
 ## Features 功能：  
 
-* Split multipart and get from source, multi-thread upload to S3 and merge, support resume upload (Part level).   
-源文件的自动分片获取，多线程并发上传到目的S3再合并文件，断点续传(分片级别)，自动重传。  
+* Multi-threads transmission to Amazon S3, support resuming upload, auto retry, fully usage bandwidth. Optimized traffic control mechanism. A typical test result is migrate 1.2TBytes data from us-east-1 S3 to cn-northwest-1 S3 in ONE HOUR.  
+多线程并发传输到目的 Amazon S3，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在典型测试中，迁移1.2TB数据从 us-east-1 S3 到 cn-northwest-1 S3 只用1小时。
 
-* Single node version support source: local files, Amazon S3, AliCloud OSS  
-Cluster and Serverless version support source: Amazon S3  
-单机版支持的源：本地文件、Amazon S3、阿里云 OSS  
+* Support sources:
+Single node version: local folder/file, Amazon S3, AliCloud OSS  
+Cluster and Serverless version: Amazon S3  
+单机版支持的源：本地目录/文件、Amazon S3、阿里云 OSS  
 集群与Serverless版支持源：Amazon S3  
 
 * Support destination: Amazon S3  
 支持的目的地：Amazon S3  
 
-* Multi-files concurrently transmission and each file multi-threads download and upload.    
-多文件并发传输，且每个文件再多线程并发传输，充分压榨带宽。S3_TO_S3 或 ALIOSS_TO_S3 中间只过中转服务器的内存，不落盘，节省时间和存储。可支撑 MB, GB, TB, PB 级别的文件传输。对于海量KB级以下文件，性价比不好，建议打包压缩后再采用  
+* In S3_TO_S3 or ALIOSS_TO_S3 mode, the data is only transimitted through memory of the middle node by single part, not saving to local disk of the node, for high performance, no storage needed and better security. This project can support data from 0 Size to TBytes level.  
+S3_TO_S3 或 ALIOSS_TO_S3 模式下，传输数据只以单个分片的形式过中转节点的内存，不落该节点本地盘，节省时间、存储并且数据更安全。可支撑 0 Size 至 TB 级别。  
 
-* Support setup S3 storage class, such as: standard, S3-IA, Glacier or Deep Archive  
-可设置S3存储级别，如：标准、S3-IA、Glacier或深度归档。  
+* Support setup all S3 storage class, such as: standard, S3-IA, Glacier or Deep Archive  
+支持设置所有S3存储级别，如：标准、S3-IA、Glacier或深度归档。  
 
-## Version Selection - 版本选择
+## Module Selection - 版本选择  
 
-### Single Node:  
+### Single Node - 单机版  
 Single Python file can run anywhere - 单个 Python 文件可在任何地方运行  
 * LOCAL_TO_S3: - 本地上传   
 * S3_TO_S3: In one batch - 轻中量级，一次性运行的   
 * ALIOSS_TO_S3: - 阿里云OSS到S3  
-### Serverless:  
+### Serverless - 无服务器版:  
 AWS Lambda + Amazon SQS  
-* S3_TO_S3: Unpredictable, instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB )  
-轻中量(建议单文件< 50GB)，不定期，即时同步  
-### Cluster:  
+* S3_TO_S3: Unpredictable transimission tasks, or instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB ). Leverage break-point resuming and SQS redrive, no worry of Lambda 15 minutes timeout. 
+轻中量(建议单文件< 50GB)，不定期传输，或即时数据同步。利用断点续传和SQS重驱动，Lambda不用担心15分钟超时。  
+### Cluster - 集群版:  
 Amazon EC2 Autoscaling + Amazon SQS 
-* S3_TO_S3: Mass of files with single size from 0 to TByte. Cron task or instantly sync data.  
-大量文件，单文件从0到TB级别。定时任务或即时数据同步。  
-### Jobsender:  
-* Scan S3 exist objects, create delta job list to trigger SQS. Can work with Cluster or Serverless  
-扫描S3现有文件，生成差异列表发任务到SQS。可以与Cluster或Serverless一起工作。
+* S3_TO_S3: Mass of files with single size from 0 to TByte. Cron scan tasks or instantly sync data ( S3 trigger SQS ).  
+大量文件，单文件从0到TB级别。定时任务扫描或即时数据同步（S3触发SQS）。  
+### Jobsender - 任务调度:  
+* Scan S3 exist objects, create delta job list to trigger SQS. Can work with Cluster or Serverless. The code is in the folder of Cluster. The Cluster CDK will deploy Jobsender Server. The Serverless CDK has not deploy this, you can manually deploy if needed.  
+扫描S3现有文件，生成差异列表发任务到SQS。可以与Cluster或Serverless一起工作。代码在Cluster目录下，Cluster 的 CDK 会自动部署 Jobsender 服务器，Serverless 的 CDK 暂时没做这个部署，如果需要可以手工部署。  
 
-### Single Node Version - 单机版  
-* Single node: It can run on any place which can run AWS CLI. Even no Python environment, can use package version.  
+## Description - 说明
+### Single Node Module Detail - 单机版  
+* Single node: It can run on anywhere with Python. Even no Python environment, you can use package version.  
 单机运行：能运行 Python 的地方都能运行，无 Python 环境也可使用打包版本。  
 * Auto traversal: Auto traversal sub-directory, can also specify to just one file copying  
 自动遍历： 自动遍历下级子目录，也可以指定单一文件拷贝  
@@ -54,14 +56,14 @@ Amazon EC2 Autoscaling + Amazon SQS
 * Multiple thread concurrently transmission, fully usage of bandwidth.  
 多线程，充分压榨带宽  
   
-  [Single Node Version 进入单机版](./single_node/)  
+  [Single Node Module -- -- 进入单机版](./single_node/)  
     
-  Single node version architecture 单机版架构图如下：  
+  Single node Module architecture - 单机版架构图如下：  
   
 ![SingleNode Diagram](./img/01.png)
   
   
-### Cluster and Serverless Version 集群与无服务器版本  
+### Cluster and Serverless Module Detail - 集群与无服务器版本  
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
 Amazon EC2 自动扩展集群版本和无服务器 AWS Lambda版本，可以分别单独部署和运行在不同场景，也可以一起运行。  
 * Transmission between AWS Global and AWS China: Cluster version is suitable for mass data migration. Serverless version is suitable for unschedule burst migration.  
@@ -79,51 +81,13 @@ Amazon EC2 自动扩展集群版本和无服务器 AWS Lambda版本，可以分�
 * Serverless solution with AWS Lambda can also support large file of tens of GBytes size with Amazon SQS Redrive, no worry of 15 mins timeout of AWS Lambda.  
 基于 Amazon SQS Redrive，无服务器 AWS Lambda 也可以支持GB级别的大文件传输，无需担心 Lambda 15分钟超时。  
   
-  [进入集群版(中文说明)](./cluster/) -- -- -- [Cluster Version (English Readme)](./cluster/README-English.md)  
-  [进入无服务器版(中文说明)](./serverless/) -- -- -- [Serverless Version (English Readme)](./serverless/README-English.md)  
+  [Cluster Module (English Readme)](./cluster/README-English.md) -- -- [进入集群版(中文说明)](./cluster/)  
+  [Serverless Module (English Readme)](./serverless/README-English.md) -- -- [进入无服务器版(中文说明)](./serverless/)  
       
-  Cluster&Serverless Architeture 集群和无服务器版架构图如下：  
+  Cluster&Serverless Module Architeture - 集群和无服务器版架构图如下：  
   
 ![Cluster Diagram](./img/02.png)  
   
-
-### Limitation - 局限
-* It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
-本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
-
-* Don't change the chunksize while start data copying.  
-不要在开始数据复制之后修改Chunksize。其实程序会自动根据文件调整，一般你无需调整该值。  
-
-* It only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node uploader. If it is trigger by new object created on S3, then it will alway copy and overwrite.  
-本项目只对比文件Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做判断，直接复制并覆盖。  
-
-### TCP BBR improve Network performance - 提高网络性能
-If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
-如果是跨 AWS Global 和中国区，推荐启用 TCP BBR: Congestion-Based Congestion Control，可以提高传输效率  
-
-[Amazon Linux AMI 2017.09.1 Kernel 4.9.51](https://aws.amazon.com/cn/amazon-linux-ami/2017.09-release-notes/) or later version supported TCP Bottleneck Bandwidth and RTT (BBR) .  
-
-BBR is `NOT` enabled by default. You can enable it on your EC2 Instance via:：
-```
-$ sudo modprobe tcp_bbr
-$ sudo modprobe sch_fq
-$ sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
-```
-Persistent configuration should look like:
-```
-$ sudo su -
-
-# cat <<EOF>> /etc/sysconfig/modules/tcpcong.modules
->#!/bin/bash
-> exec /sbin/modprobe tcp_bbr >/dev/null 2>&1
-> exec /sbin/modprobe sch_fq >/dev/null 2>&1
-> EOF
-
-# chmod 755 /etc/sysconfig/modules/tcpcong.modules
-
-# echo "net.ipv4.tcp_congestion_control = bbr" >> /etc/sysctl.d/00-tcpcong.conf
-```
-
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
