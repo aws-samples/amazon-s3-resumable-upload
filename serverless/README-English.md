@@ -101,9 +101,12 @@ If you don't want to use AWS CDK to auto deploy, you can follow above CDK deploy
 Access Read/Write Amazon SQS and DynamoDB  
 Read Srouce Amazon S3 Bucket  
 Put Amazon CloudWatch Logs  
-* Config AWS Lambda Language Python 3.8 and upload these two code files:
+* Config AWS Lambda Language Python 3.8 and upload these two code files, located in
+```
+amazon-s3-resumable-upload/serverless/cdk-serverless/lambda/  
 lambda_function.py  
 s3_migration_lib.py  
+```
 * Config Lambda Environment Variable:
 ```
 Des_bucket_default  

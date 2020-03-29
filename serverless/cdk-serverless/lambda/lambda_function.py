@@ -12,6 +12,7 @@ Des_prefix_default = os.environ['Des_prefix_default']
 aws_access_key_id = os.environ['aws_access_key_id']
 aws_secret_access_key = os.environ['aws_secret_access_key']
 region = os.environ['aws_access_key_region']
+checkip_url = os.environ['checkip_url']
 
 # 内部参数
 JobType = "PUT"
@@ -49,7 +50,7 @@ if JobType.upper() == "GET":
 try:
     context = ssl._create_unverified_context()
     response = urllib.request.urlopen(
-        urllib.request.Request("https://checkip.amazonaws.com"), timeout=3, context=context
+        urllib.request.Request(checkip_url), timeout=3, context=context
     ).read()
     instance_id = "lambda-" + response.decode('utf-8')[0:-1]
 except Exception as e:

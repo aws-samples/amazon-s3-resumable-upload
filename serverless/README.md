@@ -100,9 +100,12 @@ table_queue_name 会由 CDK 自动生成
 访问读写对应的Amazon SQS和DynamoDB  
 读源 Amazon S3 Bucket权限  
 写Amazon CloudWatch Logs  
-* 配置 AWS Lambda 为 Python 3.8 ，并部署这两个代码文件：
+* 配置 AWS Lambda 为 Python 3.8 ，并部署这两个代码文件，位于  
+```
+amazon-s3-resumable-upload/serverless/cdk-serverless/lambda/  
 lambda_function.py  
 s3_migration_lib.py  
+```
 * 配置 AWS Lambda 环境变量，目标S3/存储级别/目标S3访问密钥/SQS和DynamoDB名称：
 ```
 Des_bucket_default  

@@ -11,6 +11,7 @@ import aws_cdk.aws_cloudwatch_actions as action
 import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
 import aws_cdk.aws_logs as logs
+import aws_cdk.aws_apigateway as api
 
 Des_bucket_default = 's3-migration-test-nx'
 Des_prefix_default = 's3-migration-cdk-from-us'
@@ -48,6 +49,24 @@ class CdkResourceStack(core.Stack):
                                   queue=sqs_queue_DLQ
                               )
                               )
+
+        checkip = api.RestApi(self, "lambda-checkip-api",
+                              cloud_watch_role=True,
+                              deploy=True,
+                              description="For Lambda get IP address",
+                              default_integration=api.MockIntegration(
+                                  integration_responses=[api.IntegrationResponse(
+                                      status_code="200",
+                                      response_templates={"application/json": "$context.identity.sourceIp"})
+                                  ],
+                                  request_templates={"application/json": '{"statusCode": 200}'}
+                              ),
+                              endpoint_types=[api.EndpointType.REGIONAL])
+        checkip.root.add_method("GET", method_responses=[api.MethodResponse(
+            status_code="200",
+            response_models={"application/json": api.Model.EMPTY_MODEL}
+        )])
+
         handler = lam.Function(self, "lambdaFunction",
                                code=lam.Code.asset("./lambda"),
                                handler="lambda_function.lambda_handler",
@@ -62,7 +81,8 @@ class CdkResourceStack(core.Stack):
                                    'StorageClass': StorageClass,
                                    'aws_access_key_id': aws_access_key_id,
                                    'aws_secret_access_key': aws_secret_access_key,
-                                   'aws_access_key_region': aws_access_key_region
+                                   'aws_access_key_region': aws_access_key_region,
+                                   'checkip_url': checkip.url
                                })
 
         ddb_file_list.grant_read_write_data(handler)
@@ -148,7 +168,8 @@ class CdkResourceStack(core.Stack):
                           # TODO: here monitor all lambda concurrency not just the working one. Limitation from CDK
                           # Lambda now supports monitor single lambda concurrency, will change this after CDK support
                           cw.GraphWidget(title="Lambda-all-concurrent",
-                                         left=[handler.metric_all_concurrent_executions(period=core.Duration.minutes(1))]),
+                                         left=[handler.metric_all_concurrent_executions(
+                                             period=core.Duration.minutes(1))]),
 
                           cw.GraphWidget(title="Lambda-invocations/errors/throttles",
                                          left=[handler.metric_invocations(period=core.Duration.minutes(1)),
@@ -162,16 +183,16 @@ class CdkResourceStack(core.Stack):
                                          left=[sqs_queue.metric_approximate_number_of_messages_visible(
                                              period=core.Duration.minutes(1)
                                          ),
-                                               sqs_queue.metric_approximate_number_of_messages_not_visible(
-                                                   period=core.Duration.minutes(1)
-                                               )]),
+                                             sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                 period=core.Duration.minutes(1)
+                                             )]),
                           cw.GraphWidget(title="SQS-DeadLetterQueue",
                                          left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
                                              period=core.Duration.minutes(1)
                                          ),
-                                               sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                   period=core.Duration.minutes(1)
-                                               )]),
+                                             sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                 period=core.Duration.minutes(1)
+                                             )]),
                           cw.GraphWidget(title="ERROR/WARNING Logs",
                                          left=[log_metric_ERROR],
                                          right=[log_metric_WARNING]),
@@ -179,15 +200,15 @@ class CdkResourceStack(core.Stack):
                                                metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
                                                    period=core.Duration.minutes(1)
                                                ),
-                                                        sqs_queue.metric_approximate_number_of_messages_visible(
-                                                            period=core.Duration.minutes(1)
-                                                        ),
-                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                            period=core.Duration.minutes(1)
-                                                        ),
-                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
-                                                            period=core.Duration.minutes(1)
-                                                        )],
+                                                   sqs_queue.metric_approximate_number_of_messages_visible(
+                                                       period=core.Duration.minutes(1)
+                                                   ),
+                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                       period=core.Duration.minutes(1)
+                                                   ),
+                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                                       period=core.Duration.minutes(1)
+                                                   )],
                                                height=6)
                           )
         # Alarm for queue - DLQ
@@ -226,7 +247,7 @@ class CdkResourceStack(core.Stack):
 
         # core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for Serverless: " + alarm_email)
         core.CfnOutput(self, "Dashboard", value="CloudWatch Dashboard name s3_migrate_serverless")
-
+        core.CfnOutput(self, "API-checkip", value=checkip.url)
 
 ###############
 app = core.App()
