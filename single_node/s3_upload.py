@@ -153,6 +153,7 @@ def set_config():
 
         # Click List Prefix
         def ListPrefix(*args):
+            DesProfileName = DesProfileName_txt.get()
             client = Session(profile_name=DesProfileName).client('s3')
             prefix_list = []
             this_bucket = DesBucket_txt.get()
