@@ -330,14 +330,15 @@ def set_config():
 def set_log():
     logger = logging.getLogger()
     # File logging
-    os.system("mkdir log")
+    if not os.path.exists("./log"):
+        os.system("mkdir log")
     this_file_name = os.path.splitext(os.path.basename(__file__))[0]
     t = time.localtime()
     file_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
     log_file_name = './log/' + this_file_name + '-' + file_time + '.log'
     print('Logging to file:', os.path.abspath(log_file_name))
     print('Logging level:', LoggingLevel)
-    fileHandler = logging.FileHandler(filename=log_file_name)
+    fileHandler = logging.FileHandler(filename=log_file_name, encoding='utf-8')
     fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
     logger.addHandler(fileHandler)
     # Screen stream logging
