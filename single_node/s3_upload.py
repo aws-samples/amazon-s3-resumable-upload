@@ -11,6 +11,7 @@ import hashlib
 import logging
 from pathlib import PurePosixPath, Path
 import platform
+import codecs
 
 global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, MaxThread, \
     MaxParallelFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \
@@ -172,7 +173,7 @@ def set_config():
             except Exception as e:
                 messagebox.showinfo('Error', f'Cannot get prefix list from bucket: {this_bucket}, {str(e)}')
             S3Prefix_txt['values'] = prefix_list
-            S3Prefix_txt.current(1)
+            S3Prefix_txt.current(0)
             # Finish list prefix
 
         # Change JobType
@@ -251,7 +252,8 @@ def set_config():
         S3Prefix_txt = Combobox(window, width=48)
         S3Prefix_txt.grid(column=1, row=5, sticky='w', padx=2, pady=2)
         S3Prefix_txt['values'] = S3Prefix
-        S3Prefix_txt.current(0)
+        if S3Prefix != '':
+            S3Prefix_txt.current(0)
         Button(window, text="List Prefix", width=10, command=ListPrefix) \
             .grid(column=2, row=5, sticky='w', padx=2, pady=2)
 
@@ -310,7 +312,7 @@ def set_config():
             cfg['LOCAL_TO_S3']['SrcDir'] = SrcDir
             cfg['Basic']['SrcFileIndex'] = SrcFileIndex
             config_file = os.path.join(file_path, 's3_upload_config.ini')
-            with open(config_file, 'w') as f:
+            with codecs.open(config_file, 'w', 'utf-8') as f:
                 cfg.write(f)
                 print(f"Save config to {config_file}")
         # GUI window finish
@@ -366,7 +368,8 @@ def get_local_file_list():
                         "Size": file_size
                     })
         else:
-            file_size = os.path.getsize(os.path.join(SrcDir, SrcFileIndex))
+            join_path = os.path.join(SrcDir, SrcFileIndex)
+            file_size = os.path.getsize(join_path)
             __src_file_list = [{
                 "Key": SrcFileIndex,
                 "Size": file_size
@@ -1115,8 +1118,7 @@ if __name__ == '__main__':
     logger.info('Get source file list')
     src_file_list = []
     if JobType == "LOCAL_TO_S3":
-        if SrcDir[-1] == '/':
-            SrcDir = SrcDir[:len(SrcDir) - 1]
+        SrcDir = str(Path(SrcDir))
         src_file_list = get_local_file_list()
     elif JobType == "S3_TO_S3":
         if SrcFileIndex == "*":

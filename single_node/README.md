@@ -34,10 +34,11 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 可设置输出消息级别，如设置WARNING级别，则只输出你最关注的信息。
 --------  
 
-### Version 1.6
+### Version 1.61
 * Support GUI for LOCAL_TO_S3 mode
 * Package binary version to Windows with GUI, no local python needed
 * Performance upgrade for small size file and support 0 size file for all mode.
+* Support windows Chinese character folder
 
 ## Architecture 架构图  
 1. Local upload to S3  
