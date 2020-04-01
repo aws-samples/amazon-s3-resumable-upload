@@ -92,11 +92,11 @@ Amazon SQS 配置死信队列DLQ，确保消息被多次重新仍失败进入DLQ
 ## 部署
 ### 1. 前置配置
 * 请在 AWS CDK 部署前手工配置 SSM Parameter Store  
-名称：s3_migration_credentials  
+名称：s3_migrate_credentials  
 类型：SecureString  
 Tier：Standard
 KMS key source：My current account/alias/aws/ssm  或选择其他你已有的加密 KMS Key  
-这个 s3_migration_credentials 是用于访问跟EC2不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
+这个 s3_migrate_credentials 是用于访问跟EC2不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
 ```
 {
   "aws_access_key_id": "your_aws_access_key_id",
