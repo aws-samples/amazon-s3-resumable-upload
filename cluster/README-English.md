@@ -117,7 +117,9 @@ Configuration snapshot of s3_migration_credentials:
     }]
 ```
 These information will be deploy to Parameter Store as s3_migrate_bucket_para  
-* Change your notification email in cdk_resource_stack.py
+* Change your notification email in cdk_ec2_stack.py
+* If needed, you can change default config, such as JobType, and package the code to zip onto your own s3 bucket, so can EC2 start Userdata to fetch this code and config.
+
 ### 2. AWS CDK Auto-deploy
 * AWS CDK will deploy below all resources except as manually config credentials in step 1.  
 Amazon VPC ( with 2AZ, 2 Public subnets ) and S3 Endpoint,  

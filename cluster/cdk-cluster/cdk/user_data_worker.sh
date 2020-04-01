@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -v
 echo "yum update -y"
 yum update -y
 

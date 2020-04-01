@@ -122,9 +122,9 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
 ```
 这些会被AWS CDK自动部署到 Parameter Store 的 s3_migrate_bucket_para  
 
-* 配置告警通知邮件地址在 cdk_resource_stack.py
+* 配置告警通知邮件地址在 cdk_ec2stack.py
 
-* 如果有需要可以修改默认的 config 配置(例如JobType)，并且把打包的代码放自己的S3上面供EC2启动时候的Userdata运行去下载。
+* 如果有需要可以修改默认的 config 配置(例如JobType)，并且把打包的代码放自己的S3上面，然后修改EC2启动的Userdata运行去下载。
 
 ### 2. CDK自动部署
 * CDK 会自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
@@ -234,13 +234,35 @@ $ sudo su -
 
 # echo "net.ipv4.tcp_congestion_control = bbr" >> /etc/sysctl.d/00-tcpcong.conf
 ```
+## 改为 GET 模式
+当前目录下的CDK配置的是按PUT模式配置。改变为GET模式只需修改：
+* cdk_ec2_stack.py 里面这一段，即把src_bucket换成des_bucket，并且允许EC2读写现有S3：
+```
+        # Allow EC2 access exist s3 bucket for GET mode: read and write access the destination buckets
+        # bucket_name = ''
+        # for b in bucket_para:
+        #     if bucket_name != b['des_bucket']:  # 如果列了多个相同的Bucket，就跳过
+        #         bucket_name = b['des_bucket']
+        #         s3exist_bucket = s3.Bucket.from_bucket_name(self,
+        #                                                     bucket_name,  # 用这个做id
+        #                                                     bucket_name=bucket_name)
+        #         s3exist_bucket.grant_read_write(jobsender)
+        #         s3exist_bucket.grant_read_write(worker_asg)
+```
+* 另外，注意 s3_migration_cluster_config.ini 设置为 JobType = GET 
 
-## Limitation 局限
+## 局限与提醒
+* CDK 默认配置的是EC2启动之后，自动通过 Userdata 脚本去yum安装 python，pip安装boto3, CloudwatchAgent，以及下载github上面的代码和配置，如果要修改配置，建议打包放自己的S3上面。  
+另外，如果你在中国区部署EC2，下载boto3, CWAgent的速度会慢，建议放到自己的S3上面，或不用userdata（包括jobsender和worker），而是自己手工部署，然后打包成AMI给后续EC2启动使用。
+
 * 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 
 * 不要在开始数据复制之后修改Chunksize。  
 
 * 本项目只对比文件Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
+
+* 删除资源则 cdk destroy 。  
+另外 DynamoDB、CloudWatch Log Group 、S3 bucket 需要手工删除
 
 ## License
 

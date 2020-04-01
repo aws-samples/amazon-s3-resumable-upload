@@ -9,15 +9,15 @@ from cdk.cdk_resource_stack import CdkResourceStack
 ############
 # Define bucket before deploy CDK
 bucket_para = [{
-    "src_bucket": "huangzb-s3-migration-test",
+    "src_bucket": "broad-references",
     "src_prefix": "",
     "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "s3-migration-cdk-from-us",
+    "des_prefix": "broad-references",
     }, {
-    "src_bucket": "huangzb-tokyo-video",
-    "src_prefix": "small",
+    "src_bucket": "gatk-test-data",
+    "src_prefix": "",
     "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "s3-migration-cdk-from-jp",
+    "des_prefix": "gatk-test-data",
     }]
 
 # key_name = "id_rsa"  # Optional if use SSM-SessionManager
@@ -52,7 +52,6 @@ ec2_stack = CdkEc2Stack(app, "s3-migration-cluster-ec2", vpc, bucket_para,
                         resource_stack.sqs_queue_DLQ,
                         resource_stack.ssm_bucket_para,
                         resource_stack.ssm_credential_para,
-                        # resource_stack.s3bucket
-                        )
+                        resource_stack.s3bucket)
 
 app.synth()

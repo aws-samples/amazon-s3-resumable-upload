@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -v
 yum update -y
 echo "Install git, python3 and boto3"
 yum install git -y

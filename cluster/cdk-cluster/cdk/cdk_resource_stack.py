@@ -9,7 +9,7 @@ import aws_cdk.aws_s3_notifications as s3n
 table_queue_name = 's3_migration_file_list'
 ssm_parameter_bucket = 's3_migration_bucket_para'
 ssm_parameter_credentials = 's3_migration_credentials'
-
+ssm_parameter_credentials_version = 1
 
 class CdkResourceStack(core.Stack):
 
@@ -46,13 +46,13 @@ class CdkResourceStack(core.Stack):
         self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
             self, "ssm_parameter_credentials",
             parameter_name=ssm_parameter_credentials,
-            version=2
+            version=ssm_parameter_credentials_version
         )
 
         # New a S3 bucket, new object in this bucket will trigger SQS jobs
         # This is not for existing S3 bucket. Jobsender will scan the existing bucket and create sqs jobs.
         # 这里新建一个S3 bucket，里面新建Object就会触发SQS启动搬迁工作。
         # 对于现有的S3 bucket，不在这里配置，由jobsender进行扫描并生成SQS Job任务。
-        # self.s3bucket = s3.Bucket(self, "newbucket")
-        # self.s3bucket.add_event_notification(s3.EventType.OBJECT_CREATED,
-        #                                      s3n.SqsDestination(self.sqs_queue))
+        self.s3bucket = s3.Bucket(self, "newbucket")
+        self.s3bucket.add_event_notification(s3.EventType.OBJECT_CREATED,
+                                             s3n.SqsDestination(self.sqs_queue))

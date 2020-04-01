@@ -1,3 +1,9 @@
+'''
+Below stack is for PUT mode. The GET mode is almost the same as put mode, just reverse the Source and Destination buckets access role.
+And auth the read and write access for ec2 role
+Dont forget to change the JobTpe to GET in s3_migration_cluster_config.ini
+'''
+
 from aws_cdk import core
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_autoscaling as autoscaling
@@ -22,6 +28,7 @@ linux_ami = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LIN
                                  virtualization=ec2.AmazonLinuxVirt.HVM,
                                  storage=ec2.AmazonLinuxStorage.GENERAL_PURPOSE
                                  )
+
 # Load your user data for ec2
 with open("./cdk/user_data_worker.sh") as f:
     user_data_worker = f.read()
@@ -33,8 +40,7 @@ class CdkEc2Stack(core.Stack):
 
     def __init__(self, scope: core.Construct, _id: str, vpc, bucket_para,
                  # key_name,
-                 ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para,
-                 # s3bucket,
+                 ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para, s3bucket,
                  **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
 
@@ -72,7 +78,7 @@ class CdkEc2Stack(core.Stack):
                                                   machine_image=linux_ami,
                                                   # key_name=key_name,  # Optional if use SSM-SessionManager
                                                   user_data=ec2.UserData.custom(user_data_worker),
-                                                  desired_capacity=1,
+                                                  desired_capacity=2,
                                                   min_capacity=1,
                                                   max_capacity=10,
                                                   spot_price="0.5"
@@ -107,10 +113,10 @@ class CdkEc2Stack(core.Stack):
         ssm_credential_para.grant_read(worker_asg)
 
         # Allow EC2 access new s3 bucket
-        # s3bucket.grant_read(jobsender)
-        # s3bucket.grant_read(worker_asg)
+        s3bucket.grant_read(jobsender)
+        s3bucket.grant_read(worker_asg)
 
-        # Allow EC2 access exist s3 bucket
+        # Allow EC2 access exist s3 bucket for PUT mode: readonly access the source buckets
         bucket_name = ''
         for b in bucket_para:
             if bucket_name != b['src_bucket']:  # 如果列了多个相同的Bucket，就跳过
@@ -120,9 +126,20 @@ class CdkEc2Stack(core.Stack):
                                                             bucket_name=bucket_name)
                 s3exist_bucket.grant_read(jobsender)
                 s3exist_bucket.grant_read(worker_asg)
+        # Allow EC2 access exist s3 bucket for GET mode: read and write access the destination buckets
+        # bucket_name = ''
+        # for b in bucket_para:
+        #     if bucket_name != b['des_bucket']:  # 如果列了多个相同的Bucket，就跳过
+        #         bucket_name = b['des_bucket']
+        #         s3exist_bucket = s3.Bucket.from_bucket_name(self,
+        #                                                     bucket_name,  # 用这个做id
+        #                                                     bucket_name=bucket_name)
+        #         s3exist_bucket.grant_read_write(jobsender)
+        #         s3exist_bucket.grant_read_write(worker_asg)
+
 
         # Dashboard to monitor SQS and EC2
-        board = cw.Dashboard(self, "s3_migrate", dashboard_name="s3_migrate_cluster")
+        board = cw.Dashboard(self, "s3_migrate-")
 
         ec2_metric_net = cw.Metric(namespace="AWS/EC2",
                                    metric_name="NetworkOut",
@@ -172,8 +189,7 @@ class CdkEc2Stack(core.Stack):
                                     period=core.Duration.minutes(1))
 
         # CWAgent collected application logs - filter metric
-        s3_migrate_log = logs.LogGroup(self, "applog",
-                                       log_group_name="s3_migration_log")
+        s3_migrate_log = logs.LogGroup(self, "applog")
         s3_migrate_log.add_metric_filter("ERROR",
                                          metric_name="ERROR-Logs",
                                          metric_namespace="s3_migrate",
