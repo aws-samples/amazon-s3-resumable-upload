@@ -90,7 +90,7 @@ Amazon SQS config Dead Letter Queue (DLQ), to ensure message reach maximum retri
 * Before AWS CDK deploy, please config AWS SSM Parameter Store manually with this credentials  
 Name: s3_migration_credentials   
 Type: SecureString  
-Tier: Standard
+Tier: Standard  
 KMS key source：My current account/alias/aws/ssm  or others you can have  
 This s3_migration_credentials  is to access the account which is not the same as EC2 running account. s3_migration_credentials  body example:  
 ```
