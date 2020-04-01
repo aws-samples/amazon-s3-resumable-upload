@@ -6,9 +6,9 @@ import aws_cdk.aws_ssm as ssm
 import json
 import aws_cdk.aws_s3_notifications as s3n
 
-table_queue_name = 's3_migrate_file_list'
-ssm_parameter_bucket = 's3_migrate_bucket_para'
-ssm_parameter_credentials = 's3_migrate_credentials'
+table_queue_name = 's3_migration_file_list'
+ssm_parameter_bucket = 's3_migration_bucket_para'
+ssm_parameter_credentials = 's3_migration_credentials'
 
 
 class CdkResourceStack(core.Stack):
