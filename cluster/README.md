@@ -124,6 +124,8 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
 
 * 配置告警通知邮件地址在 cdk_resource_stack.py
 
+* 如果有需要可以修改默认的 config 配置(例如JobType)，并且把打包的代码放自己的S3上面供EC2启动时候的Userdata运行去下载。
+
 ### 2. CDK自动部署
 * CDK 会自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
 Amazon VPC（含2AZ，2个公有子网） 和 S3 Endpoint,  
