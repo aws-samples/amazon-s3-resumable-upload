@@ -114,10 +114,11 @@ def check_sqs_empty(sqs, sqs_queue):
         return False  # Can't get sqs status, then consider it is not empty
     NotVisible = sqs_in_flight['Attributes']['ApproximateNumberOfMessagesNotVisible']
     Visible = sqs_in_flight['Attributes']['ApproximateNumberOfMessages']
-    if NotVisible == '0' and Visible == '0':
-        logger.info('No message in queue available and inFlight')
-        return True  # sqs is empty
     logging.info(f'ApproximateNumberOfMessagesNotVisible: {NotVisible}, ApproximateNumberOfMessages: {Visible}')
+    if NotVisible == '0' and (Visible == '0' or Visible == '1'):
+        # In init state, the new created bucket trigger SQS will send one test message to SQS.
+        # So here to ignore the case Visible == '1'
+        return True  # sqs is empty
     return False  # sqs is not empty
 
 
