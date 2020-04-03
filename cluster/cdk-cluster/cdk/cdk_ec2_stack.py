@@ -1,9 +1,10 @@
 '''
-Below stack is for PUT mode. The GET mode is almost the same as put mode, just reverse the Source and Destination buckets access role.
+Below stack is for PUT mode.
+The GET mode is almost the same as put mode, just inverse the Source and Destination buckets.
 And auth the read and write access for ec2 role
 Dont forget to change the JobTpe to GET in s3_migration_cluster_config.ini
 '''
-
+import json
 from aws_cdk import core
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_autoscaling as autoscaling
@@ -14,6 +15,7 @@ import aws_cdk.aws_cloudwatch_actions as action
 import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
 import aws_cdk.aws_logs as logs
+import base64
 
 # Adjust ec2 type here
 worker_type = "c5.large"
@@ -30,10 +32,14 @@ linux_ami = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LIN
                                  )
 
 # Load your user data for ec2
+with open("./cdk/user_data_part1.sh") as f:
+    user_data_part1 = f.read()
+with open("./cdk/cw_agent_config.json") as f:
+    cw_agent_config = json.load(f)
 with open("./cdk/user_data_worker.sh") as f:
-    user_data_worker = f.read()
+    user_data_worker_p = f.read()
 with open("./cdk/user_data_jobsender.sh") as f:
-    user_data_jobsender = f.read()
+    user_data_jobsender_p = f.read()
 
 
 class CdkEc2Stack(core.Stack):
@@ -44,16 +50,29 @@ class CdkEc2Stack(core.Stack):
                  **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
 
+        # Create log group and put group name into userdata
+        s3_migrate_log = logs.LogGroup(self, "applog")
+        cw_agent_config['logs']['logs_collected']['files']['collect_list'][0][
+            'log_group_name'] = s3_migrate_log.log_group_name
+        cw_agent_config['logs']['logs_collected']['files']['collect_list'][1][
+            'log_group_name'] = s3_migrate_log.log_group_name
+        cw_agent_config['metrics']['append_dimensions']['AutoScalingGroupName'] = "\\${aws:AutoScalingGroupName}"
+        cw_agent_config_str = json.dumps(cw_agent_config, indent=4).replace("\\\\", "\\")
+        jobsender_userdata = user_data_part1 + cw_agent_config_str + user_data_jobsender_p
+        worker_userdata = user_data_part1 + cw_agent_config_str + user_data_worker_p
         # Create jobsender ec2 node
-        jobsender = ec2.Instance(self, "jobsender",
-                                 instance_name="s3_migrate_cluster_jobsender",
-                                 instance_type=ec2.InstanceType(
-                                     instance_type_identifier=jobsender_type),
-                                 machine_image=linux_ami,
-                                 # key_name=key_name,
-                                 user_data=ec2.UserData.custom(user_data_jobsender),
-                                 vpc=vpc,
-                                 vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC))
+        jobsender = autoscaling.AutoScalingGroup(self, "jobsender",
+                                                 instance_type=ec2.InstanceType(
+                                                     instance_type_identifier=jobsender_type),
+                                                 machine_image=linux_ami,
+                                                 # key_name=key_name,
+                                                 user_data=ec2.UserData.custom(jobsender_userdata),
+                                                 vpc=vpc,
+                                                 vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+                                                 desired_capacity=1,
+                                                 min_capacity=0,
+                                                 max_capacity=1
+                                                 )
 
         # jobsender.connections.allow_from_any_ipv4(ec2.Port.tcp(22), "Internet access SSH")
         # Don't need SSH since we use Session Manager
@@ -77,7 +96,7 @@ class CdkEc2Stack(core.Stack):
                                                       instance_type_identifier=worker_type),
                                                   machine_image=linux_ami,
                                                   # key_name=key_name,  # Optional if use SSM-SessionManager
-                                                  user_data=ec2.UserData.custom(user_data_worker),
+                                                  user_data=ec2.UserData.custom(worker_userdata),
                                                   desired_capacity=2,
                                                   min_capacity=1,
                                                   max_capacity=10,
@@ -137,9 +156,8 @@ class CdkEc2Stack(core.Stack):
         #         s3exist_bucket.grant_read_write(jobsender)
         #         s3exist_bucket.grant_read_write(worker_asg)
 
-
         # Dashboard to monitor SQS and EC2
-        board = cw.Dashboard(self, "s3_migrate-")
+        board = cw.Dashboard(self, "s3_migrate")
 
         ec2_metric_net = cw.Metric(namespace="AWS/EC2",
                                    metric_name="NetworkOut",
@@ -189,7 +207,7 @@ class CdkEc2Stack(core.Stack):
                                     period=core.Duration.minutes(1))
 
         # CWAgent collected application logs - filter metric
-        s3_migrate_log = logs.LogGroup(self, "applog")
+
         s3_migrate_log.add_metric_filter("ERROR",
                                          metric_name="ERROR-Logs",
                                          metric_namespace="s3_migrate",
@@ -229,16 +247,16 @@ class CdkEc2Stack(core.Stack):
                                          left=[sqs_queue.metric_approximate_number_of_messages_visible(
                                              period=core.Duration.minutes(1)
                                          ),
-                                               sqs_queue.metric_approximate_number_of_messages_not_visible(
-                                                   period=core.Duration.minutes(1)
-                                               )]),
+                                             sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                 period=core.Duration.minutes(1)
+                                             )]),
                           cw.GraphWidget(title="SQS-DeadLetterQueue",
                                          left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
                                              period=core.Duration.minutes(1)
                                          ),
-                                               sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                   period=core.Duration.minutes(1)
-                                               )]),
+                                             sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                 period=core.Duration.minutes(1)
+                                             )]),
                           cw.GraphWidget(title="ERROR/WARNING Logs",
                                          left=[log_metric_ERROR],
                                          right=[log_metric_WARNING],
@@ -247,16 +265,16 @@ class CdkEc2Stack(core.Stack):
                                                metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
                                                    period=core.Duration.minutes(1)
                                                ),
-                                                        sqs_queue.metric_approximate_number_of_messages_visible(
-                                                            period=core.Duration.minutes(1)
-                                                        ),
-                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                            period=core.Duration.minutes(1)
-                                                        ),
-                                                        sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
-                                                            period=core.Duration.minutes(1)
-                                                        )
-                                                        ],
+                                                   sqs_queue.metric_approximate_number_of_messages_visible(
+                                                       period=core.Duration.minutes(1)
+                                                   ),
+                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                       period=core.Duration.minutes(1)
+                                                   ),
+                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                                       period=core.Duration.minutes(1)
+                                                   )
+                                               ],
                                                height=6)
                           )
 
@@ -325,7 +343,8 @@ class CdkEc2Stack(core.Stack):
         alarm_DLQ.add_alarm_action(action.SnsAction(alarm_topic_DLQ))
 
         # Output
-        core.CfnOutput(self, "JobSenderEC2", value=jobsender.instance_id)
+        core.CfnOutput(self, "LogGroup", value=s3_migrate_log.log_group_name)
+        core.CfnOutput(self, "JobSenderEC2", value=jobsender.auto_scaling_group_name)
         core.CfnOutput(self, "WorkerEC2AutoscalingGroup", value=worker_asg.auto_scaling_group_name)
         core.CfnOutput(self, "Dashboard", value="CloudWatch Dashboard name s3_migrate_cluster")
         core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for cluster: " + alarm_email)

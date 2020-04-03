@@ -67,10 +67,14 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
 
         # 取另一个Account的credentials
         logger.info(f'Get ssm_parameter_credentials: {ssm_parameter_credentials}')
-        credentials = json.loads(ssm.get_parameter(
-            Name=ssm_parameter_credentials,
-            WithDecryption=True
-        )['Parameter']['Value'])
+        try:
+            credentials = json.loads(ssm.get_parameter(
+                Name=ssm_parameter_credentials,
+                WithDecryption=True
+            )['Parameter']['Value'])
+        except Exception as e:
+            logger.error(f'Fail to get {ssm_parameter_credentials} in SSM Parameter store, fix and restart Jobsender')
+            sys.exit(0)
         credentials_session = boto3.session.Session(
             aws_access_key_id=credentials["aws_access_key_id"],
             aws_secret_access_key=credentials["aws_secret_access_key"],
