@@ -1,3 +1,5 @@
+# PROJECT LONGBOW - LIB FOR TRANSMISSION BETWEEN AMAZON S3
+
 import time
 import logging
 import json

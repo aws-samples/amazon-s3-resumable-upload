@@ -1,3 +1,5 @@
+# PROJECT LONGBOW - WORKER NODE FOR TRANSMISSION BETWEEN AMAZON S3
+
 import os
 import sys
 import concurrent.futures

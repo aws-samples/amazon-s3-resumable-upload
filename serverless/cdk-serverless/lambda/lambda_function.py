@@ -1,3 +1,6 @@
+# PROJECT LONGBOW
+# AWS LAMBDA WORKER NODE FOR TRANSMISSION BETWEEN AMAZON S3
+
 import json, os, urllib, ssl, logging
 import boto3
 from s3_migration_lib import step_function, step_fn_small_file

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# PROJECT LONGBOW - AMAZON S3 UPLOAD TOOL WITH BREAK-POINT RESUMING
 import os
 import sys
 import json
@@ -198,7 +200,7 @@ def set_config():
 
         # Start GUI
         window = Tk()
-        window.title("Amazon S3 Resumable Upload Tool v1.5 - example")
+        window.title("LONGBOW - AMAZON S3 UPLOAD TOOL WITH BREAK-POINT RESUMING")
         window.geometry('705x350')
         window.configure(background='#ECECEC')
         window.protocol("WM_DELETE_WINDOW", sys.exit)

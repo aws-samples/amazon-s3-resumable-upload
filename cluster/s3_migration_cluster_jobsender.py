@@ -1,3 +1,5 @@
+# PROJECT LONGBOW - JOBSENDER FOR COMPARE AMAZON S3 AND CREATE DELTA JOB LIST TO SQS
+
 import json
 import os
 import sys
@@ -55,8 +57,12 @@ if __name__ == '__main__':
 
         # Load Bucket para from ssm parameter store
         logger.info(f'Get ssm_parameter_bucket: {ssm_parameter_bucket}')
-        load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Parameter']['Value'])
-        logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
+        try:
+            load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Parameter']['Value'])
+            logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
+        except Exception as e:
+            logger.error(f'Fail to get buckets info from ssm_parameter_bucket, fix and restart Jobsender. {str(e)}')
+            sys.exit(0)
         for bucket_para in load_bucket_para:
             src_bucket = bucket_para['src_bucket']
             src_prefix = bucket_para['src_prefix']

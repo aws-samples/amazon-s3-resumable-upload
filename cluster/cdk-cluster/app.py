@@ -12,12 +12,12 @@ bucket_para = [{
     "src_bucket": "broad-references",
     "src_prefix": "",
     "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "broad-references",
+    "des_prefix": "broad-references"
     }, {
     "src_bucket": "gatk-test-data",
     "src_prefix": "",
     "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "gatk-test-data",
+    "des_prefix": "gatk-test-data"
     }]
 
 # key_name = "id_rsa"  # Optional if use SSM-SessionManager

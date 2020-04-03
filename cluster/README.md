@@ -1,9 +1,9 @@
 # Amazon S3 MultiThread Resume Migration Cluster Solution  (Amazon S3多线程断点续传迁移集群方案)   
-  
+
 [English Readme](./README-English.md)
   
-Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国Amazon S3之间传输   
-Cluster & Serverless Version 0.94  
+  PROJECT LONGBOW  -  Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国Amazon S3之间传输   
+Cluster & Serverless Version 0.95  
 
   集群和无服务器版架构图如下：  
   

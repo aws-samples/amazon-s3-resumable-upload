@@ -1,7 +1,7 @@
 # Amazon S3 MultiThread Resume Migration Cluster Solution   
 
-Amazon EC2 Autoscaling Cluster. Support mass scale of large objects trasmission between AWS Global Amazon S3 and China Amazon S3   
-Cluster & Serverless Version 0.94  
+  PROJECT LONGBOW  -  Amazon EC2 Autoscaling Cluster. Support mass scale of large objects trasmission between AWS Global Amazon S3 and China Amazon S3   
+Cluster & Serverless Version 0.95  
 
   Cluster and Serverless Version Architecture:  
   
