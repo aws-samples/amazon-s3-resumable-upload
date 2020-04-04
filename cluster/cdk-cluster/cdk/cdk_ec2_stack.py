@@ -159,19 +159,14 @@ class CdkEc2Stack(core.Stack):
         # Dashboard to monitor SQS and EC2
         board = cw.Dashboard(self, "s3_migrate")
 
-        ec2_metric_net = cw.Metric(namespace="AWS/EC2",
-                                   metric_name="NetworkOut",
-                                   # dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
-                                   period=core.Duration.minutes(1),
-                                   statistic="Sum")
         ec2_metric_cpu_max = cw.Metric(namespace="AWS/EC2",
                                        metric_name="CPUUtilization",
-                                       # dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                       dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
                                        period=core.Duration.minutes(1),
                                        statistic="Maximum")
         ec2_metric_cpu_avg = cw.Metric(namespace="AWS/EC2",
                                        metric_name="CPUUtilization",
-                                       # dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
+                                       dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
                                        period=core.Duration.minutes(1))
 
         autoscaling_GroupDesiredCapacity = cw.Metric(namespace="AWS/AutoScaling",
@@ -194,6 +189,7 @@ class CdkEc2Stack(core.Stack):
                                              dimensions={
                                                  "AutoScalingGroupName": worker_asg.auto_scaling_group_name},
                                              period=core.Duration.minutes(1))
+
         # CWAgent collected metric
         cwagent_mem_avg = cw.Metric(namespace="CWAgent",
                                     metric_name="mem_used_percent",
@@ -205,9 +201,58 @@ class CdkEc2Stack(core.Stack):
                                     dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
                                     statistic="Maximum",
                                     period=core.Duration.minutes(1))
+        cwagent_disk_avg = cw.Metric(namespace="CWAgent",
+                                     metric_name="disk_used_percent",
+                                     dimensions={
+                                         "AutoScalingGroupName": worker_asg.auto_scaling_group_name,
+                                         "path": "/",
+                                         "device": "nvme0n1p1",
+                                         "fstype": "xfs"
+                                     },
+                                     statistic="Average",
+                                     period=core.Duration.minutes(1))
+        cwagent_disk_max = cw.Metric(namespace="CWAgent",
+                                     metric_name="disk_used_percent",
+                                     dimensions={
+                                         "AutoScalingGroupName": worker_asg.auto_scaling_group_name,
+                                         "path": "/",
+                                         "device": "nvme0n1p1",
+                                         "fstype": "xfs"
+                                     },
+                                     statistic="Maximum",
+                                     period=core.Duration.minutes(1))
 
         # CWAgent collected application logs - filter metric
-
+        s3_migrate_log.add_metric_filter("Completed-bytes",
+                                         metric_name="Completed-bytes",
+                                         metric_namespace="s3_migrate",
+                                         metric_value="$bytes",
+                                         filter_pattern=logs.FilterPattern.literal(
+                                             '[date, time, info, hs, p="--->Complete", bytes, key]'))
+        s3_migrate_log.add_metric_filter("Uploading-bytes",
+                                         metric_name="Uploading-bytes",
+                                         metric_namespace="s3_migrate",
+                                         metric_value="$bytes",
+                                         filter_pattern=logs.FilterPattern.literal(
+                                             '[date, time, info, hs, p="--->Uploading", bytes, key]'))
+        s3_migrate_log.add_metric_filter("Downloading-bytes",
+                                         metric_name="Downloading-bytes",
+                                         metric_namespace="s3_migrate",
+                                         metric_value="$bytes",
+                                         filter_pattern=logs.FilterPattern.literal(
+                                             '[date, time, info, hs, p="--->Downloading", bytes, key]'))
+        traffic_metric_Complete = cw.Metric(namespace="s3_migrate",
+                                            metric_name="Completed-bytes",
+                                            statistic="Sum",
+                                            period=core.Duration.minutes(1))
+        traffic_metric_Upload = cw.Metric(namespace="s3_migrate",
+                                          metric_name="Uploading-bytes",
+                                          statistic="Sum",
+                                          period=core.Duration.minutes(1))
+        traffic_metric_Download = cw.Metric(namespace="s3_migrate",
+                                            metric_name="Downloading-bytes",
+                                            statistic="Sum",
+                                            period=core.Duration.minutes(1))
         s3_migrate_log.add_metric_filter("ERROR",
                                          metric_name="ERROR-Logs",
                                          metric_namespace="s3_migrate",
@@ -229,52 +274,44 @@ class CdkEc2Stack(core.Stack):
                                        statistic="Sum",
                                        period=core.Duration.minutes(1))
 
-        board.add_widgets(cw.GraphWidget(title="EC2-ALL-NETWORK",
-                                         left=[ec2_metric_net]),
-                          cw.GraphWidget(title="EC2-ALL-CPU",
-                                         left=[ec2_metric_cpu_avg, ec2_metric_cpu_max]),
+        board.add_widgets(cw.GraphWidget(title="S3-MIGRATION-TOTAL-TRAFFIC",
+                                         left=[traffic_metric_Complete, traffic_metric_Upload,
+                                               traffic_metric_Download]),
+                          cw.GraphWidget(title="ERROR/WARNING LOGS",
+                                         left=[log_metric_ERROR],
+                                         right=[log_metric_WARNING],
+                                         height=6),
+                          cw.GraphWidget(title="SQS-JOBS",
+                                         left=[sqs_queue.metric_approximate_number_of_messages_visible(
+                                             period=core.Duration.minutes(1)),
+                                             sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                 period=core.Duration.minutes(1))]),
+                          cw.SingleValueWidget(title="RUNNING, WAITING & DEATH JOBS",
+                                               metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
+                                                   period=core.Duration.minutes(1)),
+                                                   sqs_queue.metric_approximate_number_of_messages_visible(
+                                                       period=core.Duration.minutes(1)),
+                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
+                                                       period=core.Duration.minutes(1)),
+                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
+                                                       period=core.Duration.minutes(1))],
+                                               height=6)
+                          )
+
+        board.add_widgets(cw.GraphWidget(title="EC2-AutoscalingGroup-CPU",
+                                         left=[ec2_metric_cpu_avg, ec2_metric_cpu_max],
+                                         left_y_axis=cw.YAxisProps(max=100, min=0)),
                           cw.GraphWidget(title="EC2-AutoscalingGroup-MEMORY",
-                                         left=[cwagent_mem_max, cwagent_mem_avg]),
-                          cw.SingleValueWidget(title="EC2-AutoscalingGroup-Capacity",
+                                         left=[cwagent_mem_max, cwagent_mem_avg],
+                                         left_y_axis=cw.YAxisProps(max=100, min=0)),
+                          cw.GraphWidget(title="EC2-AutoscalingGroup-DISK",
+                                         left=[cwagent_disk_avg, cwagent_disk_max],
+                                         left_y_axis=cw.YAxisProps(max=100, min=0)),
+                          cw.SingleValueWidget(title="EC2-AutoscalingGroup-CAPACITY",
                                                metrics=[autoscaling_GroupDesiredCapacity,
                                                         autoscaling_GroupInServiceInstances,
                                                         autoscaling_GroupMinSize,
                                                         autoscaling_GroupMaxSize],
-                                               height=6),
-                          )
-
-        board.add_widgets(cw.GraphWidget(title="SQS-Jobs",
-                                         left=[sqs_queue.metric_approximate_number_of_messages_visible(
-                                             period=core.Duration.minutes(1)
-                                         ),
-                                             sqs_queue.metric_approximate_number_of_messages_not_visible(
-                                                 period=core.Duration.minutes(1)
-                                             )]),
-                          cw.GraphWidget(title="SQS-DeadLetterQueue",
-                                         left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
-                                             period=core.Duration.minutes(1)
-                                         ),
-                                             sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                 period=core.Duration.minutes(1)
-                                             )]),
-                          cw.GraphWidget(title="ERROR/WARNING Logs",
-                                         left=[log_metric_ERROR],
-                                         right=[log_metric_WARNING],
-                                         height=6),
-                          cw.SingleValueWidget(title="Running/Waiting and Death Jobs",
-                                               metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
-                                                   period=core.Duration.minutes(1)
-                                               ),
-                                                   sqs_queue.metric_approximate_number_of_messages_visible(
-                                                       period=core.Duration.minutes(1)
-                                                   ),
-                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                       period=core.Duration.minutes(1)
-                                                   ),
-                                                   sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
-                                                       period=core.Duration.minutes(1)
-                                                   )
-                                               ],
                                                height=6)
                           )
 
