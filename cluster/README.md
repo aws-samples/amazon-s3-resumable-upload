@@ -109,15 +109,15 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
     "src_bucket": "your_global_bucket_1",
     "src_prefix": "your_prefix",
     "des_bucket": "your_china_bucket_1",
-    "des_prefix": "prefix_1",
+    "des_prefix": "prefix_1"
     }, {
     "src_bucket": "your_global_bucket_2",
     "src_prefix": "your_prefix",
     "des_bucket": "your_china_bucket_2",
-    "des_prefix": "prefix_2",
+    "des_prefix": "prefix_2"
     }]
 ```
-这些会被AWS CDK自动部署到 Parameter Store 的 s3_migration_bucket_para  
+这些会被AWS CDK自动部署到 System Manager Parameter Store 的 s3_migration_bucket_para  
 
 * 配置告警通知邮件地址在 cdk_ec2stack.py
 
@@ -159,24 +159,24 @@ Amazon CloudWatch Alarm 自动Email告警
 在 SSM ParameterStore 上保存的另一个账户访问密钥的那个参数名，需与CloudFormation/CDK创建的 parameter store 的名称一致
 
 * StorageClass = STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE
-选择目标存储的存储类型
+选择目标存储的存储类型, default STANDARD
 
-* ResumableThreshold
+* ResumableThreshold  (default 5MB)
 单位MBytes，小于该值的文件，则开始传文件时不走Multipart Upload，不做断点续传，节省性能  
 
-* MaxRetry
+* MaxRetry  (default 10)
 API Call在应用层面的最大重试次数
 
-* MaxThread
+* MaxThread  (default 30)
 单文件同时working的Thread进程数量  
 
-* MaxParallelFile
+* MaxParallelFile  (default 5)
 并行操作文件数量
 
-* JobTimeout
+* JobTimeout  (default 3600)
 单个文件传输超时时间，Seconds 秒
 
-* LoggingLevel = WARNING | INFO | DEBUG
+* LoggingLevel = WARNING | INFO | DEBUG  (default: INFO)
 * 不建议修改：ifVerifyMD5Twice, ChunkSize, CleanUnfinishedUpload, LocalProfileMode
 * 隐藏参数 max_pool_connections=200 在 s3_migration_lib.py
 ```

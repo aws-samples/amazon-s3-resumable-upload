@@ -7,7 +7,7 @@ Cluster & Serverless Version 0.95
   
 ![Cluster Diagram](./img/02.png)  
   
-## Features 
+## Highlight 
 * Transmit between Global and China Amazon S3: Cluster Version suitable of mass scale transmission, Serverless Version suitable for unpredictable burst transmission  
 * **Fast and stable**: Multiple nodes X Multiple files/node X Multiple threads/file. Support mass of hugh file concurrently migration. Auto-seperate small file ( including 0 Size) and large file for different procedure. Enable TCP BBR acceleration.   
 * **Reliability**: Amazon SQS queue managed files level jobs, break-point resume trasmission, with timeout protection. Every part will be verified with MD5 after transmission. Single Point of True, final file merging takes the destination Amazon S3 as standard, to ensure integrity.  
@@ -106,15 +106,15 @@ Configuration snapshot of s3_migration_credentials:
     "src_bucket": "your_global_bucket_1",
     "src_prefix": "your_prefix",
     "des_bucket": "your_china_bucket_1",
-    "des_prefix": "prefix_1",
+    "des_prefix": "prefix_1"
     }, {
     "src_bucket": "your_global_bucket_2",
     "src_prefix": "your_prefix",
     "des_bucket": "your_china_bucket_2",
-    "des_prefix": "prefix_2",
+    "des_prefix": "prefix_2"
     }]
 ```
-These information will be deployed to Parameter Store as s3_migration_bucket_para  
+These information will be deployed to System Manager Parameter Store as s3_migration_bucket_para  
 * Change your notification email in cdk_ec2_stack.py
 * If needed, you can change default config, such as JobType, and package the code onto your own s3 bucket, change EC2 Userdata to fetch this code and config.
 
@@ -155,24 +155,24 @@ The name on SSM ParameterStore to save access key of the other account
 Needed to be the same as CloudFormation/CDK ssm_parameter_credentials
 
 * StorageClass = STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE
-Select target Amazon S3 Storage Class
+Select target Amazon S3 Storage Class, default STANDARD
 
-* ResumableThreshold
+* ResumableThreshold  (default 5MB)
 Unit MBytes, the file size equal or less than this value will not go through multipart upload procedue, no resumable upload to save performance.   
 
-* MaxRetry
+* MaxRetry  (default 10)
 MaxRetry for single API call on application level
 
-* MaxThread
+* MaxThread  (default 30)
 Max thread concurrency for single file  
 
-* MaxParallelFile
+* MaxParallelFile  (default 5)
 Max file transmission for a single noede  
 
-* JobTimeout
+* JobTimeout  (default 3600)
 Timeout for single file job, Unit Seconds  
 
-* LoggingLevel = WARNING | INFO | DEBUG
+* LoggingLevel = WARNING | INFO | DEBUG  (default: INFO)
 
 * For Deubg: fVerifyMD5Twice, ChunkSize, CleanUnfinishedUpload, LocalProfileMode
 * Hidden para: max_pool_connections=200 in s3_migration_lib.py
