@@ -23,7 +23,8 @@
     },
     "metrics": {
         "append_dimensions": {
-            "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+            "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+            "InstanceId":"${aws:InstanceId}"
         },
         "metrics_collected": {
             "disk": {
@@ -38,6 +39,12 @@
             "mem": {
                 "measurement": [
                     "mem_used_percent"
+                ],
+                "metrics_collection_interval": 60
+            },
+            "netstat": {
+                "measurement": [
+                        "tcp_established"
                 ],
                 "metrics_collection_interval": 60
             }

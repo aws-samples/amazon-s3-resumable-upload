@@ -57,6 +57,7 @@ class CdkEc2Stack(core.Stack):
         cw_agent_config['logs']['logs_collected']['files']['collect_list'][1][
             'log_group_name'] = s3_migrate_log.log_group_name
         cw_agent_config['metrics']['append_dimensions']['AutoScalingGroupName'] = "\\${aws:AutoScalingGroupName}"
+        cw_agent_config['metrics']['append_dimensions']['InstanceId'] = "\\${aws:InstanceId}"
         cw_agent_config_str = json.dumps(cw_agent_config, indent=4).replace("\\\\", "\\")
         jobsender_userdata = user_data_part1 + cw_agent_config_str + user_data_jobsender_p
         worker_userdata = user_data_part1 + cw_agent_config_str + user_data_worker_p
@@ -159,15 +160,16 @@ class CdkEc2Stack(core.Stack):
         # Dashboard to monitor SQS and EC2
         board = cw.Dashboard(self, "s3_migrate")
 
-        ec2_metric_cpu_max = cw.Metric(namespace="AWS/EC2",
-                                       metric_name="CPUUtilization",
-                                       dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
-                                       period=core.Duration.minutes(1),
-                                       statistic="Maximum")
         ec2_metric_cpu_avg = cw.Metric(namespace="AWS/EC2",
                                        metric_name="CPUUtilization",
                                        dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
                                        period=core.Duration.minutes(1))
+
+        ec2_metric_net_out = cw.MathExpression(
+            expression="SEARCH('{AWS/EC2, InstanceId} NetworkOut', 'Average', 60)",
+            label="EC2-NetworkOut",
+            using_metrics={}
+        )
 
         autoscaling_GroupDesiredCapacity = cw.Metric(namespace="AWS/AutoScaling",
                                                      metric_name="GroupDesiredCapacity",
@@ -191,36 +193,27 @@ class CdkEc2Stack(core.Stack):
                                              period=core.Duration.minutes(1))
 
         # CWAgent collected metric
-        cwagent_mem_avg = cw.Metric(namespace="CWAgent",
-                                    metric_name="mem_used_percent",
-                                    dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
-                                    statistic="Average",
-                                    period=core.Duration.minutes(1))
-        cwagent_mem_max = cw.Metric(namespace="CWAgent",
-                                    metric_name="mem_used_percent",
-                                    dimensions={"AutoScalingGroupName": worker_asg.auto_scaling_group_name},
-                                    statistic="Maximum",
-                                    period=core.Duration.minutes(1))
-        cwagent_disk_avg = cw.Metric(namespace="CWAgent",
-                                     metric_name="disk_used_percent",
-                                     dimensions={
-                                         "AutoScalingGroupName": worker_asg.auto_scaling_group_name,
-                                         "path": "/",
-                                         "device": "nvme0n1p1",
-                                         "fstype": "xfs"
-                                     },
-                                     statistic="Average",
-                                     period=core.Duration.minutes(1))
-        cwagent_disk_max = cw.Metric(namespace="CWAgent",
-                                     metric_name="disk_used_percent",
-                                     dimensions={
-                                         "AutoScalingGroupName": worker_asg.auto_scaling_group_name,
-                                         "path": "/",
-                                         "device": "nvme0n1p1",
-                                         "fstype": "xfs"
-                                     },
-                                     statistic="Maximum",
-                                     period=core.Duration.minutes(1))
+        cwagent_mem_avg = cw.MathExpression(
+            expression="SEARCH('{CWAgent, AutoScalingGroupName, InstanceId} (AutoScalingGroupName=" +
+                       worker_asg.auto_scaling_group_name +
+                       " AND MetricName=mem_used_percent)', 'Average', 60)",
+            label="mem_avg",
+            using_metrics={}
+        )
+        cwagent_disk_avg = cw.MathExpression(
+            expression="SEARCH('{CWAgent, path, InstanceId, AutoScalingGroupName, device, fstype} "
+                       "(AutoScalingGroupName=" + worker_asg.auto_scaling_group_name +
+                       " AND MetricName=disk_used_percent AND path=\"/\")', 'Average', 60)",
+            label="disk_avg",
+            using_metrics={}
+        )
+        cwagent_net_tcp = cw.MathExpression(
+            expression="SEARCH('{CWAgent, AutoScalingGroupName, InstanceId} (AutoScalingGroupName=" +
+                       worker_asg.auto_scaling_group_name +
+                       " AND MetricName=tcp_established)', 'Average', 60)",
+            label="tcp_conn",
+            using_metrics={}
+        )
 
         # CWAgent collected application logs - filter metric
         s3_migrate_log.add_metric_filter("Completed-bytes",
@@ -276,11 +269,13 @@ class CdkEc2Stack(core.Stack):
 
         board.add_widgets(cw.GraphWidget(title="S3-MIGRATION-TOTAL-TRAFFIC",
                                          left=[traffic_metric_Complete, traffic_metric_Upload,
-                                               traffic_metric_Download]),
+                                               traffic_metric_Download],
+                                         left_y_axis=cw.YAxisProps(label="Bytes/min", show_units=False)),
                           cw.GraphWidget(title="ERROR/WARNING LOGS",
                                          left=[log_metric_ERROR],
+                                         left_y_axis=cw.YAxisProps(label="Count", show_units=False),
                                          right=[log_metric_WARNING],
-                                         height=6),
+                                         right_y_axis=cw.YAxisProps(label="Count", show_units=False)),
                           cw.GraphWidget(title="SQS-JOBS",
                                          left=[sqs_queue.metric_approximate_number_of_messages_visible(
                                              period=core.Duration.minutes(1)),
@@ -298,15 +293,15 @@ class CdkEc2Stack(core.Stack):
                                                height=6)
                           )
 
-        board.add_widgets(cw.GraphWidget(title="EC2-AutoscalingGroup-CPU",
-                                         left=[ec2_metric_cpu_avg, ec2_metric_cpu_max],
-                                         left_y_axis=cw.YAxisProps(max=100, min=0)),
-                          cw.GraphWidget(title="EC2-AutoscalingGroup-MEMORY",
-                                         left=[cwagent_mem_max, cwagent_mem_avg],
-                                         left_y_axis=cw.YAxisProps(max=100, min=0)),
+        board.add_widgets(cw.GraphWidget(title="EC2-AutoscalingGroup-TCP",
+                                         left=[cwagent_net_tcp],
+                                         left_y_axis=cw.YAxisProps(label="Count", show_units=False)),
+                          cw.GraphWidget(title="EC2-AutoscalingGroup-CPU/MEMORY",
+                                         left=[ec2_metric_cpu_avg, cwagent_mem_avg],
+                                         left_y_axis=cw.YAxisProps(max=100, min=0, label="%", show_units=False)),
                           cw.GraphWidget(title="EC2-AutoscalingGroup-DISK",
-                                         left=[cwagent_disk_avg, cwagent_disk_max],
-                                         left_y_axis=cw.YAxisProps(max=100, min=0)),
+                                         left=[cwagent_disk_avg],
+                                         left_y_axis=cw.YAxisProps(max=100, min=0, label="%", show_units=False)),
                           cw.SingleValueWidget(title="EC2-AutoscalingGroup-CAPACITY",
                                                metrics=[autoscaling_GroupDesiredCapacity,
                                                         autoscaling_GroupInServiceInstances,
@@ -314,8 +309,11 @@ class CdkEc2Stack(core.Stack):
                                                         autoscaling_GroupMaxSize],
                                                height=6)
                           )
+        board.add_widgets(cw.GraphWidget(title="EC2-NetworkOut",
+                                         left=[ec2_metric_net_out],
+                                         left_y_axis=cw.YAxisProps(label="Bytes/min", show_units=False)))
 
-        # Autoscaling up when visible message > 100 every 3 of 3 x 5 mins
+        # Autoscaling up when visible message > 100 in 5 mins
         worker_asg.scale_on_metric("scaleup", metric=sqs_queue.metric_approximate_number_of_messages_visible(),
                                    scaling_steps=[autoscaling.ScalingInterval(
                                        change=1,

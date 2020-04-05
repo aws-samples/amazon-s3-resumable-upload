@@ -191,9 +191,10 @@ CDK has deployed CloudWatch Dashbard:
 RUNNING: The number of Messages in Flight of SQS Queue  
 WAITING: The number of Messages Available of SQS Queue  
 DEATH: The number of message in Death Letter Queue, which collected the messages exceeded max retry times. And when there is in SQS-DLQ, it will trigger SNS email warning.  
-* Amazon EC2 Autoscaling Group CPU  
-* Amazon EC2 Autoscaling Group MEMORY. Collected by CloudWatch Agent.  
-* Amazon EC2 Autoscaling Group DISK. Collected by CloudWatch Agent. Notice that if disk full, it will cause application fail and quit. If Autoscaling Group setup resonable scaling policy, the group scale in from time to time, then old server will be terminated and no worry about the disk full.  
+* Amazon EC2 Autoscaling Group TCP, each worker TCP connections, collected by CloudWatch Agent.
+* Amazon EC2 Autoscaling Group CPU, total CPU Average Utilization.
+* Amazon EC2 Autoscaling Group MEMORY, each worker Memory Average Utilization, collected by CloudWatch Agent.  
+* Amazon EC2 Autoscaling Group DISK, each worker Disk Used, collected by CloudWatch Agent. Notice that if disk full, it will cause application fail and quit. If Autoscaling Group setup resonable scaling policy, the group scale in from time to time, then old server will be terminated and no worry about the disk full.  
 * Autoscaling Group CAPACITY. Collect from Autoscaling Monitor metrics. **Please enable "Group Metrics Collection" in EC2 console -> Autoscaling -> Monitor Tab by MANUALLY.** Which is not supprted by CDK high level api to enable right now.  
 * Autoscaling Up: AWS CDK create alarm trigger according to SQS Messages Available. In 5 mins, Messages > 100, scale 1 EC2. If Message > 500, scale 2 EC2.  
 * Autoscaling Shut Down: When there is no message in SQS queue, scale down EC2 to one instance only. The setup is: AWS CDK created Metrics Expression: SQS Messages Available + Messages in Flight = 0 AND EC2 count >1, then trigger Autoscaling Group EC2 desired capacity set to 1, and at the same time to send SNS email notification. This notification means jobs finished in batch. And because we set the condition "EC2 count >1" here, so it will only notify email once, and not send email in every 15 mins. According to your requirement to set desired capacity to 0, terminated all.

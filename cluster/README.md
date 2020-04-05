@@ -192,9 +192,10 @@ CDK 已经自动部署了 CloudWatch Dashbard:
 RUNNING 是 Amazon SQS 队列监控多少是正在进行的 ( Messages in Flight )   
 WAITING 即多少任务在排队 ( Messages Available )  
 DEATH 即死信队列 s3_migrate_file_list-DLQ 收集在正常队列中处理失败超过次数的消息（默认配置重试24次），出现 DLQ 会触发 SNS 告警邮件。
-* Amazon EC2 Autoscaling Group CPU  
-* Amazon EC2 Autoscaling Group 内存。通过 CloudWatch Agent 收集。  
-* Amazon EC2 Autoscaling Group 本地盘空间，通过 CloudWatch Agent 收集。注意如果满了会导致应用写日志失败而退出。如果 Autoscaling Group 策略设置合理，经常伸缩，则由于旧服务器会被终止，所以不必担心日志满。  
+* Amazon EC2 Autoscaling Group TCP 每台服务器的连接数，通过 CloudWatch Agent 收集。
+* Amazon EC2 Autoscaling Group CPU 总的平均占用率  
+* Amazon EC2 Autoscaling Group MEMORY，每台服务器的内存占用率，通过 CloudWatch Agent 收集。  
+* Amazon EC2 Autoscaling Group DISK，每台服务器的磁盘占用率，通过 CloudWatch Agent 收集。注意如果满了会导致应用写日志失败而退出。如果 Autoscaling Group 策略设置合理，经常伸缩，则由于旧服务器会被终止，所以不必担心日志满。  
 * Autoscaling Group CAPACITY 实例数量，这个值需要你手工到 EC2 控制台 Autoscaling 菜单的 Monitor 分页，去 Enable "Group Metrics Collection" 功能才能收集到。
 * Autoscaling Up: AWS CDK 创建了基于 SQS 队列 Messages Available 的 Alarm，5 分钟大于 100 消息触发 Autoscaling 增加 1 台EC2，超过 500 消息则直接增加 2 台。 
 * Autoscaling Shut Down: 队列中无消息时会将 EC2 数量降到 1。实现方式是：AWS CDK 创建了表达式 Expression: SQS Messages Available + Messages in Flight = 0 ，并且 EC2 数量大于1，则触发自动缩减 EC2 数量直接设为 1，并同时发送 SNS 告警 EMAIL 通知。这个告警可以作为批量传输完成后的通知，而且这样设置了 EC2 当前数量的判断，于是只会在一批次缩减的时候通知一次，而不会不停地每15分钟通知一次。你也可以根据场景需求，把这里自动设置为 0 ，即一次性关闭全部。  
