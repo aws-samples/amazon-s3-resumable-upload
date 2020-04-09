@@ -128,62 +128,46 @@ def check_sqs_empty(sqs, sqs_queue):
     return False  # sqs is not empty
 
 
-def get_s3_file_list(s3_client, bucket, S3Prefix):
-    logger.info(f'Get s3 file list from bucket: {bucket}')
+def get_s3_file_list(s3_client, bucket, S3Prefix, del_prefix=False):
+    logger.info(f'Get s3 file list from: {bucket}/{S3Prefix}')
+
+    # For delete prefix in des_prefix
+    if S3Prefix == '' or S3Prefix == '/':
+        # 目的bucket没有设置 Prefix
+        dp_len = 0
+    else:
+        # 目的bucket的 "prefix/"长度
+        dp_len = len(S3Prefix) + 1
 
     # get s3 file list with loop retry every 5 sec
-    while True:
-        des_file_list = []
+    des_file_list = []
+    paginator = s3_client.get_paginator('list_objects_v2')
+    for retry in range(5):
         try:
-            response_fileList = s3_client.list_objects_v2(
+            response_iterator = paginator.paginate(
                 Bucket=bucket,
-                Prefix=S3Prefix,
-                MaxKeys=1000
+                Prefix=S3Prefix
             )
+            for page in response_iterator:
+                if "Contents" in page:
+                    for n in page["Contents"]:
+                        key = n["Key"]
+
+                        # For delete prefix in des_prefix
+                        if del_prefix:
+                            key = key[dp_len:]
+
+                        des_file_list.append({
+                            "Key": key,
+                            "Size": n["Size"]
+                        })
             break
         except Exception as err:
             logger.warning(f'Fail to get s3 list objests: {str(err)}')
             time.sleep(5)
             logger.warning(f'Retry get S3 list bucket: {bucket}')
 
-    if response_fileList["KeyCount"] != 0:
-        for n in response_fileList["Contents"]:
-            # if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
-            des_file_list.append({
-                "Key": n["Key"],
-                "Size": n["Size"]
-            })
-            # else:
-            #     logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
-
-        # IsTruncated, keep getting next lists
-        while response_fileList["IsTruncated"]:
-            # Get next part of s3 list
-            while True:
-                try:
-                    response_fileList = s3_client.list_objects_v2(
-                        Bucket=bucket,
-                        Prefix=S3Prefix,
-                        MaxKeys=1000,
-                        ContinuationToken=response_fileList["NextContinuationToken"]
-                    )
-                    break
-                except Exception as err:
-                    logger.warning(str(err))
-                    time.sleep(5)
-                    logger.warning(f'Retry get S3 list bucket: {bucket}')
-
-            for n in response_fileList["Contents"]:
-                # if n["Size"] != 0:  # 子目录或 0 size 文件，不处理
-                des_file_list.append({
-                    "Key": n["Key"],
-                    "Size": n["Size"]
-                })
-                # else:
-                #     logger.warning(f'Zero size file, skip: {bucket}/{n["Key"]}')
-        logger.info(f'Bucket list length：{str(len(des_file_list))}')
-    else:
-        logger.info(f'File list is empty in: {bucket}')
+    logger.info(f'Bucket list length：{str(len(des_file_list))}')
 
     return des_file_list
 
@@ -193,10 +177,6 @@ def delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list):
     src_prefix = str(PurePosixPath(bucket_para['src_prefix']))
     des_bucket = bucket_para['des_bucket']
     des_prefix = str(PurePosixPath(bucket_para['des_prefix']))
-    if des_prefix == '.':
-        dp_len = 0
-    else:
-        dp_len = len(des_prefix) + 1  # 目的bucket的 "prefix/"长度
     # Delta list
     logger.info(f'Compare source s3://{src_bucket}/{src_prefix} and '
                 f'destination s3://{des_bucket}/{des_prefix}')
@@ -233,14 +213,7 @@ def delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list):
             continue  # 跳过当前 src
 
         # 比对源文件是否在目标中
-        in_list = False
-        for des in des_file_list:
-            # 去掉目的bucket的prefix做Key对比，且Size一致，则判为存在，不加入上传列表
-            if des['Key'][dp_len:] == src['Key'] and des['Size'] == src['Size']:
-                in_list = True
-                break
-        # 单个源文件比对结束
-        if in_list:
+        if src in des_file_list:
             # 下一个源文件
             continue
         # 把源文件加入job list
@@ -258,7 +231,7 @@ def delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list):
                 }
             )
     spent_time = int(time.time()) - start_time
-    logger.info(f'Generate delta file list LENGTH: {len(job_list)} - SPENT TIME: {spent_time}S')
+    logger.info(f'Delta list: {len(job_list)}, ignore list: {len(ignore_records)} - SPENT TIME: {spent_time}S')
     return job_list, ignore_records
 
 

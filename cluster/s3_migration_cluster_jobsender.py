@@ -71,12 +71,12 @@ if __name__ == '__main__':
 
             # Get List on S3
             src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
-            des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix)
+            des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix, True)
             # Generate job list
             job_list, ignore_records = delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list)
 
             # Just backup for debug
-            logger.info('Writing job list to local file backup...')
+            logger.info('Writing job and ignore list to local file backup...')
             t = time.localtime()
             start_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
             log_path = os.path.split(os.path.abspath(__file__))[0] + '/s3_migration_log'
@@ -84,12 +84,12 @@ if __name__ == '__main__':
                 local_backup_list = f'{log_path}/job-list-{src_bucket}-{start_time}.json'
                 with open(local_backup_list, 'w') as f:
                     json.dump(job_list, f)
-                logger.info(f'Finish writing: {os.path.abspath(local_backup_list)}')
+                logger.info(f'Write Job List: {os.path.abspath(local_backup_list)}')
             if ignore_records:
                 local_ignore_records = f'{log_path}/ignore-records-{src_bucket}-{start_time}.json'
                 with open(local_ignore_records, 'w') as f:
                     json.dump(ignore_records, f)
-                logger.info(f'Finish writing: {os.path.abspath(local_ignore_records)}')
+                logger.info(f'Write Ignore List: {os.path.abspath(local_ignore_records)}')
 
             # Upload jobs to sqs
             if len(job_list) != 0:
