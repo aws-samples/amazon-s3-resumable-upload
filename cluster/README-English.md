@@ -203,7 +203,7 @@ DEATH: The number of message in Death Letter Queue, which collected the messages
 
 
 ## Objects List Filter mode  
-* Jobsender support ignore some objects while comparing bucket. Edit s3_migration_ignore_list.txt, add the file bucket/key as one file one line. Or The last character " * " means wildcard prefix, or the first character " * " means wildcard suffix. E.g.  
+* Jobsender support ignore some objects while comparing bucket. Edit s3_migration_ignore_list.txt, add the file bucket/key as one file one line. Or use wildcard "*" or "?". E.g.  
 ```
 your_src_bucket/your_exact_key.mp4
 your_src_bucket/your_exact_key.*

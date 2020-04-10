@@ -6,6 +6,8 @@ import boto3
 from s3_migration_lib import step_function, step_fn_small_file
 from botocore.config import Config
 from pathlib import PurePosixPath
+import urllib.request
+import urllib.parse
 
 # 环境变量
 table_queue_name = os.environ['table_queue_name']
