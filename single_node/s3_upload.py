@@ -9,6 +9,7 @@ from botocore.client import Config
 from concurrent import futures
 from configparser import ConfigParser, RawConfigParser, NoOptionError
 import time
+import datetime
 import hashlib
 import logging
 from pathlib import PurePosixPath, Path
@@ -1169,19 +1170,16 @@ if __name__ == '__main__':
 
     # 再次获取源文件列表和目标文件夹现存文件列表进行比较，每个文件大小一致，输出比较结果
     spent_time = int(time.time() - start_time)
-    time_m, time_s = divmod(spent_time, 60)
-    time_h, time_m = divmod(time_m, 60)
+    time_str = str(datetime.timedelta(seconds=spent_time))
     if JobType == 'S3_TO_S3':
-        print(
-            f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_h}H:{time_m}M:{time_s}S \033[0m- FROM: {SrcBucket}/{S3Prefix} TO {DesBucket}/{S3Prefix}')
+        str_from = f'{SrcBucket}/{S3Prefix}'
         compare_buckets()
     elif JobType == 'ALIOSS_TO_S3':
-        print(
-            f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_h}H:{time_m}M:{time_s}S \033[0m- FROM: {ali_SrcBucket}/{S3Prefix} TO {DesBucket}/{S3Prefix}')
+        str_from = f'{ali_SrcBucket}/{S3Prefix}'
         compare_buckets()
     elif JobType == 'LOCAL_TO_S3':
-        print(
-            f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_h}H:{time_m}M:{time_s}S \033[0m- FROM: {SrcDir} TO {DesBucket}/{S3Prefix}')
+        str_from = f'{SrcDir}'
         compare_local_to_s3()
+    print(f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_str} \033[0m - FROM: {str_from} TO {DesBucket}/{S3Prefix}')
     print('Logged to file:', os.path.abspath(log_file_name))
     input('PRESS ENTER TO QUIT')
