@@ -101,7 +101,7 @@ def delta_job_list(src_file_list, des_file_list, bucket_para, ignore_list):
     for src in src_file_list:
 
         # 排除掉 ignore_list 里面列的 bucket/key
-        src_bucket_key = str(PurePosixPath(src_bucket) / src['Key'])
+        src_bucket_key = src_bucket + '/' + src['Key']
         ignore_match = False
         # 每个 ignore key 匹配一次，匹配上任何一个就跳过这个scr_key
         for ignore_key in ignore_list:

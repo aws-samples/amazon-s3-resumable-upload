@@ -1,6 +1,7 @@
 # PROJECT LONGBOW - LIB FOR TRANSMISSION BETWEEN AMAZON S3
 
 import time
+import datetime
 import logging
 import json
 import os
@@ -21,29 +22,23 @@ logger = logging.getLogger()
 
 # Configure logging
 def set_log(LoggingLevel, this_file_name):
-    _logger = logging.getLogger()
-    _logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.WARNING)
     if LoggingLevel == 'INFO':
-        _logger.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
     elif LoggingLevel == 'DEBUG':
-        _logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
     # File logging
     file_path = os.path.split(os.path.abspath(__file__))[0]
     log_path = file_path + '/s3_migration_log'
     if not os.path.exists(log_path):
         os.system(f"mkdir {log_path}")
-        print(f'Created folder {log_path}')
-    else:
-        print(f'Folder exist {log_path}')
-    # this_file_name = os.path.splitext(os.path.basename(__file__))[0]
-    t = time.localtime()
-    start_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
+    start_time = datetime.datetime.now().isoformat().replace(':', '-')[:19]
     _log_file_name = f'{log_path}/{this_file_name}-{start_time}.log'
-    print('Logging level:', LoggingLevel, 'Log file:', _log_file_name)
+    print('Log file:', _log_file_name)
     fileHandler = logging.FileHandler(filename=_log_file_name)
     fileHandler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s - %(message)s'))
-    _logger.addHandler(fileHandler)
-    return _logger, _log_file_name
+    logger.addHandler(fileHandler)
+    return logger, _log_file_name
 
 
 # Set environment
