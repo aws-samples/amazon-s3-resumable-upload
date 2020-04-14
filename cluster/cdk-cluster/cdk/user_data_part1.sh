@@ -21,5 +21,8 @@ sysctl -w net.ipv4.tcp_congestion_control=bbr
 echo "Install CW Agent"
 wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
 rpm -U ./amazon-cloudwatch-agent.rpm
+# Add to startup
+echo "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/root/cw-agent-config.json -s" >> /etc/rc.local
+
 # Create CWAgent config file
 cat <<EOF>> /root/cw-agent-config.json
