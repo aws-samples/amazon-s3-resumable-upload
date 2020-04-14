@@ -86,7 +86,7 @@ class CdkResourceStack(core.Stack):
                                })
 
         ddb_file_list.grant_read_write_data(handler)
-        handler.add_event_source(SqsEventSource(sqs_queue))
+        handler.add_event_source(SqsEventSource(sqs_queue, batch_size=1))
 
         s3bucket = s3.Bucket(self, "s3bucket")
         s3bucket.grant_read(handler)
