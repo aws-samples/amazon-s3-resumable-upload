@@ -57,7 +57,7 @@ try:
     response = urllib.request.urlopen(
         urllib.request.Request(checkip_url), timeout=3, context=context
     ).read()
-    instance_id = "lambda-" + response.decode('utf-8')[0:-1]
+    instance_id = "lambda-" + response.decode('utf-8')
 except Exception as e:
     logger.warning(f'Fail to connect to checkip.amazonaws.com')
     instance_id = 'lambda-ip-timeout'
