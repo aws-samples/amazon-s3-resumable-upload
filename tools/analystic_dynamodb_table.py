@@ -4,7 +4,7 @@
 
 import boto3
 import os, time, csv
-
+from operator import itemgetter
 
 def get_ddb():
     result = []
@@ -16,7 +16,7 @@ def get_ddb():
             LastEvaluatedKey = response['LastEvaluatedKey']
             while LastEvaluatedKey:
                 response = table.scan(
-                    LastEvaluatedKey=LastEvaluatedKey
+                    ExclusiveStartKey=LastEvaluatedKey
                 )
                 if "Items" in response:
                     result.extend(response['Items'])
@@ -32,8 +32,9 @@ def get_ddb():
 def get_running(data):
     result = []
     for i in data:
-        if i['lastTimeProgress'] != 100:
-            result.append(i)
+        if 'lastTimeProgress' in i:
+            if i['lastTimeProgress'] != 100:
+                result.append(i)
     print('Total:', len(result), 'running')
     return result
 
@@ -66,11 +67,11 @@ def display(data, limit=10, mute=False):
         else:
             i['Size'] = 0
         if 'firstTime_f' in i:
-            p += f"Start: \033[0;34;1m{i['firstTime_f']}\033[0m "
+            p += f"firstTime: \033[0;34;1m{i['firstTime_f']}\033[0m "
         else:
             i['firstTime_f'] = 'NA'
         if 'lastTimeProgress' in i:
-            p += f"Status: \033[0;34;1m{i['lastTimeProgress']}%\033[0m "
+            p += f"lastTimeProgress: \033[0;34;1m{i['lastTimeProgress']}%\033[0m "
         else:
             i['lastTimeProgress'] = 'NA'
         if 'totalSpentTime' in i:
@@ -78,11 +79,11 @@ def display(data, limit=10, mute=False):
         else:
             i['totalSpentTime'] = 'NA'
         if 'tryTimes' in i:
-            p += f"TryTimes: \033[0;34;1m{i['tryTimes']}\033[0m "
+            p += f"tryTimes: \033[0;34;1m{i['tryTimes']}\033[0m "
         else:
             i['tryTimes'] = 'NA'
         if 'thisRoundStart_f' in i:
-            p += f"ThisRoundStart: \033[0;34;1m{i['thisRoundStart_f']}\033[0m "
+            p += f"thisRoundStart: \033[0;34;1m{i['thisRoundStart_f']}\033[0m "
         else:
             i['thisRoundStart_f'] = 'NA'
         if 'endTime_f' in i:
@@ -108,20 +109,10 @@ def display(data, limit=10, mute=False):
     return result
 
 
-def get_descend(data):  # 降序
-    for i in range(len(data) - 1):
-        for j in range(len(data) - i - 1):
-            if 'firstTime' in data[j] and 'firstTime' in data[j+1]:
-                if data[j]['firstTime'] < data[j+1]['firstTime']:
-                    data[j], data[j+1] = data[j+1], data[j]
-    return data
-
-
 # Main
 if __name__ == '__main__':
-    table_queue_name = "s3_migrate_file_list"
+    table_queue_name = "covid19-s3-migrate-serverless-covid19s3migrateddb4500B92E-A8EFI0ZPV1UE"
     src_session = boto3.session.Session(profile_name='iad')
-    
     dynamodb = src_session.resource('dynamodb')
     table = dynamodb.Table(table_queue_name)
 
@@ -146,7 +137,8 @@ if __name__ == '__main__':
 
     # 输出启动时间最晚的记录
     print("\nLast firstTime data:")
-    query_descend = get_descend(ddb_result)
+    query_descend = sorted(
+        ddb_result, key=itemgetter('firstTime'), reverse=True)
     display(query_descend, 10)
 
     # 补缺数据，否则文件输出csv会在缺失数据的地方中断
@@ -162,13 +154,3 @@ if __name__ == '__main__':
             csvwriter.writerow([i['Key'], i['Size'], i['firstTime_f'], i['lastTimeProgress'], i['totalSpentTime'],
                 i['tryTimes'], i['thisRoundStart_f'], i['endTime_f'], str(i['instanceID']), str(i['jobStatus'])])
     print(f'\n Full data write to {ddb_result_filename}')
-
-    # result = table.query(
-    #     IndexName='tryTimes-firstTime-index',
-    #     Select='ALL_ATTRIBUTES',
-    #     Limit=3,
-    #     ScanIndexForward=False,
-    #     KeyConditionExpression="tryTimes=:t",
-    #     ExpressionAttributeValues={":t": 1}
-    # )
-    # print(result['Items'])
