@@ -45,7 +45,7 @@ https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html
 cd cdk-serverless
 cdk deploy
 ```
-This CDK is written in PYTHON, and will deploy the following resources:  
+./cdk-serverless  This CDK is written in PYTHON, and will deploy the following resources:  
 * Create Amazon S3 Bucket. When new object created in this bucket, it will trigger sqs and start jobs.  
 If you want to transmit existing S3 bucket, please leverage Jobsender from Cluster version of this solution to scan and compare S3, and then it will send jobs messages to Amazon SQS to trigger Lambda doing its jobs.  
 * Notice: AWS CDK/CloudFormation doesn't support leverage existing S3 bucket to triiger SQS or Lambda.
@@ -162,6 +162,17 @@ So Lambda traffic bytes/min will be emit to CloudWatch Metric for monitoring. Co
 If you change, it will cause the destination file wrong. Workaround is to run the Jobsender(cluster version) after each batch of migration job. Jobsender will compare source and destination s3 file key and size, if different size, it will send jobs to sqs to trigger copy again. But if size is same, it will take it as same file.  
 
 * Don't change the chunksize while start data copying.  
+
+## Enhanced project: Lambda Jobsender   
+In ./project-covid19-lake-viginia-put-zhy , there is CDK deploy project with Lambda Jobsender and Lambda Worker. What's the different?  
+
+* Jobsender: This project is to sync S3 from US to China, and the source bucket is not under our control but only read access. So we can't setup S3 trigger SQS, but use Lambda Jobsender with cron trigger by CloudWatch Event every hour. Lambda Jobsender compare and send jobs to SQS, the SQS trigger Lambda Worker to transmit data to China.  
+
+* Credentials: Move the credentials from Lambda Env to SSM Parameter Store, so the two lambda functions can share and this way is easier to redeploy lambda code with CDK.  
+So you need to manually setup credentials in SSM Parameter Store. For more detail, please read the CDK app.py file.    
+
+* Ignore List: Jobsender support ignore some files or some kind of files with wildcard ("*" or "?"), please setup in s3_migration_ignore_list.txt 
+
 
 ## License
 

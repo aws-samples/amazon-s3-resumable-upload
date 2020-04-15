@@ -47,7 +47,7 @@ https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html
 cd cdk-serverless
 cdk deploy
 ```
-该 CDK 由 Python 编写，会自动部署以下资源：  
+./cdk-serverless 该 CDK 由 Python 编写，会自动部署以下资源：  
 * 新建 Amazon S3 Bucket  
 * 新建 Amazon SQS Queue 队列和 一个相应的 SQS Queue DLQ 死信队列。InVisibleTime 15 分钟，有效期 14 天，重试 100 次后送 DLQ  
 * 新建 Amazon DynamoDB 表  
@@ -161,6 +161,16 @@ default value: 0
 * 本项目不支持Amazon S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 
 * 不要在开始数据复制之后修改Chunksize。  
+
+## 扩展项目样例：Lambda Jobsender  
+
+在 ./project-covid19-lake-viginia-put-zhy 下有CDK部署的一个项目样例。跟上面的CDK有什么不同？  
+
+* Jobsender: 这个是从美国同步S3到中国区S3的设置，因为源S3不可控制，不能设置自动触发SQS，而是采用Lambda运行Jobsender来每小时定时触发做源和目的S3的比对，然后Lambda Jobsender发送任务到SQS再触发Lambda Worker进行数据传输。  
+
+* Credentials: 中国区密钥从环境变量中挪走，改为存放到 SSM Parameter Store 中，便于两个Lambda共用读取，以及方便经常调整代码重新CDK部署。所以需要CDK部署前先手工创建 SSM Parameter Store。详细说明见 CDK 中的 app.py 文件。  
+
+* Ignore List: Jobsender 可以支持忽略某些文件，或者某类型文件 (通配符*或?)，请在s3_migration_ignore_list.txt中配置  
 
 ## License
 
