@@ -14,11 +14,21 @@ import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
 import aws_cdk.aws_logs as logs
 import aws_cdk.aws_apigateway as api
+import json
 
-Des_bucket_default = 'covid19-lake'  # The bucket in China
-Des_prefix_default = ''
-Src_bucket_default = 'covid19-lake'  # The bucket in US
-Src_prefix_default = ''
+# Define bucket parameter before deploy CDK
+bucket_para = [{
+    "src_bucket": "broad-references",
+    "src_prefix": "",
+    "des_bucket": "s3-migration-test-nx",
+    "des_prefix": "broad-references-20200405b"
+}, {
+    "src_bucket": "covid19-lake",
+    "src_prefix": "",
+    "des_bucket": "covid19-lake",
+    "des_prefix": ""
+}]
+
 StorageClass = 'STANDARD'
 
 # The China region credential setting in SSM Parameter Store
@@ -50,29 +60,37 @@ try:
 except Exception:
     ignore_list = ""
 
+
 class CdkResourceStack(core.Stack):
 
     def __init__(self, scope: core.Construct, _id: str, **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
 
+        # Setup SSM parameter of credentials, bucket_para, ignore_list
         ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
             self, "ssm_parameter_credentials",
             parameter_name=ssm_parameter_credentials,
             version=1
         )
 
-        ssm_parameter_ignore_list = ssm.StringParameter(self, "covid19_lake_s3_migrate_ignore_list",
+        ssm_bucket_para = ssm.StringParameter(self, "s3bucket_para",
+                                              string_value=json.dumps(bucket_para, indent=4)
+                                              )
+
+        ssm_parameter_ignore_list = ssm.StringParameter(self, "s3_migrate_ignore_list",
                                                         string_value=ignore_list)
 
-        ddb_file_list = ddb.Table(self, "covid19_s3_migrate_ddb",
+        # Setup DynamoDB
+        ddb_file_list = ddb.Table(self, "s3_migrate_ddb",
                                   partition_key=ddb.Attribute(name="Key", type=ddb.AttributeType.STRING),
                                   billing_mode=ddb.BillingMode.PAY_PER_REQUEST)
 
-        sqs_queue_DLQ = sqs.Queue(self, "covid19_s3_migrate_DLQ",
+        # Setup SQS
+        sqs_queue_DLQ = sqs.Queue(self, "s3_migrate_DLQ",
                                   visibility_timeout=core.Duration.minutes(15),
                                   retention_period=core.Duration.days(14)
                                   )
-        sqs_queue = sqs.Queue(self, "covid19_s3_migrate_queue",
+        sqs_queue = sqs.Queue(self, "s3_migrate_queue",
                               visibility_timeout=core.Duration.minutes(15),
                               retention_period=core.Duration.days(14),
                               dead_letter_queue=sqs.DeadLetterQueue(
@@ -81,6 +99,7 @@ class CdkResourceStack(core.Stack):
                               )
                               )
 
+        # Setup API for Lambda to get IP address (for debug networking routing purpose)
         checkip = api.RestApi(self, "lambda-checkip-api",
                               cloud_watch_role=True,
                               deploy=True,
@@ -98,7 +117,8 @@ class CdkResourceStack(core.Stack):
             response_models={"application/json": api.Model.EMPTY_MODEL}
         )])
 
-        handler = lam.Function(self, "covid19-s3-migrate-worker",
+        # Setup Lambda functions
+        handler = lam.Function(self, "s3-migrate-worker",
                                code=lam.Code.asset("./lambda"),
                                handler="lambda_function_worker.lambda_handler",
                                runtime=lam.Runtime.PYTHON_3_8,
@@ -107,14 +127,12 @@ class CdkResourceStack(core.Stack):
                                tracing=lam.Tracing.ACTIVE,
                                environment={
                                    'table_queue_name': ddb_file_list.table_name,
-                                   'Des_bucket_default': Des_bucket_default,
-                                   'Des_prefix_default': Des_prefix_default,
                                    'StorageClass': StorageClass,
                                    'checkip_url': checkip.url,
                                    'ssm_parameter_credentials': ssm_parameter_credentials
                                })
 
-        handler_jobsender = lam.Function(self, "covid19-s3-migrate-jobsender",
+        handler_jobsender = lam.Function(self, "s3-migrate-jobsender",
                                          code=lam.Code.asset("./lambda"),
                                          handler="lambda_function_jobsender.lambda_handler",
                                          runtime=lam.Runtime.PYTHON_3_8,
@@ -123,58 +141,65 @@ class CdkResourceStack(core.Stack):
                                          tracing=lam.Tracing.ACTIVE,
                                          environment={
                                              'table_queue_name': ddb_file_list.table_name,
-                                             'Des_bucket_default': Des_bucket_default,
-                                             'Des_prefix_default': Des_prefix_default,
                                              'StorageClass': StorageClass,
                                              'checkip_url': checkip.url,
                                              'sqs_queue': sqs_queue.queue_name,
-                                             'Src_bucket_default': Src_bucket_default,
-                                             'Src_prefix_default': Src_prefix_default,
                                              'ssm_parameter_credentials': ssm_parameter_credentials,
-                                             'ssm_parameter_ignore_list': ssm_parameter_ignore_list.parameter_name
+                                             'ssm_parameter_ignore_list': ssm_parameter_ignore_list.parameter_name,
+                                             'ssm_parameter_bucket': ssm_bucket_para.parameter_name
                                          })
 
+        # Allow lambda read/write DDB, SQS
         ddb_file_list.grant_read_write_data(handler)
         ddb_file_list.grant_read_write_data(handler_jobsender)
         sqs_queue.grant_send_messages(handler_jobsender)
+        # SQS trigger Lambda worker
         handler.add_event_source(SqsEventSource(sqs_queue, batch_size=1))
 
-        s3bucket = s3.Bucket.from_bucket_name(self, 'covid19-lake', bucket_name='covid19-lake')
-        s3bucket.grant_read(handler)
-        s3bucket.grant_read(handler_jobsender)
+        # Allow S3 Buckets to be read by Lambda functions
+        bucket_name = ''
+        for b in bucket_para:
+            if bucket_name != b['src_bucket']:  # 如果列了多个相同的Bucket，就跳过
+                bucket_name = b['src_bucket']
+                s3exist_bucket = s3.Bucket.from_bucket_name(self,
+                                                            bucket_name,  # 用这个做id
+                                                            bucket_name=bucket_name)
+                s3exist_bucket.grant_read(handler_jobsender)
+                s3exist_bucket.grant_read(handler)
 
+        # Allow Lambda read ssm parameters
+        ssm_bucket_para.grant_read(handler_jobsender)
         ssm_credential_para.grant_read(handler)
         ssm_credential_para.grant_read(handler_jobsender)
         ssm_parameter_ignore_list.grant_read(handler_jobsender)
 
-        core.CfnOutput(self, "DynamoDB_Table", value=ddb_file_list.table_name)
-        core.CfnOutput(self, "SQS_Job_Queue", value=sqs_queue.queue_name)
-        core.CfnOutput(self, "SQS_Job_Queue_DLQ", value=sqs_queue_DLQ.queue_name)
-
         # Schedule cron event to trigger Lambda Jobsender:
-        event.Rule(self, 'cron_trigger_convid19_lake_jobsender',
+        event.Rule(self, 'cron_trigger_jobsender',
                    schedule=event.Schedule.rate(core.Duration.hours(1)),
                    targets=[target.LambdaFunction(handler_jobsender)])
 
+        # workaround for the loggroup filter not created
+        theloggroup = logs.LogGroup.from_log_group_name(self, 'lambdalog',
+                                                        log_group_name=handler.log_group.log_group_name)
         # Create Lambda logs filter to create network traffic metric
-        handler.log_group.add_metric_filter("Complete-bytes",
-                                            metric_name="Complete-bytes",
-                                            metric_namespace="s3_migrate",
-                                            metric_value="$bytes",
-                                            filter_pattern=logs.FilterPattern.literal(
-                                                '[info, date, sn, p="--->Complete", bytes, key]'))
-        handler.log_group.add_metric_filter("Uploading-bytes",
-                                            metric_name="Uploading-bytes",
-                                            metric_namespace="s3_migrate",
-                                            metric_value="$bytes",
-                                            filter_pattern=logs.FilterPattern.literal(
-                                                '[info, date, sn, p="--->Uploading", bytes, key]'))
-        handler.log_group.add_metric_filter("Downloading-bytes",
-                                            metric_name="Downloading-bytes",
-                                            metric_namespace="s3_migrate",
-                                            metric_value="$bytes",
-                                            filter_pattern=logs.FilterPattern.literal(
-                                                '[info, date, sn, p="--->Downloading", bytes, key]'))
+        theloggroup.add_metric_filter("Complete-bytes",
+                                      metric_name="Complete-bytes",
+                                      metric_namespace="s3_migrate",
+                                      metric_value="$bytes",
+                                      filter_pattern=logs.FilterPattern.literal(
+                                          '[info, date, sn, p="--->Complete", bytes, key]'))
+        theloggroup.add_metric_filter("Uploading-bytes",
+                                      metric_name="Uploading-bytes",
+                                      metric_namespace="s3_migrate",
+                                      metric_value="$bytes",
+                                      filter_pattern=logs.FilterPattern.literal(
+                                          '[info, date, sn, p="--->Uploading", bytes, key]'))
+        theloggroup.add_metric_filter("Downloading-bytes",
+                                      metric_name="Downloading-bytes",
+                                      metric_namespace="s3_migrate",
+                                      metric_value="$bytes",
+                                      filter_pattern=logs.FilterPattern.literal(
+                                          '[info, date, sn, p="--->Downloading", bytes, key]'))
         lambda_metric_Complete = cw.Metric(namespace="s3_migrate",
                                            metric_name="Complete-bytes",
                                            statistic="Sum",
@@ -187,18 +212,18 @@ class CdkResourceStack(core.Stack):
                                            metric_name="Downloading-bytes",
                                            statistic="Sum",
                                            period=core.Duration.minutes(1))
-        handler.log_group.add_metric_filter("ERROR",
-                                            metric_name="ERROR-Logs",
-                                            metric_namespace="s3_migrate",
-                                            metric_value="1",
-                                            filter_pattern=logs.FilterPattern.literal(
-                                                '"ERROR"'))
-        handler.log_group.add_metric_filter("WARNING",
-                                            metric_name="WARNING-Logs",
-                                            metric_namespace="s3_migrate",
-                                            metric_value="1",
-                                            filter_pattern=logs.FilterPattern.literal(
-                                                '"WARNING"'))
+        theloggroup.add_metric_filter("ERROR",
+                                      metric_name="ERROR-Logs",
+                                      metric_namespace="s3_migrate",
+                                      metric_value="1",
+                                      filter_pattern=logs.FilterPattern.literal(
+                                          '"ERROR"'))
+        theloggroup.add_metric_filter("WARNING",
+                                      metric_name="WARNING-Logs",
+                                      metric_namespace="s3_migrate",
+                                      metric_value="1",
+                                      filter_pattern=logs.FilterPattern.literal(
+                                          '"WARNING"'))
         log_metric_ERROR = cw.Metric(namespace="s3_migrate",
                                      metric_name="ERROR-Logs",
                                      statistic="Sum",
@@ -209,7 +234,7 @@ class CdkResourceStack(core.Stack):
                                        period=core.Duration.minutes(1))
 
         # Dashboard to monitor SQS and Lambda
-        board = cw.Dashboard(self, "covid19_s3_migrate", dashboard_name="covid19_s3_migrate_serverless")
+        board = cw.Dashboard(self, "s3_migrate_serverless")
 
         board.add_widgets(cw.GraphWidget(title="Lambda-NETWORK",
                                          left=[lambda_metric_Download, lambda_metric_Upload, lambda_metric_Complete]),
@@ -261,7 +286,6 @@ class CdkResourceStack(core.Stack):
                           )
         # Alarm for queue - DLQ
         alarm_DLQ = cw.Alarm(self, "SQS_DLQ",
-                             alarm_name="s3-migration-serverless-SQS Dead Letter Queue",
                              metric=sqs_queue_DLQ.metric_approximate_number_of_messages_visible(),
                              threshold=0,
                              comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
@@ -276,6 +300,6 @@ class CdkResourceStack(core.Stack):
 
 ###############
 app = core.App()
-CdkResourceStack(app, "covid19-s3-migrate-serverless")
+CdkResourceStack(app, "s3-migrate-serverless-c19l")
 # MyStack(app, "MyStack", env=core.Environment(region="REGION",account="ACCOUNT")
 app.synth()

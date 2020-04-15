@@ -14,14 +14,11 @@ import boto3
 # 环境变量
 table_queue_name = os.environ['table_queue_name']
 StorageClass = os.environ['StorageClass']
-Des_bucket_default = os.environ['Des_bucket_default']
-Des_prefix_default = os.environ['Des_prefix_default']
 ssm_parameter_credentials = os.environ['ssm_parameter_credentials']
 checkip_url = os.environ['checkip_url']
 sqs_queue_name = os.environ['sqs_queue']
-Src_bucket_default = os.environ['Src_bucket_default']
-Src_prefix_default = os.environ['Src_prefix_default']
 ssm_parameter_ignore_list = os.environ['ssm_parameter_ignore_list']
+ssm_parameter_bucket = os.environ['ssm_parameter_bucket']
 
 # 内部参数
 JobType = "PUT"
@@ -35,7 +32,7 @@ table = dynamodb.Table(table_queue_name)
 sqs = boto3.client('sqs')
 sqs_queue = sqs.get_queue_url(QueueName=sqs_queue_name)['QueueUrl']
 
-# 取另一个Account的credentials
+# Get credentials of the other account
 ssm = boto3.client('ssm')
 logger.info(f'Get ssm_parameter_credentials: {ssm_parameter_credentials}')
 credentials = json.loads(ssm.get_parameter(
@@ -47,6 +44,12 @@ credentials_session = boto3.session.Session(
     aws_secret_access_key=credentials["aws_secret_access_key"],
     region_name=credentials["region"]
 )
+
+# Get buckets information
+logger.info(f'Get ssm_parameter_bucket: {ssm_parameter_bucket}')
+load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Parameter']['Value'])
+logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
+
 # Default Jobtype is PUT
 s3_src_client = boto3.client('s3')
 s3_des_client = credentials_session.client('s3')
@@ -240,34 +243,36 @@ def lambda_handler(event, context):
     # Check SQS is empty or not
     if check_sqs_empty(sqs, sqs_queue):
         logger.info('Job sqs queue is empty, now process comparing s3 bucket...')
+        for bucket_para in load_bucket_para:
+            src_bucket = bucket_para['src_bucket']
+            src_prefix = bucket_para['src_prefix']
+            des_bucket = bucket_para['des_bucket']
+            des_prefix = bucket_para['des_prefix']
 
-        src_bucket = Src_bucket_default
-        src_prefix = Src_prefix_default
-        des_bucket = Des_bucket_default
-        des_prefix = Des_prefix_default
+            # Get List on S3
+            logger.info('Get source bucket')
+            src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
+            logger.info('Get destination bucket')
+            des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix, True)
+            # Generate job list
+            job_list, ignore_records = delta_job_list(src_file_list, des_file_list,
+                                                      src_bucket, src_prefix, des_bucket, des_prefix, ignore_list)
 
-        # Get List on S3
-        src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
-        des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix, True)
-        # Generate job list
-        job_list, ignore_records = delta_job_list(src_file_list, des_file_list,
-                                                  src_bucket, src_prefix, des_bucket, des_prefix, ignore_list)
+            # Output for debug
+            print("job_list: ")
+            if job_list:
+                for n in job_list:
+                    print(str(n))
+            print("ignore_records: ")
+            if ignore_records:
+                for n in ignore_records:
+                    print(str(n))
 
-        # Output for debug
-        print("job_list: ")
-        if job_list:
-            for n in job_list:
-                print(str(n))
-        print("ignore_records: ")
-        if ignore_records:
-            for n in ignore_records:
-                print(str(n))
-
-        # Upload jobs to sqs
-        if len(job_list) != 0:
-            job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
-        else:
-            logger.info('Source list are all in Destination, no job to send.')
+            # Upload jobs to sqs
+            if len(job_list) != 0:
+                job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
+            else:
+                logger.info('Source list are all in Destination, no job to send.')
     else:
         logger.error('Job sqs queue is not empty or fail to get_queue_attributes. Stop process.')
     # print('Completed and logged to file:', os.path.abspath(log_file_name))

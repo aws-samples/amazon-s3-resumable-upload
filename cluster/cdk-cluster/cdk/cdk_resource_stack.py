@@ -36,7 +36,7 @@ class CdkResourceStack(core.Stack):
                                    )
                                    )
         self.ssm_bucket_para = ssm.StringParameter(self, "para-bucket",
-                                                   string_value=json.dumps(bucket_para),
+                                                   string_value=json.dumps(bucket_para, indent=4),
                                                    parameter_name=ssm_parameter_bucket
                                                    )
 

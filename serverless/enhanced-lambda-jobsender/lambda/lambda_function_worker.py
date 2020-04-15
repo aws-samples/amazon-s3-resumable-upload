@@ -12,8 +12,12 @@ import urllib.parse
 # 环境变量
 table_queue_name = os.environ['table_queue_name']
 StorageClass = os.environ['StorageClass']
-Des_bucket_default = os.environ['Des_bucket_default']
-Des_prefix_default = os.environ['Des_prefix_default']
+try:
+    Des_bucket_default = os.environ['Des_bucket_default']
+    Des_prefix_default = os.environ['Des_prefix_default']
+except Exception as e:
+    print(e)
+    Des_bucket_default, Des_prefix_default = "", ""
 ssm_parameter_credentials = os.environ['ssm_parameter_credentials']
 checkip_url = os.environ['checkip_url']
 

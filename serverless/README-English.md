@@ -164,9 +164,11 @@ If you change, it will cause the destination file wrong. Workaround is to run th
 * Don't change the chunksize while start data copying.  
 
 ## Enhanced project: Lambda Jobsender   
-In ./project-covid19-lake-viginia-put-zhy , there is CDK deploy project with Lambda Jobsender and Lambda Worker. What's the different?  
+In ./enhanced-lambda-jobsender , there is CDK deploy project with Lambda Jobsender and Lambda Worker. What's the different?  
 
 * Jobsender: This project is to sync S3 from US to China, and the source bucket is not under our control but only read access. So we can't setup S3 trigger SQS, but use Lambda Jobsender with cron trigger by CloudWatch Event every hour. Lambda Jobsender compare and send jobs to SQS, the SQS trigger Lambda Worker to transmit data to China.  
+
+* Source/Destination bucket info: The Source/Destination bucket info is located in SSM parameter store, jobsender get this information and to compare. Please define it in CDK app.py file.
 
 * Credentials: Move the credentials from Lambda Env to SSM Parameter Store, so the two lambda functions can share and this way is easier to redeploy lambda code with CDK.  
 So you need to manually setup credentials in SSM Parameter Store. For more detail, please read the CDK app.py file.    
