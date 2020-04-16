@@ -5,11 +5,12 @@ import aws_cdk.aws_sqs as sqs
 import aws_cdk.aws_ssm as ssm
 import json
 import aws_cdk.aws_s3_notifications as s3n
+import aws_cdk.aws_s3_deployment as s3d
 
 table_queue_name = 's3_migration_file_list'
 ssm_parameter_bucket = 's3_migration_bucket_para'
 ssm_parameter_credentials = 's3_migration_credentials'
-ssm_parameter_credentials_version = 1
+
 
 class CdkResourceStack(core.Stack):
 
@@ -46,7 +47,7 @@ class CdkResourceStack(core.Stack):
         self.ssm_credential_para = ssm.StringParameter.from_secure_string_parameter_attributes(
             self, "ssm_parameter_credentials",
             parameter_name=ssm_parameter_credentials,
-            version=ssm_parameter_credentials_version
+            version=1
         )
 
         # New a S3 bucket, new object in this bucket will trigger SQS jobs
@@ -56,3 +57,12 @@ class CdkResourceStack(core.Stack):
         self.s3bucket = s3.Bucket(self, "newbucket")
         self.s3bucket.add_event_notification(s3.EventType.OBJECT_CREATED,
                                              s3n.SqsDestination(self.sqs_queue))
+
+        # Deploy code
+        self.s3_deploy = s3.Bucket(self, "deploybucket")
+        s3d.BucketDeployment(self, "deploy_code",
+                             sources=[s3d.Source.asset("./code")],
+                             destination_bucket=self.s3_deploy)
+
+        core.CfnOutput(self, 'NewS3Bucket_MigrateObjects', value=self.s3bucket.bucket_name)
+        core.CfnOutput(self, 'NewS3Bucket_deploy_code', value=self.s3_deploy.bucket_name)

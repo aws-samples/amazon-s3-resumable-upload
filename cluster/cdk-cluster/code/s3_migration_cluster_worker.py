@@ -3,7 +3,6 @@
 import os
 import sys
 import concurrent.futures
-import time
 from configparser import ConfigParser
 
 from s3_migration_lib import set_env, set_log, job_looper
@@ -57,7 +56,6 @@ if __name__ == '__main__':
 
     # For concur jobs(files)
     logger.info(f'Start concurrent {MaxParallelFile} jobs.')
-    start_time = int(time.time())
     with concurrent.futures.ThreadPoolExecutor(max_workers=MaxParallelFile) as job_pool:
         for i in range(MaxParallelFile):  # 这里只控制多个Job同时循环进行，每个Job的并发和超时在内层控制
             job_pool.submit(job_looper,
@@ -66,9 +64,3 @@ if __name__ == '__main__':
                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
                             Des_bucket_default, Des_prefix_default
                             )
-    # 目前是 loop ，所以实际上不会走到这里
-    spent_time = int(time.time() - start_time)
-    time_m, time_s = divmod(spent_time, 60)
-    time_h, time_m = divmod(time_m, 60)
-    logger.warning(f'All jobs on queue are done. Spent time: {time_h}H:{time_m}M:{time_s}S. '
-                   f'Working logs in file: {os.path.abspath(log_file_name)}')

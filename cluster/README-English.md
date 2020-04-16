@@ -1,7 +1,7 @@
 # Amazon S3 MultiThread Resume Migration Cluster Solution   
 
   PROJECT LONGBOW  -  Amazon EC2 Autoscaling Cluster. Support mass scale of large objects trasmission between AWS Global Amazon S3 and China Amazon S3   
-Cluster & Serverless Version 0.95  
+Cluster & Serverless Version 0.96  
 
   Cluster and Serverless Version Architecture:  
   
@@ -116,7 +116,7 @@ Configuration snapshot of s3_migration_credentials:
 ```
 These information will be deployed to System Manager Parameter Store as s3_migration_bucket_para  
 * Change your notification email in cdk_ec2_stack.py
-* If needed, you can change default config, such as JobType, and package the code onto your own s3 bucket, change EC2 Userdata to fetch this code and config.
+* If needed, can change the default config file: ./cdk-cluster/code/s3_migration_cluster_config.ini (e.g. JobType or Threads), CDK will deploy code and config to a new create s3 bucket: s3-migration-cluster-resourc-deploybucket. You can also change the config after deploy, upload to the same s3 bucket. New created EC2 will download the new config via Userdata.
 
 ### 2. AWS CDK Auto-deploy
 * AWS CDK will deploy below all resources except as manually config credentials in step 1.  
@@ -131,7 +131,9 @@ AWS SSM Parameter Store: s3_migration_bucket_para as bucket information for Jobs
 Amazon EC2 all needed IAM Role  
 Amazon CloudWatch Dashboard  
 Amazon CloudWatch Alarm to email notification 
-  
+Amazon S3 Bucket - s3-migration-cluster-resource-newbucket - New created object in this bucket will trigger SQS and start transmission.
+Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket - code deploy bucket: For CDK to upload the application source code. All EC2 start will first download these codes and config. If you want to change the config.ini, you can change it in this bucket.
+
 * Amazon EC2 User Data will install CloudWatch Logs Agent to collect EC2 initial logs and s3_migrate application logs  
 * Amazon EC2 User Data enable TCP BBR  
 * Amazon EC2 User data auto clone application code and default config.ini from github and run it. Recommand to put code and modified config on your own S3 bucket for user data to pull or make your own AMI to start Amazon EC2.  

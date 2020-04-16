@@ -3,7 +3,7 @@
 [English Readme](./README-English.md)
   
   PROJECT LONGBOW  -  Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国Amazon S3之间传输   
-Cluster & Serverless Version 0.95  
+Cluster & Serverless Version 0.96  
 
   集群和无服务器版架构图如下：  
   
@@ -121,7 +121,7 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
 
 * 配置告警通知邮件地址在 cdk_ec2stack.py
 
-* 如果有需要可以修改默认的 config 配置(例如JobType)，并且把打包的代码放自己的S3上面，然后修改EC2启动的Userdata运行去下载。
+* 如果有需要可以修改默认的 ./cdk-cluster/code/s3_migration_cluster_config.ini 配置(例如JobType，或者并发线程数)，CDK会自动部署代码和配置文件到新建的一个s3-migration-cluster-resourc-deploybucket桶。在部署完成后，也可以再次修改配置文件，重新上传S3同样的位置。新启动的EC2就会在Userdata中下载新的配置文件。
 
 ### 2. CDK自动部署
 * CDK 会自动化部署以下所有资源除了 1. 前置配置所要求手工配置的Key：  
@@ -136,6 +136,8 @@ Amazon SSM Parameter Store: s3_migration_bucket_para 作为S3桶信息给Jobsend
 Amazon EC2 所需要访问各种资源的 IAM Role  
 Amazon CloudWatch Dashboard 监控
 Amazon CloudWatch Alarm 自动Email告警
+Amazon S3 Bucket - s3-migration-cluster-resource-newbucket 新增内容桶，新增内容自动触发SQS，所有新存入的对象都会被传输
+Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket 代码部署桶，这个桶是给部署的时候CDK上传应用程序代码的，每个EC2启动的时候都会从这个桶下载代码。如果要修改配置文件，可以直接在这个桶修改。
   
 * Amazon EC2 User Data 自动安装 CloudWatch Logs Agent 收集 EC2 初始化运行 User Data 时候的 Logs，以及收集 s3_migrate 程序运行产生的 Logs 
 * Amazon EC2 User Data 自动启用 TCP BBR  

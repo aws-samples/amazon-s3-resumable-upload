@@ -15,7 +15,6 @@ import aws_cdk.aws_cloudwatch_actions as action
 import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
 import aws_cdk.aws_logs as logs
-import base64
 
 # Adjust ec2 type here
 worker_type = "c5.large"
@@ -34,6 +33,8 @@ linux_ami = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LIN
 # Load your user data for ec2
 with open("./cdk/user_data_part1.sh") as f:
     user_data_part1 = f.read()
+with open("./cdk/user_data_part2.sh") as f:
+    user_data_part2 = f.read()
 with open("./cdk/cw_agent_config.json") as f:
     cw_agent_config = json.load(f)
 with open("./cdk/user_data_worker.sh") as f:
@@ -46,7 +47,7 @@ class CdkEc2Stack(core.Stack):
 
     def __init__(self, scope: core.Construct, _id: str, vpc, bucket_para,
                  # key_name,
-                 ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para, s3bucket,
+                 ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para, s3bucket, s3_deploy,
                  **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
 
@@ -59,8 +60,9 @@ class CdkEc2Stack(core.Stack):
         cw_agent_config['metrics']['append_dimensions']['AutoScalingGroupName'] = "\\${aws:AutoScalingGroupName}"
         cw_agent_config['metrics']['append_dimensions']['InstanceId'] = "\\${aws:InstanceId}"
         cw_agent_config_str = json.dumps(cw_agent_config, indent=4).replace("\\\\", "\\")
-        jobsender_userdata = user_data_part1 + cw_agent_config_str + user_data_jobsender_p
-        worker_userdata = user_data_part1 + cw_agent_config_str + user_data_worker_p
+        userdata_head = user_data_part1 + cw_agent_config_str + user_data_part2 + s3_deploy.bucket_name + " ."
+        jobsender_userdata = userdata_head + user_data_jobsender_p
+        worker_userdata = userdata_head + user_data_worker_p
         # Create jobsender ec2 node
         jobsender = autoscaling.AutoScalingGroup(self, "jobsender",
                                                  instance_type=ec2.InstanceType(
@@ -99,7 +101,7 @@ class CdkEc2Stack(core.Stack):
                                                   # key_name=key_name,  # Optional if use SSM-SessionManager
                                                   user_data=ec2.UserData.custom(worker_userdata),
                                                   desired_capacity=2,
-                                                  min_capacity=1,
+                                                  min_capacity=2,
                                                   max_capacity=10,
                                                   spot_price="0.5"
                                                   )
@@ -131,6 +133,10 @@ class CdkEc2Stack(core.Stack):
         ssm_bucket_para.grant_read(jobsender)
         ssm_credential_para.grant_read(jobsender)
         ssm_credential_para.grant_read(worker_asg)
+
+        # Allow EC2 access source code on s3_deploy bucket
+        s3_deploy.grant_read(jobsender)
+        s3_deploy.grant_read(worker_asg)
 
         # Allow EC2 access new s3 bucket
         s3bucket.grant_read(jobsender)
@@ -379,7 +385,5 @@ class CdkEc2Stack(core.Stack):
 
         # Output
         core.CfnOutput(self, "LogGroup", value=s3_migrate_log.log_group_name)
-        core.CfnOutput(self, "JobSenderEC2", value=jobsender.auto_scaling_group_name)
-        core.CfnOutput(self, "WorkerEC2AutoscalingGroup", value=worker_asg.auto_scaling_group_name)
         core.CfnOutput(self, "Dashboard", value="CloudWatch Dashboard name s3_migrate_cluster")
         core.CfnOutput(self, "Alarm", value="CloudWatch SQS queue empty Alarm for cluster: " + alarm_email)

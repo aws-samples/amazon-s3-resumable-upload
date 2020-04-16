@@ -8,6 +8,7 @@ from configparser import ConfigParser
 from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 from s3_migration_lib import set_env, set_log
+from operator import itemgetter
 
 # Read config.ini
 cfg = ConfigParser()
@@ -258,8 +259,16 @@ if __name__ == '__main__':
             # Upload jobs to sqs
             if len(job_list) != 0:
                 job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
+                max_object = max(job_list, key=itemgetter('Size'))
+                if max_object['Size'] > 50*1024*1024*1024:
+                    logger.warning(f'Max object in job_list is {str(max_object)}, '
+                                   f'be carefull to tune the concurrency threads and instance memory')
+                else:
+                    logger.info(f'Max object in job_list is {str(max_object)}')
             else:
                 logger.info('Source list are all in Destination, no job to send.')
+
+
     else:
         logger.error('Job sqs queue is not empty or fail to get_queue_attributes. Stop process.')
     print('Completed and logged to file:', os.path.abspath(log_file_name))
