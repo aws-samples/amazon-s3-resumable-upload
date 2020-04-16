@@ -164,7 +164,7 @@ If you change, it will cause the destination file wrong. Workaround is to run th
 * Don't change the chunksize while start data copying.  
 
 ## Enhanced project: Lambda Jobsender   
-In ./enhanced-lambda-jobsender , there is CDK deploy project with Lambda Jobsender and Lambda Worker. What's the different?  
+In ./enhanced-lambda-jobsender folder, there is CDK deploy project with Lambda Jobsender and Lambda Worker. What's the different?  
 
 * Jobsender: This project is to sync S3 from US to China, and the source bucket is not under our control but only read access. So we can't setup S3 trigger SQS, but use Lambda Jobsender with cron trigger by CloudWatch Event every hour. Lambda Jobsender compare and send jobs to SQS, the SQS trigger Lambda Worker to transmit data to China.  
 

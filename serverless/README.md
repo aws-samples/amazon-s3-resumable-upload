@@ -164,9 +164,9 @@ default value: 0
 
 ## 扩展项目样例：Lambda Jobsender  
 
-在 ./ 下有CDK部署的一个项目样例。跟上面的CDK有什么不同？  
+在 ./enhanced-lambda-jobsender 下有CDK部署的一个项目样例。跟上面的CDK有什么不同？  
 
-* Jobsender: 这个是从美国同步S3到中国区S3的设置，因为源S3不可控制，不能设置自动触发SQS，而是采用Lambda运行Jobsender来每小时定时触发做源和目的S3的比对，然后Lambda Jobsender发送任务到SQS再触发Lambda Worker进行数据传输。  
+* Jobsender: 这个样例是从美国同步S3到中国区S3的设置，因为源S3不可控制，不能设置自动触发SQS，而是采用Lambda运行Jobsender来每小时定时触发做源和目的S3的比对，然后Lambda Jobsender发送任务到SQS再触发Lambda Worker进行数据传输。  
 
 * Source/Destination bucket 信息: S3源和目的桶信息通过CDK部署到了 SSM parameter store, jobsender 启动时会取下来桶信息然后开始比对。请在 CDK 的 app.py 文件中定义 
 
