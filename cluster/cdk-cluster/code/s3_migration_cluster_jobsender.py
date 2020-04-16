@@ -20,6 +20,8 @@ try:
     ssm_parameter_credentials = cfg.get('Basic', 'ssm_parameter_credentials')
     LocalProfileMode = cfg.getboolean('Debug', 'LocalProfileMode')
     JobType = cfg.get('Basic', 'JobType')
+    MaxThread = cfg.getint('Mode', 'MaxThread')
+    MaxParallelFile = cfg.getint('Mode', 'MaxParallelFile')
     LoggingLevel = cfg.get('Debug', 'LoggingLevel')
 except Exception as e:
     print("s3_migration_cluster_config.ini", str(e))
@@ -260,14 +262,16 @@ if __name__ == '__main__':
             if len(job_list) != 0:
                 job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
                 max_object = max(job_list, key=itemgetter('Size'))
+                MaxChunkSize = int(max_object['Size'] / 10000) + 1024
                 if max_object['Size'] > 50*1024*1024*1024:
-                    logger.warning(f'Max object in job_list is {str(max_object)}, '
-                                   f'be carefull to tune the concurrency threads and instance memory')
+                    logger.warning(f'Max object in job_list is {str(max_object)}. Remember to check instance memory >= '
+                                   f'MaxChunksize x MaxThread x MaxParallelFile, i.e. '
+                                   f'{MaxChunkSize} x {MaxThread} x {MaxParallelFile} = '
+                                   f'{MaxChunkSize*MaxThread*MaxParallelFile}')
                 else:
                     logger.info(f'Max object in job_list is {str(max_object)}')
             else:
                 logger.info('Source list are all in Destination, no job to send.')
-
 
     else:
         logger.error('Job sqs queue is not empty or fail to get_queue_attributes. Stop process.')

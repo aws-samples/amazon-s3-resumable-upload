@@ -273,9 +273,10 @@ def lambda_handler(event, context):
             if len(job_list) != 0:
                 job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
                 max_object = max(job_list, key=itemgetter('Size'))
+                MaxChunkSize = int(max_object['Size'] / 10000) + 1024
                 if max_object['Size'] >= 50 * 1024 * 1024 * 1024:
-                    logger.warning(f'Max object in job_list is {str(max_object)}, '
-                                   f'be carefull to tune the concurrency threads and instance memory')
+                    logger.warning(f'Max object in job_list is {str(max_object)}. Remember to check instance memory >= '
+                                   f'MaxChunksize({MaxChunkSize}) x MaxThread x MaxParallelFile')
             else:
                 logger.info('Source list are all in Destination, no job to send.')
     else:
