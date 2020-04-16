@@ -167,7 +167,7 @@ Amazon CloudWatch Alarm 自动Email告警
 * MaxRetry  (default 10)
 API Call在应用层面的最大重试次数
 
-* MaxThread  (default 30)
+* MaxThread  (default 10)
 单文件同时working的Thread进程数量  
 
 * MaxParallelFile  (default 5)
@@ -235,6 +235,10 @@ CDK 默认部署时启动了 Amazon EC2 服务器上的 TCP BBR: Congestion-Base
 * 另外，注意 s3_migration_cluster_config.ini 设置为 JobType = GET 
 
 ## 局限与提醒
+* 所需内存 = 并发数 * ChunckSize 。小于50GB的文件，ChunckSize为5MB，大于50GB的文件，则ChunkSize会自动调整为约等于: 文件Size/10000。  
+例如如果平均要处理的文件 Size 是 500GB ，ChunckSize 会自动调整为50MB，并发设置是 5 File x 10 Concurrency/File = 50，所以需要的EC2或Lambda的可运行内存约为 50 x 50MB = 2.5GB。 
+如需要提高并发度，可以调整配置，但对应的EC2或Lambda内存也要相应增加。 
+
 * CDK 默认配置的是EC2启动之后，自动通过 Userdata 脚本去yum安装 python，pip安装boto3, CloudwatchAgent，以及下载github上面的代码和配置，如果要修改配置，请打包放自己的S3上面。  
 另外，如果你在中国区部署EC2，下载boto3, CWAgent的速度会慢，建议放到自己的S3上面，或不用userdata（包括jobsender和worker），而是自己手工部署，然后打包成AMI给EC2启动。
 

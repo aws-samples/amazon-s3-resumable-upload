@@ -157,7 +157,11 @@ default value: 0
 * 配置 Amazon SQS 监控告警，把 Visible 和 InVisible 消息相加，如果连续 3 of 3 为 <= 0 则发 SNS 告警通知。
 
 
-## Limitation 局限
+## 局限和提醒注意：
+* 所需内存 = 并发数 * ChunckSize 。小于50GB的文件，ChunckSize为5MB，大于50GB的文件，则ChunkSize会自动调整为约等于: 文件Size/10000。  
+例如如果平均要处理的文件 Size 是 500GB ，ChunckSize 会自动调整为50MB，并发设置是 5 File x 10 Concurrency/File = 50，所以需要的EC2或Lambda的可运行内存约为 50 x 50MB = 2.5GB。 
+如需要提高并发度，可以调整配置，但对应的EC2或Lambda内存也要相应增加。 
+
 * 本项目不支持Amazon S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 
 * 不要在开始数据复制之后修改Chunksize。  

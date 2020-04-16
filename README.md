@@ -35,7 +35,7 @@ Single Python file can run anywhere - 单个 Python 文件可在任何地方运�
 * ALIOSS_TO_S3: - 阿里云OSS到S3  
 ### Serverless - 无服务器版:  
 AWS Lambda + Amazon SQS  
-* S3_TO_S3: Unpredictable transimission tasks, or instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB ). Leverage break-point resuming and SQS redrive, no worry of Lambda 15 minutes timeout. 
+* S3_TO_S3: Unpredictable transimission tasks, or instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB ). Leverage break-point resuming and SQS redrive, no worry of Lambda 15 minutes timeout.  
 轻中量(建议单文件< 50GB)，不定期传输，或即时数据同步。利用断点续传和SQS重驱动，Lambda不用担心15分钟超时。  
 ### Cluster - 集群版:  
 Amazon EC2 Autoscaling + Amazon SQS 

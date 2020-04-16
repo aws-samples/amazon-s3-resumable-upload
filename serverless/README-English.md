@@ -157,7 +157,11 @@ So Lambda traffic bytes/min will be emit to CloudWatch Metric for monitoring. Co
 
 * Config Amazon SQS Alarm, expression metric Visible + InVisible Messages <= 0 3 of 3 then trigger Amazon SNS Notification for empty queue.
 
-## Limitation 
+## Limitation and Notice: 
+* Required memory = concurrency * ChunckSize. For the file < 50GB, ChunckSize is 5MB. For the file >50GB, ChunkSize will be auto change to Size/10000  
+So for example is file average Size is 500GB , ChunckSize will be auto change to 50MB, and the default concurrency setting 5 File x 10 Concurrency/File = 50. So required 50 x 50MB = 2.5GB memory to run in EC2 or Lambda.  
+If you need to increase the concurrency, can change it in config, but remember provision related memory for EC2 or Lambda.  
+
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 If you change, it will cause the destination file wrong. Workaround is to run the Jobsender(cluster version) after each batch of migration job. Jobsender will compare source and destination s3 file key and size, if different size, it will send jobs to sqs to trigger copy again. But if size is same, it will take it as same file.  
 

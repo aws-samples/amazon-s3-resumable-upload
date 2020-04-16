@@ -163,7 +163,7 @@ Unit MBytes, the file size equal or less than this value will not go through mul
 * MaxRetry  (default 10)
 MaxRetry for single API call on application level
 
-* MaxThread  (default 30)
+* MaxThread  (default 10)
 Max thread concurrency for single file  
 
 * MaxParallelFile  (default 5)
@@ -235,6 +235,10 @@ Currenty default config setting is PUT mode. If you need to change to GET mode:
 * Don'f forget to change s3_migration_cluster_config.ini to JobType = GET 
 
 ## Limitation and notice  
+* Required memory = concurrency * ChunckSize. For the file < 50GB, ChunckSize is 5MB. For the file >50GB, ChunkSize will be auto change to Size/10000  
+So for example is file average Size is 500GB , ChunckSize will be auto change to 50MB, and the default concurrency setting 5 File x 10 Concurrency/File = 50. So required 50 x 50MB = 2.5GB memory to run in EC2 or Lambda.  
+If you need to increase the concurrency, can change it in config, but remember provision related memory for EC2 or Lambda.  
+
 * It doesn't support S3 version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 
 * Don't change the chunksize after start data copying.  
