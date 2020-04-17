@@ -179,27 +179,27 @@ class CdkResourceStack(core.Stack):
                    targets=[target.LambdaFunction(handler_jobsender)])
 
         # workaround for the loggroup filter not created
-        theloggroup = logs.LogGroup.from_log_group_name(self, 'lambdalog',
-                                                        log_group_name=handler.log_group.log_group_name)
+        # theloggroup = logs.LogGroup.from_log_group_name(self, 'lambdalog',
+        #                                                 log_group_name=handler.log_group.log_group_name)
         # Create Lambda logs filter to create network traffic metric
-        theloggroup.add_metric_filter("Complete-bytes",
-                                      metric_name="Complete-bytes",
-                                      metric_namespace="s3_migrate",
-                                      metric_value="$bytes",
-                                      filter_pattern=logs.FilterPattern.literal(
-                                          '[info, date, sn, p="--->Complete", bytes, key]'))
-        theloggroup.add_metric_filter("Uploading-bytes",
-                                      metric_name="Uploading-bytes",
-                                      metric_namespace="s3_migrate",
-                                      metric_value="$bytes",
-                                      filter_pattern=logs.FilterPattern.literal(
-                                          '[info, date, sn, p="--->Uploading", bytes, key]'))
-        theloggroup.add_metric_filter("Downloading-bytes",
-                                      metric_name="Downloading-bytes",
-                                      metric_namespace="s3_migrate",
-                                      metric_value="$bytes",
-                                      filter_pattern=logs.FilterPattern.literal(
-                                          '[info, date, sn, p="--->Downloading", bytes, key]'))
+        handler.log_group.add_metric_filter("Complete-bytes",
+                                            metric_name="Complete-bytes",
+                                            metric_namespace="s3_migrate",
+                                            metric_value="$bytes",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '[info, date, sn, p="--->Complete", bytes, key]'))
+        handler.log_group.add_metric_filter("Uploading-bytes",
+                                            metric_name="Uploading-bytes",
+                                            metric_namespace="s3_migrate",
+                                            metric_value="$bytes",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '[info, date, sn, p="--->Uploading", bytes, key]'))
+        handler.log_group.add_metric_filter("Downloading-bytes",
+                                            metric_name="Downloading-bytes",
+                                            metric_namespace="s3_migrate",
+                                            metric_value="$bytes",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '[info, date, sn, p="--->Downloading", bytes, key]'))
         lambda_metric_Complete = cw.Metric(namespace="s3_migrate",
                                            metric_name="Complete-bytes",
                                            statistic="Sum",
@@ -212,18 +212,18 @@ class CdkResourceStack(core.Stack):
                                            metric_name="Downloading-bytes",
                                            statistic="Sum",
                                            period=core.Duration.minutes(1))
-        theloggroup.add_metric_filter("ERROR",
-                                      metric_name="ERROR-Logs",
-                                      metric_namespace="s3_migrate",
-                                      metric_value="1",
-                                      filter_pattern=logs.FilterPattern.literal(
-                                          '"ERROR"'))
-        theloggroup.add_metric_filter("WARNING",
-                                      metric_name="WARNING-Logs",
-                                      metric_namespace="s3_migrate",
-                                      metric_value="1",
-                                      filter_pattern=logs.FilterPattern.literal(
-                                          '"WARNING"'))
+        handler.log_group.add_metric_filter("ERROR",
+                                            metric_name="ERROR-Logs",
+                                            metric_namespace="s3_migrate",
+                                            metric_value="1",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '"ERROR"'))
+        handler.log_group.add_metric_filter("WARNING",
+                                            metric_name="WARNING-Logs",
+                                            metric_namespace="s3_migrate",
+                                            metric_value="1",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '"WARNING"'))
         log_metric_ERROR = cw.Metric(namespace="s3_migrate",
                                      metric_name="ERROR-Logs",
                                      statistic="Sum",
