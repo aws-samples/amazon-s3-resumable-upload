@@ -1,21 +1,22 @@
 # PROJECT LONGBOW - LIB FOR TRANSMISSION BETWEEN AMAZON S3
 
-import time
 import datetime
 import logging
-import json
-import os
-from pathlib import PurePosixPath
 import hashlib
 import concurrent.futures
 import threading
 import base64
-import sys
 import urllib.request
 import urllib.parse
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
+import json
+import os
+import sys
+import time
+from fnmatch import fnmatchcase
+from pathlib import PurePosixPath
 
 logger = logging.getLogger()
 
@@ -42,7 +43,7 @@ def set_log(LoggingLevel, this_file_name):
 
 
 # Set environment
-def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentials):
+def set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials):
     s3_config = Config(max_pool_connections=200)  # boto default 10
 
     if os.uname()[0] == 'Linux' and not LocalProfileMode:  # on EC2, use EC2 role
@@ -99,18 +100,179 @@ def set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentia
 
     table = dynamodb.Table(table_queue_name)
     table.wait_until_exists()
-    sqs_queue = wait_sqs_available(sqs, table_queue_name)
+    sqs_queue = wait_sqs_available(sqs, sqs_queue_name)
 
     return sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm
 
 
-def wait_sqs_available(sqs, table_queue_name):
+def wait_sqs_available(sqs, sqs_queue_name):
     while True:
         try:
-            return sqs.get_queue_url(QueueName=table_queue_name)['QueueUrl']
+            return sqs.get_queue_url(QueueName=sqs_queue_name)['QueueUrl']
         except Exception as e:
             logger.warning(f'Waiting for SQS availability. {str(e)}')
             time.sleep(10)
+
+
+def check_sqs_empty(sqs, sqs_queue):
+    try:
+        sqs_in_flight = sqs.get_queue_attributes(
+            QueueUrl=sqs_queue,
+            AttributeNames=['ApproximateNumberOfMessagesNotVisible', 'ApproximateNumberOfMessages']
+        )
+    except Exception as e:
+        logger.error(f'Fail to get_queue_attributes: {str(e)}')
+        return False  # Can't get sqs status, then consider it is not empty
+    NotVisible = sqs_in_flight['Attributes']['ApproximateNumberOfMessagesNotVisible']
+    Visible = sqs_in_flight['Attributes']['ApproximateNumberOfMessages']
+    logger.info(f'ApproximateNumberOfMessagesNotVisible: {NotVisible}, ApproximateNumberOfMessages: {Visible}')
+    if NotVisible == '0' and (Visible == '0' or Visible == '1'):
+        # In init state, the new created bucket trigger SQS will send one test message to SQS.
+        # So here to ignore the case Visible == '1'
+        return True  # sqs is empty
+    return False  # sqs is not empty
+
+
+def get_s3_file_list(s3_client, bucket, S3Prefix, del_prefix=False):
+
+    # For delete prefix in des_prefix
+    if S3Prefix == '' or S3Prefix == '/':
+        # 目的bucket没有设置 Prefix
+        dp_len = 0
+    else:
+        # 目的bucket的 "prefix/"长度
+        dp_len = len(S3Prefix) + 1
+
+    # get s3 file list with loop retry every 5 sec
+    des_file_list = []
+    paginator = s3_client.get_paginator('list_objects_v2')
+    for retry in range(5):
+        try:
+            logger.info(f'Get s3 file list from: {bucket}/{S3Prefix}')
+            response_iterator = paginator.paginate(
+                Bucket=bucket,
+                Prefix=S3Prefix
+            )
+            for page in response_iterator:
+                if "Contents" in page:
+                    for n in page["Contents"]:
+                        key = n["Key"]
+
+                        # For delete prefix in des_prefix
+                        if del_prefix:
+                            key = key[dp_len:]
+
+                        des_file_list.append({
+                            "Key": key,
+                            "Size": n["Size"]
+                        })
+            break
+        except Exception as err:
+            logger.warning(f'Fail to get s3 list objests: {str(err)}')
+            time.sleep(5)
+
+    logger.info(f'Bucket list length：{str(len(des_file_list))}')
+
+    return des_file_list
+
+
+def job_upload_sqs_ddb(sqs, sqs_queue, table, job_list, MaxRetry=30):
+    sqs_batch = 0
+    sqs_message = []
+    logger.info(f'Start uploading jobs to queue: {sqs_queue}')
+    # create ddb writer, 这里写table是为了一次性发数十万的job到sqs时在table有记录可以核对
+    with table.batch_writer() as ddb_batch:
+        for job in job_list:
+            # write to ddb, auto batch
+            for retry in range(MaxRetry + 1):
+                try:
+                    ddb_key = str(PurePosixPath(job["Src_bucket"]) / job["Src_key"])
+                    if job["Src_key"][-1] == '/':
+                        ddb_key += '/'
+                    ddb_batch.put_item(Item={
+                        "Key": ddb_key,
+                        # "Src_bucket": job["Src_bucket"],
+                        # "Des_bucket": job["Des_bucket"],
+                        # "Des_key": job["Des_key"],
+                        "Size": job["Size"]
+                    })
+                    break
+                except Exception as e:
+                    logger.warning(f'Fail to writing to DDB: {ddb_key}, {str(e)}')
+                    if retry >= MaxRetry:
+                        logger.error(f'Fail writing to DDB: {ddb_key}')
+                    else:
+                        time.sleep(5 * retry)
+
+            # construct sqs messages
+            sqs_message.append({
+                "Id": str(sqs_batch),
+                "MessageBody": json.dumps(job),
+            })
+            sqs_batch += 1
+
+            # write to sqs in batch 10 or is last one
+            if sqs_batch == 10 or job == job_list[-1]:
+                for retry in range(MaxRetry + 1):
+                    try:
+                        sqs.send_message_batch(QueueUrl=sqs_queue, Entries=sqs_message)
+                        break
+                    except Exception as e:
+                        logger.warning(f'Fail to send sqs message: {str(sqs_message)}, {str(e)}')
+                        if retry >= MaxRetry:
+                            logger.error(f'Fail MaxRetry {MaxRetry} send sqs message: {str(sqs_message)}')
+                        else:
+                            time.sleep(5 * retry)
+                sqs_batch = 0
+                sqs_message = []
+
+    logger.info(f'Complete upload job to queue: {sqs_queue}')
+    return
+
+
+def delta_job_list(src_file_list, des_file_list, src_bucket, src_prefix, des_bucket, des_prefix, ignore_list):
+    # Delta list
+    logger.info(f'Compare source s3://{src_bucket}/{src_prefix} and '
+                f'destination s3://{des_bucket}/{des_prefix}')
+    start_time = int(time.time())
+    job_list = []
+    ignore_records = []
+    for src in src_file_list:
+
+        # 排除掉 ignore_list 里面列的 bucket/key
+        src_bucket_key = src_bucket + '/' + src['Key']
+        ignore_match = False
+        # 每个 ignore key 匹配一次，匹配上任何一个就跳过这个scr_key
+        for ignore_key in ignore_list:
+            if fnmatchcase(src_bucket_key, ignore_key):
+                ignore_match = True
+                break
+            # 匹配不上，循环下一个 ignore_key
+        if ignore_match:
+            ignore_records.append(src_bucket_key)
+            continue  # 跳过当前 src
+
+        # 比对源文件是否在目标中
+        if src in des_file_list:
+            # 下一个源文件
+            continue
+        # 把源文件加入job list
+        else:
+            Des_key = str(PurePosixPath(des_prefix) / src["Key"])
+            if src["Key"][-1] == '/':  # 源Key是个目录的情况，需要额外加 /
+                Des_key += '/'
+            job_list.append(
+                {
+                    "Src_bucket": src_bucket,
+                    "Src_key": src["Key"],  # Src_key已经包含了Prefix
+                    "Des_bucket": des_bucket,
+                    "Des_key": Des_key,
+                    "Size": src["Size"],
+                }
+            )
+    spent_time = int(time.time()) - start_time
+    logger.info(f'Delta list: {len(job_list)}, ignore list: {len(ignore_records)} - SPENT TIME: {spent_time}S')
+    return job_list, ignore_records
 
 
 # Split one file size into list of start byte position list
