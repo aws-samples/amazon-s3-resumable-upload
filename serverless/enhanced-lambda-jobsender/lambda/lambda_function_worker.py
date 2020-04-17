@@ -30,10 +30,10 @@ JobTimeout = 900
 
 ResumableThreshold = 5 * 1024 * 1024  # Accelerate to ignore small file
 CleanUnfinishedUpload = False  # For debug
-ChunkSize = 5 * 1024 * 1024  # For debug
+ChunkSize = 5 * 1024 * 1024  # For debug, will be auto-change
 ifVerifyMD5Twice = False  # For debug
 
-s3_config = Config(max_pool_connections=50)  # 最大连接数
+s3_config = Config(max_pool_connections=30)  # 最大连接数
 
 # Set environment
 logger = logging.getLogger()
@@ -127,6 +127,11 @@ def lambda_handler(event, context):
             upload_etag_full = step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
                                                   StorageClass, MaxRetry)
         if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
+            # 如果是超时或ERR的就不删SQS消息，是正常结束就删
+            # 大文件会在退出线程时设 MaxRetry 为 TIMEOUT，小文件则会返回 MaxRetry
+            # 小文件出现该问题可以认为没必要再让下一个worker再试了，不是因为文件下载太大导致，而是权限设置导致
+            # 直接删除SQS，并且DDB并不会记录结束状态
+            # 如果希望小文件也继续让SQS消息恢复，并让下一个worker再试，则在上面判断加upload_etag_full != "MaxRetry"
             continue
         else:
             raise TimeoutOrMaxRetry

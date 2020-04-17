@@ -13,6 +13,7 @@ try:
     file_path = os.path.split(os.path.abspath(__file__))[0]
     cfg.read(f'{file_path}/s3_migration_cluster_config.ini', encoding='utf-8-sig')
     table_queue_name = cfg.get('Basic', 'table_queue_name')
+    sqs_queue_name = cfg.get('Basic', 'sqs_queue_name')
     ssm_parameter_bucket = cfg.get('Basic', 'ssm_parameter_bucket')
     ssm_parameter_credentials = cfg.get('Basic', 'ssm_parameter_credentials')
     JobType = cfg.get('Basic', 'JobType')
@@ -40,6 +41,14 @@ except Exception as e:
     print("ERR loading s3_migration_cluster_config.ini", str(e))
     sys.exit(0)
 
+# if CDK deploy, get para from environment variable
+try:
+    table_queue_name = os.environ['table_queue_name']
+    sqs_queue_name = os.environ['sqs_queue_name']
+    ssm_parameter_bucket = os.environ['ssm_parameter_bucket']
+except Exception:
+    print("No Environment Variable from CDK, use the para from config.ini")
+
 # Main
 if __name__ == '__main__':
 
@@ -48,7 +57,7 @@ if __name__ == '__main__':
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \
-        set_env(JobType, LocalProfileMode, table_queue_name, ssm_parameter_credentials)
+        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials)
 
     #######
     # Program start processing here

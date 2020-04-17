@@ -51,6 +51,13 @@ class CdkEc2Stack(core.Stack):
                  **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
 
+        # Create environment variable into userdata
+        env_var = f'export table_queue_name={ddb_file_list.table_name}\n' \
+                  f'export sqs_queue_name={sqs_queue.queue_name}\n' \
+                  f'export ssm_parameter_bucket={ssm_bucket_para.parameter_name}\n'
+        env_var_st = f'echo \"export table_queue_name={ddb_file_list.table_name}\" >> /etc/rc.local\n' \
+                     f'echo \"export sqs_queue_name={sqs_queue.queue_name}\" >> /etc/rc.local\n' \
+                     f'echo \"export ssm_parameter_bucket={ssm_bucket_para.parameter_name}\" >> /etc/rc.local\n'
         # Create log group and put group name into userdata
         s3_migrate_log = logs.LogGroup(self, "applog")
         cw_agent_config['logs']['logs_collected']['files']['collect_list'][0][
@@ -60,9 +67,11 @@ class CdkEc2Stack(core.Stack):
         cw_agent_config['metrics']['append_dimensions']['AutoScalingGroupName'] = "\\${aws:AutoScalingGroupName}"
         cw_agent_config['metrics']['append_dimensions']['InstanceId'] = "\\${aws:InstanceId}"
         cw_agent_config_str = json.dumps(cw_agent_config, indent=4).replace("\\\\", "\\")
-        userdata_head = user_data_part1 + cw_agent_config_str + user_data_part2 + s3_deploy.bucket_name + " ."
+        userdata_head = user_data_part1 + cw_agent_config_str + user_data_part2 + \
+                        s3_deploy.bucket_name + " .\n" + env_var + env_var_st
         jobsender_userdata = userdata_head + user_data_jobsender_p
         worker_userdata = userdata_head + user_data_worker_p
+
         # Create jobsender ec2 node
         jobsender = autoscaling.AutoScalingGroup(self, "jobsender",
                                                  instance_type=ec2.InstanceType(

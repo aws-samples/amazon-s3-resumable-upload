@@ -9,15 +9,25 @@ from cdk.cdk_resource_stack import CdkResourceStack
 ############
 # Define bucket before deploy CDK
 bucket_para = [{
-    "src_bucket": "broad-references",
-    "src_prefix": "",
-    "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "broad-references"
+        "src_bucket": "broad-references",
+        "src_prefix": "",
+        "des_bucket": "s3-open-data",
+        "des_prefix": "broad-references"
     }, {
-    "src_bucket": "gatk-test-data",
-    "src_prefix": "",
-    "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "gatk-test-data"
+        "src_bucket": "gatk-test-data",
+        "src_prefix": "",
+        "des_bucket": "s3-open-data",
+        "des_prefix": "gatk-test-data"
+    }, {
+        "src_bucket": "giab",
+        "src_prefix": "",
+        "des_bucket": "s3-open-data",
+        "des_prefix": "giab"
+    }, {
+        "src_bucket": "covid19-lake",
+        "src_prefix": "",
+        "des_bucket": "covid19-lake",
+        "des_prefix": ""
     }]
 
 # key_name = "id_rsa"  # Optional if use SSM-SessionManager
