@@ -47,7 +47,7 @@ Name: s3_migration_credentials
 Type: SecureString  
 Tier: Standard  
 KMS key source：My current account/alias/aws/ssm  or others you can have  
-This s3_migration_credentials is for accessing the account which is not the same as EC2 running account. Config example:  
+This s3_migration_credentials is for accessing the account which is not the same as AWS Lambda running account. Config example:  
 ```
 {
   "aws_access_key_id": "your_aws_access_key_id",

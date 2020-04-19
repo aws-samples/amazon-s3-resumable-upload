@@ -49,7 +49,7 @@ https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html
 类型：SecureString  
 级别：Standard  
 KMS key source：My current account/alias/aws/ssm  或选择其他你已有的加密 KMS Key  
-这个 s3_migration_credentials 是用于访问跟EC2不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
+这个 s3_migration_credentials 是用于访问跟 AWS Lambda 不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
 ```
 {
   "aws_access_key_id": "your_aws_access_key_id",
@@ -75,7 +75,7 @@ KMS key source：My current account/alias/aws/ssm  或选择其他你已有的�
 ```
 这些会被AWS CDK自动部署到 System Manager Parameter Store 的 s3_migration_bucket_para  
 
-* 配置告警通知邮件地址在 app.py
+* 配置告警通知邮件地址在 app.py  
 alarm_email = "alarm_your_email@email.com"
 
 ### 2. CDK自动部署
