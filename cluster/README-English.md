@@ -83,7 +83,7 @@ Amazon SQS config Dead Letter Queue (DLQ), to ensure message reach maximum retri
 * Can run together with AWS Lambda Serverless in hybrid mode, to handle unpredictable jobs
 * Save object to Amazon S3 Standard, IA, Deep Archive and etc storage class
 
-## Auto Deploy
+## AWS CDK Auto Deploy
 ### 1. Pre-config
 * Before deploy AWS CDK, please config AWS System Manager Parameter Store manually with this credential:  
 Name: s3_migration_credentials   
@@ -247,7 +247,7 @@ If you need to increase the concurrency, can change it in config, but remember p
 
 * Jobsender only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node s3_uploader. If the jobs are trigger by S3 new created object to SQS, then no compare, just copy directly.  
 
-* Delete the resources only need one command: cdk destroy  
+* To delete the resources only need one command: cdk destroy  
 But you need to delete these resources manually: DynamoDB, CloudWatch Log Group, new created S3 bucket 
 
 ## License

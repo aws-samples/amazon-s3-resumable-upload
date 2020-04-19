@@ -37,42 +37,66 @@ After one AWS Lambda runtime timeout of 15 minutes, SQS message InvisibleTime ti
 ### Auto Deploy Dashboard  
 ![dashboard](./img/09.png)
 
-### CDK auto deploy
-Please follow instruction document to install CDK and deploy  
+## CDK auto deploy
+Please install AWS CDK and follow instruction to deploy  
 https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html   
 
-```bash
-cd cdk-serverless
-cdk deploy
+### 1. Pre-deploy Configure
+* Before deploy AWS CDK, please config AWS System Manager Parameter Store manually with this credential:  
+Name: s3_migration_credentials   
+Type: SecureString  
+Tier: Standard  
+KMS key source：My current account/alias/aws/ssm  or others you can have  
+This s3_migration_credentials is for accessing the account which is not the same as EC2 running account. Config example:  
 ```
+{
+  "aws_access_key_id": "your_aws_access_key_id",
+  "aws_secret_access_key": "your_aws_secret_access_key",
+  "region": "cn-northwest-1"
+}
+```
+Configuration snapshot of s3_migration_credentials:   
+![Config snapshot](./img/05.png)  
+* Edit app.py in CDK project with your Source and Destination S3 buckets information as example as below:  
+```
+[{
+    "src_bucket": "your_global_bucket_1",
+    "src_prefix": "your_prefix",
+    "des_bucket": "your_china_bucket_1",
+    "des_prefix": "prefix_1"
+    }, {
+    "src_bucket": "your_global_bucket_2",
+    "src_prefix": "your_prefix",
+    "des_bucket": "your_china_bucket_2",
+    "des_prefix": "prefix_2"
+    }]
+```
+These information will be deployed to System Manager Parameter Store as s3_migration_bucket_para  
+* Change your notification email in app.py   
+alarm_email = "alarm_your_email@email.com"  
+
+### 2. CDK Auto-deploy
 ./cdk-serverless  This CDK is written in PYTHON, and will deploy the following resources:  
-* Create Amazon S3 Bucket. When new object created in this bucket, it will trigger sqs and start jobs.  
-If you want to transmit existing S3 bucket, please leverage Jobsender from Cluster version of this solution to scan and compare S3, and then it will send jobs messages to Amazon SQS to trigger Lambda doing its jobs.  
-* Notice: AWS CDK/CloudFormation doesn't support leverage existing S3 bucket to triiger SQS or Lambda.
+* Option1: Create S3 Bucket, all new objects in this bucket will be transmitted by Lambda Worker.   
+If you want an exist S3 bucekt to trigger SQS/Lambda, you can set the trigger manually. (This is not config in this CDK)
+* Option2: If you can setup S3 bucket to trigger SQS/Lambda, e.g. only allow the read access to theses S3 buckets, then this CDK deploy Lambda Jobsender to cron scan these Buckets, compare and create jobs to SQS then trigger Lambda Worker to transmit. You only need to config the buckets information in app.py
 * Create Amazon SQS Queue and a related SQS Queue Death Letter Queue. Set InVisibleTime 15 minutes, valid 14 days, 100 Maximum Receives Redrive Policy to DLQ  
-* Create Amazon DynamoDB Table for statistic purpose  
-* Upload AWS Lambda code and config environment variable. PLEASE MODIFY app.py OF THESE VARIABLE, OR MODIFY THEM IN LAMBDA ENV VAR AFTER CDK DEPLOY  
-```
-Des_bucket_default = 'your_des_bucket'
-Des_prefix_default = 'my_prefix'
-StorageClass = 'STANDARD'
-aws_access_key_id = 'xxxxxxxxx'
-aws_secret_access_key = 'xxxxxxxxxxxxxxx'
-aws_access_key_region = 'cn-northwest-1'
-```
-In Amazon S3 new object trigger mode, you need to put the Default Des_bucket/prefix here.  
-In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix information from Parameter Store, then Lambda will ignore Default Des_bucket/prefix here. So you just need to put space for these two Env Var.
-  
-* Notice: For security reason, no recommend to put aws_access_key_id and aws_secret_access_key of the Destination Account here in CDK file. That might cause you leak it if not intented to commit the CDK file to some code repo.  It is better to config it in Lambda Env Var after CDK deployment. But cons is if you deploy cdk again, the variable will be overwritten.
-* Config Lambda timeout 15 mintues and 1GB mem  
-* Auto config Lambda role to access the new created S3, SQS queue and the DynamoDB Table  
+* Create Amazon DynamoDB Table for statistic purpose.   
+* Upload AWS Lambda code and config environment variable. Config Lambda timeout 15 mintues and 1GB mem. Auto config Lambda role to access the S3, SQS queue and DynamoDB Table under least priviledge.  
+There are two Lambda functions, one is Jobsender which is triggered by CloudWatch Cron Event to scan S3 buckets and creat jobs to SQS; The other is Worker, triggered by SQS then to transmit S3 objects.    
 * AWS CDK will create a new CloudWatch Dashboard: s3_migrate_serverless to monitor SQS queue and Lambda running status
-* Will create 3 customized Log Filter for Lambda Log Group. They are to filter Uploading, Downloading, Complete parts Bytes, and statistic them as Lambda traffic and publish to Dashboard
-* Create an Alarm, while detect SQS queue is empty. I.e. no Visible and no InVisible message, then send SNS to subcription email to inform all jobs are done. The email address is defined in CDK app.py, please change it or change in SNS after CDK deploy.
+* Create 3 customized Log Filter for Lambda Log Group. They are to filter Uploading, Downloading, Complete parts Bytes, and statistic them as Lambda traffic and publish to Dashboard. And 2 more filters to catch WARNING and ERROR logs.  
+* Ignore List: Jobsender support ignore some objects while comparing bucket. Edit s3_migration_ignore_list.txt in CDK, add the file bucket/key as one file one line. Or use wildcard "*" or "?". E.g.  
+```
+your_src_bucket/your_exact_key.mp4
+your_src_bucket/your_exact_key.*
+your_src_bucket/your_*
+*.jpg
+*/readme.md
+```
+CDK will deploy this to SSM Parameter Store, you can also change this parameter on s3_migrate_ignore_list after deployed.  
 
-
-### If Manually Config the whole solution:  
-If you don't want to use AWS CDK to auto deploy, you can follow above CDK deploy statment to create related resource, and remind:
+### If Manually Config, notice:  
 * Amazon SQS Access Policy to allow Amazon S3 bucket to send message as below, please change the account and bucket in this json:
 ```json
 {
@@ -96,47 +120,6 @@ If you don't want to use AWS CDK to auto deploy, you can follow above CDK deploy
   ]
 }
 ```
-* Config Amazon S3 bucket event trigger SQS queue  
-* Config AWS Lambda execution role as:  
-Access Read/Write Amazon SQS and DynamoDB  
-Read Srouce Amazon S3 Bucket  
-Put Amazon CloudWatch Logs  
-* Config AWS Lambda Language Python 3.8 and upload these two code files, located in
-```
-amazon-s3-resumable-upload/serverless/cdk-serverless/lambda/  
-lambda_function.py  
-s3_migration_lib.py  
-```
-* Config Lambda Environment Variable:
-```
-Des_bucket_default  
-Des_prefix_default  
-```
-In Amazon S3 new object trigger mode, you need to put the Default Des_bucket/prefix here.  
-In Jobsender scan and send job mode, since Jobsender will get Des_bucket/prefix information from Parameter Store, then Lambda will ignore Default Des_bucket/prefix here. So you just need to put space for these two Env Var.
-```
-StorageClass  
-```
-Select Destination S3 storage class
-STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE
-```
-aws_access_key_id  
-aws_secret_access_key  
-aws_access_key_region  
-```
-To access the S3 account which is not the same account as Lambda. You can get from that account IAM user credential.   
-aws_access_key_region code, e.g. cn-north-1
-```
-table_queue_name  
-```
-The DynamoDB table name, same as the tale created by CloudFormation/CDK  
-
-* Lambda timeout 15 mins, mem 1GB or you can try optimize it according to your workload. If neccessary, you can change these 2 para in python code to help optimize performance MaxThread, max_pool_connections for your workload. 
-* The JobType in python code is to define Amazon S3 credential usage.  
-PUT mode means Lambda role as source Amazon S3 client and access_key credentials as destination S3 client.  
-GET mode means Lambda role as destination Amazon S3 client and access_key credentials as source S3 client.
-* Config Lambda is trigger by Amazon SQS, batch size 1.  
-
 * Create Lambda log group with 3 Log filter, to match below Pattern:
 ```
 Namespace: s3_migrate
@@ -155,29 +138,20 @@ default value: 0
 ```
 So Lambda traffic bytes/min will be emit to CloudWatch Metric for monitoring. Config monitor Statistic: Sum with 1 min.
 
-* Config Amazon SQS Alarm, expression metric Visible + InVisible Messages <= 0 3 of 3 then trigger Amazon SNS Notification for empty queue.
-
 ## Limitation and Notice: 
 * Required memory = concurrency * ChunckSize. For the file < 50GB, ChunckSize is 5MB. For the file >50GB, ChunkSize will be auto change to Size/10000  
 So for example is file average Size is 500GB , ChunckSize will be auto change to 50MB, and the default concurrency setting 5 File x 10 Concurrency/File = 50. So required 50 x 50MB = 2.5GB memory to run in EC2 or Lambda.  
 If you need to increase the concurrency, can change it in config, but remember provision related memory for EC2 or Lambda.  
 
-* It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
+* This project doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 If you change, it will cause the destination file wrong. Workaround is to run the Jobsender(cluster version) after each batch of migration job. Jobsender will compare source and destination s3 file key and size, if different size, it will send jobs to sqs to trigger copy again. But if size is same, it will take it as same file.  
 
 * Don't change the chunksize while start data copying.  
 
-## Enhanced project: Lambda Jobsender   
-In ./enhanced-lambda-jobsender folder, there is CDK deploy project with Lambda Jobsender and Lambda Worker. What's the different?  
+* Jobsender only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node s3_uploader. If the jobs are trigger by S3 new created object to SQS, then no compare, just copy directly.  
 
-* Jobsender: This project is to sync S3 from US to China, and the source bucket is not under our control but only read access. So we can't setup S3 trigger SQS, but use Lambda Jobsender with cron trigger by CloudWatch Event every hour. Lambda Jobsender compare and send jobs to SQS, the SQS trigger Lambda Worker to transmit data to China.  
-
-* Source/Destination bucket info: The Source/Destination bucket info is located in SSM parameter store, jobsender get this information and to compare. Please define it in CDK app.py file.
-
-* Credentials: Move the credentials from Lambda Env to SSM Parameter Store, so the two lambda functions can share and this way is easier to redeploy lambda code with CDK.  
-So you need to manually setup credentials in SSM Parameter Store. For more detail, please read the CDK app.py file.    
-
-* Ignore List: Jobsender support ignore some files or some kind of files with wildcard ("*" or "?"), please setup in s3_migration_ignore_list.txt 
+* To delete the resources only need one command: cdk destroy  
+But you need to delete these resources manually: DynamoDB, CloudWatch Log Group, new created S3 bucket 
 
 
 ## License

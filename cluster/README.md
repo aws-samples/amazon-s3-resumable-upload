@@ -251,7 +251,7 @@ CDK 默认部署时启动了 Amazon EC2 服务器上的 TCP BBR: Congestion-Base
 * Jobsender 只对比文件 Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
 
 * 删除资源则 cdk destroy 。  
-另外 DynamoDB、CloudWatch Log Group 、自动新建的 S3 bucket 需要手工删除
+另外 DynamoDB、CloudWatch Log Group 、自动新建的 S3 bucket 需要手工删除  
 
 ## License
 

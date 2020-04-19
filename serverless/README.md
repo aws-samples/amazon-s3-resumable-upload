@@ -1,7 +1,7 @@
 # Amazon S3 MultiThread Resume Migration Serverless Solution  (Amazon S3 多线程断点续传迁移无服务器方案)   
 [Serverless Version ENGLISH README](./README-English.md)
   
-Cluster & Serverless Version 0.94  
+Cluster & Serverless Version 0.96  
   
 ### 无服务器版本  
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
@@ -39,39 +39,66 @@ AWS Lambda 15分钟运行超时后，Amazon SQS消息InvisibleTime超时，消�
 ### 自动部署监控 Dashboard  
 ![dashboard](./img/09.png)
 
-### CDK 自动化部署
-请先安装 AWS CDK 然后按以下命令部署，CDK安装部署可参照官网：  
+## CDK 自动化部署  
+请先安装 AWS CDK 然后由 CDK部署。CDK 文档可参照官网：  
 https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html   
 
-```bash
-cd cdk-serverless
-cdk deploy
+### 1. 前置配置
+* 请在 AWS CDK 部署前手工配置 System Manager Parameter Store 新增这个参数  
+名称：s3_migration_credentials  
+类型：SecureString  
+级别：Standard  
+KMS key source：My current account/alias/aws/ssm  或选择其他你已有的加密 KMS Key  
+这个 s3_migration_credentials 是用于访问跟EC2不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。配置示例：  
 ```
-./cdk-serverless 该 CDK 由 Python 编写，会自动部署以下资源：  
-* 新建 Amazon S3 Bucket  
-* 新建 Amazon SQS Queue 队列和 一个相应的 SQS Queue DLQ 死信队列。InVisibleTime 15 分钟，有效期 14 天，重试 100 次后送 DLQ  
+{
+  "aws_access_key_id": "your_aws_access_key_id",
+  "aws_secret_access_key": "your_aws_secret_access_key",
+  "region": "cn-northwest-1"
+}
+```
+配置示意图：  
+![配置示意图](./img/01.png)  
+* 配置 AWS CDK 中 app.py 你需要传输的源S3桶/目标S3桶信息，示例如下：  
+```
+[{
+    "src_bucket": "your_global_bucket_1",
+    "src_prefix": "your_prefix",
+    "des_bucket": "your_china_bucket_1",
+    "des_prefix": "prefix_1"
+    }, {
+    "src_bucket": "your_global_bucket_2",
+    "src_prefix": "your_prefix",
+    "des_bucket": "your_china_bucket_2",
+    "des_prefix": "prefix_2"
+    }]
+```
+这些会被AWS CDK自动部署到 System Manager Parameter Store 的 s3_migration_bucket_para  
+
+* 配置告警通知邮件地址在 app.py
+alarm_email = "alarm_your_email@email.com"
+
+### 2. CDK自动部署
+./cdk-serverless 该 CDK 由 Python 编写，会自动部署以下所有资源：  
+* Option1: 新建了一个 Amazon S3 Bucket，这个Bucket所有新增的文件都会触发SQS，从而触发Lambda进行传输。  
+如果你的 Bucket 是现有的，则可以手工配置这个Bucket触发SQS。
+* Option2: 如果你没有权限配置现有的Bucket去触发SQS，例如别人的 Bucket 只开放了读权限给你，则本CDK部署 Lambda Jobsender 定时任务去扫描这些 Bucekt，并生成传输任务给 Lambda Worker 去执行。你只需要在 CDK 中的 app.py 配置对应的 Bucekts 信息即可。
+* CDK 新建了 Amazon SQS Queue 队列和 一个相应的 SQS Queue DLQ 死信队列。InVisibleTime 15 分钟，有效期 14 天，重试 100 次后送 DLQ  
 * 新建 Amazon DynamoDB 表  
-* 上传 AWS Lambda 代码并配置函数相关参数，请在部署前修改 CDK 模版中 app.py 文件，或者等部署完之后在Lambda环境变量中修改  
-```
-Des_bucket_default = 'your_des_bucket'
-Des_prefix_default = 'my_prefix'
-StorageClass = 'STANDARD'
-aws_access_key_id = 'xxxxxxxxx'
-aws_secret_access_key = 'xxxxxxxxxxxxxxx'
-aws_access_key_region = 'cn-northwest-1'
-table_queue_name 会由 CDK 自动生成  
-```
-* 配置 AWS Lambda 的运行超时时间 15 分钟，内存 1GB  
-* 自动配置 AWS Lambda 访问 S3，SQS 和 DynamoDB 的 IAM 权限。  
-* 注意：推荐不在 AWS CDK 中配置 Lambda 的环境变量，而是在 Lambda 部署完成后在 Lambda 中配置，特别是aws_access_key_id 和 aws_secret_access_key，这样可以避免写 Access Key 到你的 CDK 文件中引发无意中泄漏。但缺点是，再次用 CDK 部署新版本的 Lambda 函数的话，环境变量会被覆盖为 CDK 中的配置参数。  
-* 注意：AWS CDK 不支持用现有的 S3 Bucket 来配置触发，只能让 CDK 新建。所以如果你要使用现有的 S3，则需要手工配置这个 Bucket 触发SQS，其他可以继续用 CDK 部署。  
+* 上传 AWS Lambda 代码并配置函数相关参数，配置 AWS Lambda 的运行超时时间 15 分钟，内存 1GB，自动配置 AWS Lambda 访问 S3，SQS 和 DynamoDB 的 IAM 权限。Lambda 函数有两个：Jobsender 和 Worker。一个由CloudWatch Evnet 定时任务触发，负责根据Bucket信息扫描S3，生成任务发给SQS；一个是由SQS触发去传输S3上的对象。  
 * AWS CDK 会新建一个 CloudWatch Dashboard: s3_migrate_serverless 监控 SQS 消息和 Lambda 运行状态
-* 通过 AWS Lambda Log Group 创建了三个自定义 Log Filter，过滤出 Uploading, Downloading, Complete 的分片 Bytes，并统计为 Lambda 流量发布到 Dashboard
-* 创建一个 Alarm ，检测到 Amazon SQS queue 空了，即没有 Visible 也没有 InVisible 消息，则发出 SNS 告警到订阅的邮件地址，告知任务全部完成了。邮件地址请在 CDK 的 app.py 文件中定义，或到 SNS 中修改。
+* 通过 AWS Lambda Log Group 创建了三个自定义 Log Filter，过滤出 Uploading, Downloading, Complete 的分片 Bytes，并统计为 Lambda 流量发布到 Dashboard。另外还创建了两个 Filter 监控日志出现 WARNING 或 ERROR。
+* Ignore List: Jobsender 可以支持忽略某些文件，或者某类型文件 (通配符*或?)，不生成SQS任务。请在CDK目录的s3_migration_ignore_list.txt中配置。CDK部署的时候会将该列表上传到 SSM Parameter Store，你也可以后续在 parameter store 修改这个参数 s3_migrate_ignore_list。配置示例：
+```
+your_src_bucket/your_exact_key.mp4
+your_src_bucket/your_exact_key.*
+your_src_bucket/your_*
+*.jpg
+*/readme.md
+```
   
 ### 手工配置说明  
-如不希望用 AWS CDK 部署可以参照以下手工部署步骤：
-* 配置 Amazon SQS 消息队列，以及对应的死信队列DLQ。策略为消息有效期14天，15分钟超时，重试100次转入DLQ。
+如希望手工部署，则注意以下几点：
 * 配置 Amazon SQS Access Policy，允许S3 bucket发布消息。修改以下json中account和bucket等信息：
 ```json
 {
@@ -95,47 +122,6 @@ table_queue_name 会由 CDK 自动生成
   ]
 }
 ```
-* 配置 Amazon S3 Event触发SQS  
-* 配置 AWS Lambda 的访问角色权限为：  
-访问读写对应的Amazon SQS和DynamoDB  
-读源 Amazon S3 Bucket权限  
-写Amazon CloudWatch Logs  
-* 配置 AWS Lambda 为 Python 3.8 ，并部署这两个代码文件，位于  
-```
-amazon-s3-resumable-upload/serverless/cdk-serverless/lambda/  
-lambda_function.py  
-s3_migration_lib.py  
-```
-* 配置 AWS Lambda 环境变量，目标S3/存储级别/目标S3访问密钥/SQS和DynamoDB名称：
-```
-Des_bucket_default  
-Des_prefix_default  
-```
-是给S3新增文件触发SQS的场景，用来配置目标桶/前缀的。
-对于Jobsender扫描S3并派发Job的场景，这两项配置任意字符即可。程序看到SQS消息里面有就会使用消息里面的目标桶/前缀
-```
-StorageClass  
-```
-选择目标存储的存储类型
-STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE
-```
-aws_access_key_id  
-aws_secret_access_key  
-aws_access_key_region
-```
-用于访问跟 Lambda 不在一个账号系统下的那个S3桶的访问密钥，在目标Account 的IAM user配置获取。
-aws_access_key_region 代码, 例如 cn-north-1
-```
-table_queue_name  
-```
-访问的Amazon DynamoDB的表名，需与Amazon CloudFormation/CDK创建的ddb名称一致  
-
-
-* AWS Lambda 设置超时时间15分钟，内存可以调整，可以从1GB开始尝试。
-必要时调整AWS Lambda代码中这两个参数来配合Lambda内存调优：MaxThread和max_pool_connections。代码其他参数不要修改。
-
-* 配置 AWS Lambda 被SQS触发，一次取一条消息  
-
 * 对 AWS Lambda 的 log group 创建三个 Log filter，匹配 Pattern 如下:
 ```
 Namespace: s3_migrate
@@ -154,8 +140,6 @@ default value: 0
 ```
 这样就把 AWS Lambda 的流量统计到了自定义 Metric s3_migrate，可以在 CloudWatch Metric 监控了。把监控配置为统计方式：Sum，周期 1 分钟。
 
-* 配置 Amazon SQS 监控告警，把 Visible 和 InVisible 消息相加，如果连续 3 of 3 为 <= 0 则发 SNS 告警通知。
-
 
 ## 局限和提醒注意：
 * 所需内存 = 并发数 * ChunckSize 。小于50GB的文件，ChunckSize为5MB，大于50GB的文件，则ChunkSize会自动调整为约等于: 文件Size/10000。  
@@ -164,19 +148,13 @@ default value: 0
 
 * 本项目不支持Amazon S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
 
-* 不要在开始数据复制之后修改Chunksize。  
+* 不要在开始数据复制之后修改Chunksize。    
 
-## 扩展项目样例：Lambda Jobsender  
+* Jobsender 只对比文件 Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
 
-在 ./enhanced-lambda-jobsender 下有CDK部署的一个项目样例。跟上面的CDK有什么不同？  
+* 删除资源则 cdk destroy 。  
+另外 DynamoDB、CloudWatch Log Group 、自动新建的 S3 bucket 需要手工删除   
 
-* Jobsender: 这个样例是从美国同步S3到中国区S3的设置，因为源S3不可控制，不能设置自动触发SQS，而是采用Lambda运行Jobsender来每小时定时触发做源和目的S3的比对，然后Lambda Jobsender发送任务到SQS再触发Lambda Worker进行数据传输。  
-
-* Source/Destination bucket 信息: S3源和目的桶信息通过CDK部署到了 SSM parameter store, jobsender 启动时会取下来桶信息然后开始比对。请在 CDK 的 app.py 文件中定义 
-
-* Credentials: 中国区密钥从环境变量中挪走，改为存放到 SSM Parameter Store 中，便于两个Lambda共用读取，以及方便经常调整代码重新CDK部署。所以需要CDK部署前先手工创建 SSM Parameter Store。详细说明见 CDK 中的 app.py 文件。  
-
-* Ignore List: Jobsender 可以支持忽略某些文件，或者某类型文件 (通配符*或?)，请在s3_migration_ignore_list.txt中配置  
 
 ## License
 
