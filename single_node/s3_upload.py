@@ -107,6 +107,7 @@ def set_config():
             profile_list = pro_conf.sections()
         else:
             print(f"There is no aws_access_key in {cre_path}, please input for Destination S3 Bucket: ")
+            os.mkdir(pro_path)
             aws_access_key_id = input('aws_access_key_id: ')
             aws_secret_access_key = input('aws_secret_access_key: ')
             region = input('region: ')

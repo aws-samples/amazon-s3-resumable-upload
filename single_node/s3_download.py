@@ -74,6 +74,7 @@ def set_config():
             profile_list = pro_conf.sections()
         else:
             print(f"There is no aws_access_key in {cre_path}, please input for S3 Bucket: ")
+            os.mkdir(pro_path)
             aws_access_key_id = input('aws_access_key_id: ')
             aws_secret_access_key = input('aws_secret_access_key: ')
             region = input('region: ')
@@ -409,8 +410,8 @@ def download_thread(partnumber, partStartIndex, srcfileKey, total, complete_list
         # 写入文件
         wfile.seek(partStartIndex)
         wfile.write(getBody)
-        print(f'\033[0;34;1m--->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%} - {pload_speed}\033[0m')
+        print(f'\033[0;34;1m --->Complete\033[0m {srcfileKey} '
+              f'- {partnumber}/{total}\033[0;34;1m {len(complete_list) / total:.2%} - {pload_speed}\033[0m')
 
         # 写入partnumber数据库
         dir_and_key = Path(DesDir) / srcfileKey
