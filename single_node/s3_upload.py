@@ -15,6 +15,7 @@ import logging
 from pathlib import PurePosixPath, Path
 import platform
 import codecs
+os.system("")  # workaround for some windows system to print color
 
 global JobType, SrcFileIndex, DesProfileName, DesBucket, S3Prefix, MaxRetry, MaxThread, \
     MaxParallelFile, StorageClass, ifVerifyMD5, DontAskMeToClean, LoggingLevel, \

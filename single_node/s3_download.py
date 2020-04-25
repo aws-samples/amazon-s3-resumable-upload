@@ -15,7 +15,7 @@ import platform
 import codecs
 import sqlite3
 import time
-
+os.system("")  # workaround for some windows system to print color
 
 global SrcBucket, S3Prefix, SrcFileIndex, SrcProfileName, DesDir, MaxRetry, MaxThread, MaxParallelFile, LoggingLevel
 
