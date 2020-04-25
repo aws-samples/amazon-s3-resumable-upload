@@ -14,6 +14,7 @@ from pathlib import PurePosixPath, Path
 import platform
 import codecs
 import sqlite3
+import time
 
 
 global SrcBucket, S3Prefix, SrcFileIndex, SrcProfileName, DesDir, MaxRetry, MaxThread, MaxParallelFile, LoggingLevel
@@ -374,9 +375,27 @@ def split(srcfile, ChunkSize):
     return indexList, ChunkSize
 
 
+def size_to_str(size):
+    def loop(integer, remainder, level):
+        if integer >= 1024:
+            remainder = integer % 1024
+            integer //= 1024
+            level += 1
+            return loop(integer, remainder, level)
+        else:
+            return integer, round(remainder / 1024, 1), level
+
+    units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    integer, remainder, level = loop(int(size), 0, 0)
+    if level+1 > len(units):
+        level = -1
+    return f'{integer+remainder} {units[level]}'
+
+
 def download_thread(partnumber, partStartIndex, srcfileKey, total, complete_list, ChunkSize, wfile):
     try:
         logger.info(f'Downloading {srcfileKey} - {partnumber}/{total}')
+        pstart_time = time.time()
         response_get_object = s3_src_client.get_object(
             Bucket=SrcBucket,
             Key=srcfileKey,
@@ -384,11 +403,14 @@ def download_thread(partnumber, partStartIndex, srcfileKey, total, complete_list
         )
         getBody = response_get_object["Body"].read()
         complete_list.append(partnumber)
+        pload_time = time.time() - pstart_time
+        pload_bytes = len(getBody)
+        pload_speed = size_to_str(int(pload_bytes/pload_time)) + "/s"
         # 写入文件
         wfile.seek(partStartIndex)
         wfile.write(getBody)
         print(f'\033[0;34;1m--->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%} - {pload_speed}\033[0m')
 
         # 写入partnumber数据库
         dir_and_key = Path(DesDir) / srcfileKey
@@ -431,7 +453,10 @@ def create_dir(file_dir):
     parent = file_dir.parent
     if not Path.exists(parent):
         create_dir(parent)
-    Path.mkdir(file_dir)
+    try:
+        Path.mkdir(file_dir)
+    except Exception as e:
+        logger.error(f'Fail to mkdir {str(e)}')
 
 
 # Download file

@@ -148,6 +148,8 @@ def get_s3_file_list(s3_client, bucket, S3Prefix, del_prefix=False):
     paginator = s3_client.get_paginator('list_objects_v2')
     for retry in range(5):
         try:
+            if S3Prefix == '/':
+                S3Prefix = ''
             logger.info(f'Get s3 file list from: {bucket}/{S3Prefix}')
             response_iterator = paginator.paginate(
                 Bucket=bucket,

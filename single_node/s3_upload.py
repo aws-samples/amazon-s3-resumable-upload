@@ -336,8 +336,7 @@ def set_log():
     if not os.path.exists("./log"):
         os.system("mkdir log")
     this_file_name = os.path.splitext(os.path.basename(__file__))[0]
-    t = time.localtime()
-    file_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
+    file_time = datetime.datetime.now().isoformat().replace(':', '-')[:19]
     log_file_name = './log/' + this_file_name + '-' + file_time + '.log'
     print('Logging to file:', os.path.abspath(log_file_name))
     print('Logging level:', LoggingLevel)
@@ -390,36 +389,26 @@ def get_local_file_list():
 
 
 # Get object list on S3
-def get_s3_file_list(s3_client, bucket):
+def get_s3_file_list(s3_client, bucket, S3Prefix):
     logger.info('Get s3 file list ' + bucket)
+    paginator = s3_client.get_paginator('list_objects_v2')
     __des_file_list = []
     try:
-        response_fileList = s3_client.list_objects_v2(
+        if S3Prefix == '/':
+            S3Prefix = ''
+        response_iterator = paginator.paginate(
             Bucket=bucket,
-            Prefix=S3Prefix,
-            MaxKeys=1000
+            Prefix=S3Prefix
         )
-        if response_fileList["KeyCount"] != 0:
-            for n in response_fileList["Contents"]:
-                __des_file_list.append({
-                    "Key": n["Key"],
-                    "Size": n["Size"]
-                })
-            while response_fileList["IsTruncated"]:
-                response_fileList = s3_client.list_objects_v2(
-                    Bucket=bucket,
-                    Prefix=S3Prefix,
-                    MaxKeys=1000,
-                    ContinuationToken=response_fileList["NextContinuationToken"]
-                )
-                if "Contents" in response_fileList:
-                    for n in response_fileList["Contents"]:
-                        __des_file_list.append({
-                            "Key": n["Key"],
-                            "Size": n["Size"]
-                        })
-        else:
-            logger.info('File list is empty in the s3 bucket')
+        for page in response_iterator:
+            if "Contents" in page:
+                for n in page["Contents"]:
+                    key = n["Key"]
+                    __des_file_list.append({
+                        "Key": key,
+                        "Size": n["Size"]
+                    })
+        logger.info(f'Bucket list length：{str(len(__des_file_list))}')
     except Exception as err:
         logger.error(str(err))
         input('PRESS ENTER TO QUIT')
@@ -432,10 +421,10 @@ def head_s3_single_file(s3_client, bucket):
     try:
         response_fileList = s3_client.head_object(
             Bucket=bucket,
-            Key=S3Prefix + SrcFileIndex
+            Key=str(Path(S3Prefix)/SrcFileIndex)
         )
         file = [{
-            "Key": S3Prefix + SrcFileIndex,
+            "Key": str(Path(S3Prefix)/SrcFileIndex),
             "Size": response_fileList["ContentLength"]
         }]
     except Exception as err:
@@ -534,6 +523,7 @@ def uploadTheard_small(srcfile, prefix_and_key):
     with open(os.path.join(SrcDir, srcfile["Key"]), 'rb') as data:
         for retryTime in range(MaxRetry + 1):
             try:
+                pstart_time = time.time()
                 chunkdata = data.read()
                 chunkdata_md5 = hashlib.md5(chunkdata)
                 s3_dest_client.put_object(
@@ -543,7 +533,10 @@ def uploadTheard_small(srcfile, prefix_and_key):
                     ContentMD5=base64.b64encode(chunkdata_md5.digest()).decode('utf-8'),
                     StorageClass=StorageClass
                 )
-                print(f'\033[0;34;1m    --->Complete\033[0m {srcfile["Key"]} - small file')
+                pload_time = time.time() - pstart_time
+                pload_bytes = len(chunkdata)
+                pload_speed = size_to_str(int(pload_bytes / pload_time)) + "/s"
+                print(f'\033[0;34;1m    --->Complete\033[0m {srcfile["Key"]} - small file - {pload_speed}')
                 break
             except Exception as e:
                 logger.warning(f'Upload small file Fail: {srcfile["Key"]}, '
@@ -559,6 +552,7 @@ def uploadTheard_small(srcfile, prefix_and_key):
 def download_uploadThread_small(srcfileKey):
     for retryTime in range(MaxRetry + 1):
         try:
+            pstart_time = time.time()
             # Get object
             print(f"\033[0;33;1m--->Downloading\033[0m {srcfileKey} - small file")
             response_get_object = s3_src_client.get_object(
@@ -579,7 +573,10 @@ def download_uploadThread_small(srcfileKey):
                 StorageClass=StorageClass
             )
             # 结束 Upload/download
-            print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey}  - small file')
+            pload_time = time.time() - pstart_time
+            pload_bytes = len(getBody)
+            pload_speed = size_to_str(int(pload_bytes / pload_time)) + "/s"
+            print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey}  - small file - {pload_speed}')
             break
         except Exception as e:
             logger.warning(f'Download/Upload small file Fail: {srcfileKey}, '
@@ -595,6 +592,7 @@ def download_uploadThread_small(srcfileKey):
 def alioss_download_uploadThread_small(srcfileKey):
     for retryTime in range(MaxRetry + 1):
         try:
+            pstart_time = time.time()
             # Get Objcet
             print(f"\033[0;33;1m--->Downloading\033[0m {srcfileKey} - small file")
             response_get_object = ali_bucket.get_object(
@@ -614,7 +612,10 @@ def alioss_download_uploadThread_small(srcfileKey):
                 ContentMD5=base64.b64encode(chunkdata_md5.digest()).decode('utf-8'),
                 StorageClass=StorageClass
             )
-            print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} - small file')
+            pload_time = time.time() - pstart_time
+            pload_bytes = len(getBody)
+            pload_speed = size_to_str(int(pload_bytes / pload_time)) + "/s"
+            print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} - small file - {pload_speed}')
             break
         except Exception as e:
             logger.warning(f'Download/Upload small file Fail: {srcfileKey} - small file, '
@@ -818,11 +819,30 @@ def uploadPart(uploadId, indexList, partnumberList, srcfile, ChunkSize_auto):
     return cal_etag
 
 
+# convert bytes to human readable string
+def size_to_str(size):
+    def loop(integer, remainder, level):
+        if integer >= 1024:
+            remainder = integer % 1024
+            integer //= 1024
+            level += 1
+            return loop(integer, remainder, level)
+        else:
+            return integer, round(remainder / 1024, 1), level
+
+    units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    integer, remainder, level = loop(int(size), 0, 0)
+    if level+1 > len(units):
+        level = -1
+    return f'{integer+remainder} {units[level]}'
+
+
 # Single Thread Upload one part, from local to s3
 def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list, ChunkSize):
     prefix_and_key = str(PurePosixPath(S3Prefix) / srcfileKey)
     if not dryrun:
         print(f'\033[0;32;1m--->Uploading\033[0m {srcfileKey} - {partnumber}/{total}')
+    pstart_time = time.time()
     with open(os.path.join(SrcDir, srcfileKey), 'rb') as data:
         retryTime = 0
         while retryTime <= MaxRetry:
@@ -852,15 +872,19 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
                     sys.exit(0)
                 time.sleep(5 * retryTime)  # 递增延迟重试
     complete_list.append(partnumber)
+    pload_time = time.time() - pstart_time
+    pload_bytes = len(chunkdata)
+    pload_speed = size_to_str(int(pload_bytes / pload_time)) + "/s"
     if not dryrun:
         print(f'\033[0;34;1m    --->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%} - {pload_speed}\033[0m')
     return
 
 
 # download part from src. s3 and upload to dest. s3
 def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list,
                           ChunkSize):
+    pstart_time = time.time()
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -913,15 +937,19 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
                     sys.exit(0)
                 time.sleep(5 * retryTime)  # 递增延迟重试
     complete_list.append(partnumber)
+    pload_time = time.time() - pstart_time
+    pload_bytes = len(getBody)
+    pload_speed = size_to_str(int(pload_bytes / pload_time)) + "/s"
     if not dryrun:
         print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%} - {pload_speed}\033[0m')
     return
 
 
 # download part from src. ali_oss and upload to dest. s3
 def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, srcfileSize, total, md5list, dryrun,
                                  complete_list, ChunkSize):
+    pstart_time = time.time()
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -932,7 +960,7 @@ def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKe
         while retryTime <= MaxRetry:
             try:
                 partEndIndex = partStartIndex + ChunkSize - 1
-                if partEndIndex > srcfileSize:
+                if partEndIndex >= srcfileSize:
                     partEndIndex = srcfileSize - 1
                 # Ali OSS 如果range结尾超出范围会变成从头开始下载全部(什么脑子？)，所以必须人工修改为FileSize-1
                 # 而S3或本地硬盘超出范围只会把结尾指针改为最后一个字节
@@ -980,9 +1008,12 @@ def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKe
                     sys.exit(0)
                 time.sleep(5 * retryTime)  # 递增延迟重试
     complete_list.append(partnumber)
+    pload_time = time.time() - pstart_time
+    pload_bytes = len(getBody)
+    pload_speed = size_to_str(int(pload_bytes / pload_time)) + "/s"
     if not dryrun:
         print(f'\033[0;34;1m        --->Complete\033[0m {srcfileKey} '
-              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%}\033[0m')
+              f'- {partnumber}/{total} \033[0;34;1m{len(complete_list) / total:.2%} - {pload_speed}\033[0m')
     return
 
 
@@ -1036,7 +1067,7 @@ def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
 def compare_local_to_s3():
     logger.info('Comparing destination and source ...')
     fileList = get_local_file_list()
-    desFilelist = get_s3_file_list(s3_dest_client, DesBucket)
+    desFilelist = get_s3_file_list(s3_dest_client, DesBucket, S3Prefix)
     deltaList = []
     for source_file in fileList:
         match = False
@@ -1061,7 +1092,7 @@ def compare_buckets():
     logger.info('Comparing destination and source ...')
     if JobType == 'S3_TO_S3':
         if SrcFileIndex == "*":
-            fileList = get_s3_file_list(s3_src_client, SrcBucket)
+            fileList = get_s3_file_list(s3_src_client, SrcBucket, S3Prefix)
         else:
             fileList = head_s3_single_file(s3_src_client, SrcBucket)
     if JobType == 'ALIOSS_TO_S3':
@@ -1069,7 +1100,7 @@ def compare_buckets():
             fileList = get_ali_oss_file_list(ali_bucket)
         else:
             fileList = head_oss_single_file(ali_bucket)
-    desFilelist = get_s3_file_list(s3_dest_client, DesBucket)
+    desFilelist = get_s3_file_list(s3_dest_client, DesBucket, S3Prefix)
     deltaList = []
     for source_file in fileList:
         match = False
@@ -1090,7 +1121,7 @@ def compare_buckets():
 
 # Main
 if __name__ == '__main__':
-    start_time = time.time()
+    start_time = datetime.datetime.now()
     ChunkSize_default = set_config()
     logger, log_file_name = set_log()
 
@@ -1126,7 +1157,7 @@ if __name__ == '__main__':
         src_file_list = get_local_file_list()
     elif JobType == "S3_TO_S3":
         if SrcFileIndex == "*":
-            src_file_list = get_s3_file_list(s3_src_client, SrcBucket)
+            src_file_list = get_s3_file_list(s3_src_client, SrcBucket, S3Prefix)
         else:
             src_file_list = head_s3_single_file(s3_src_client, SrcBucket)
     elif JobType == 'ALIOSS_TO_S3':
@@ -1136,7 +1167,7 @@ if __name__ == '__main__':
             src_file_list = head_oss_single_file(ali_bucket)
 
     # 获取目标s3现存文件列表
-    des_file_list = get_s3_file_list(s3_dest_client, DesBucket)
+    des_file_list = get_s3_file_list(s3_dest_client, DesBucket, S3Prefix)
 
     # 获取Bucket中所有未完成的Multipart Upload
     multipart_uploaded_list = get_uploaded_list(s3_dest_client)
@@ -1169,8 +1200,7 @@ if __name__ == '__main__':
             file_pool.submit(upload_file, src_file, des_file_list, multipart_uploaded_list, ChunkSize_default)
 
     # 再次获取源文件列表和目标文件夹现存文件列表进行比较，每个文件大小一致，输出比较结果
-    spent_time = int(time.time() - start_time)
-    time_str = str(datetime.timedelta(seconds=spent_time))
+    time_str = str(datetime.datetime.now() - start_time)
     if JobType == 'S3_TO_S3':
         str_from = f'{SrcBucket}/{S3Prefix}'
         compare_buckets()
@@ -1180,6 +1210,8 @@ if __name__ == '__main__':
     elif JobType == 'LOCAL_TO_S3':
         str_from = f'{SrcDir}'
         compare_local_to_s3()
+    else:
+        str_from = ""
     print(f'\033[0;34;1mMISSION ACCOMPLISHED - Time: {time_str} \033[0m - FROM: {str_from} TO {DesBucket}/{S3Prefix}')
     print('Logged to file:', os.path.abspath(log_file_name))
     input('PRESS ENTER TO QUIT')
