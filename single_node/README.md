@@ -110,8 +110,8 @@ ali_access_key_secret = "xxxxxxxxxxxx"
 ali_endpoint = "oss-cn-beijing.aliyuncs.com"  # OSS 区域 endpoint，在OSS控制台界面可以找到
 ```
 
-## Application Configure - 应用配置
-**For local upload to S3, you can run with GUI and config on GUI**  
+## UPLOAD Application Configure - UPLOAD 应用配置
+**For local UPLOAD to S3, you can run with GUI and config on GUI**  
 **如果是本地上传，运行图形界面模式，你可以直接在界面做这些应用设置**  
 ### Config `s3_upload_config.ini`
 * 上面配置的 profile name 填入对应源和目的 profile name 项，例如：  
@@ -127,7 +127,7 @@ JobType = LOCAL_TO_S3
 * Setup folder, destination buckets and other optional config  
 设置源文件路径和上传S3，以及其他可选配置  
 
-## Start the app - 运行应用
+## Start the UPLOAD app - 运行上传应用
 * Python3 Environment and don't want to run with GUI, Linux/MacOS/Win  
 Python3 环境，且不需要GUI界面，运行在 Linux/MacOS/Win
 ```bash
@@ -150,6 +150,30 @@ Windows 非 Python 环境运行本地上传任务，运行 s3_upload.exe
 
 ![GUI Config](./img/img05.png)
 
+## DOWNLOAD - 下载
+### Config `s3_download_config.ini` or config in GUI
+
+### Start the download app - 运行下载应用
+* Python3 Environment and don't want to run with GUI, Linux/MacOS/Win  
+Python3 环境，且不需要GUI界面，运行在 Linux/MacOS/Win
+```bash
+python3 s3_download.py --nogui
+```
+
+* Python3 Environment and run with GUI. Linux/MacOS/Win  
+Python3 环境，且带GUI界面，运行在 Linux/MacOS/Win：
+```bash
+python3 s3_download.py --gui
+```
+部分 MacOS 版本的 Python 运行 GUI（ tkinter ）会出现 Mac WindowServer 端口冲突，导致 Mac 退出用户重新启动的情况。目前受限于 Python tkinter 与 MacOS，遇到这种情况，需要升级或降级 Python/tkinter 解决。参考：  
+https://bugs.python.org/issue37833  
+https://stackoverflow.com/questions/57400301/how-to-fix-tkinter-every-code-with-gui-crashes-mac-os-with-respring    
+或不带 GUI 来运行 python3 s3_download.py --nogui。Windows 操作系统没有反馈有该问题。  
+  
+* Windows non-Python Environment Run s3_download.exe  
+Windows 非 Python 环境，运行 s3_download.exe  
+
+![GUI Config](./img/img06.png)
 
 ### Known Issue  注意:  
 
