@@ -16,7 +16,7 @@ try:
     Des_bucket_default = os.environ['Des_bucket_default']
     Des_prefix_default = os.environ['Des_prefix_default']
 except Exception as e:
-    print(e)
+    print('No Env Des_bucket_default/Des_prefix_default ', e)
     Des_bucket_default, Des_prefix_default = "", ""
 ssm_parameter_credentials = os.environ['ssm_parameter_credentials']
 checkip_url = os.environ['checkip_url']

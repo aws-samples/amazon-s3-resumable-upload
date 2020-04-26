@@ -134,7 +134,6 @@ def check_sqs_empty(sqs, sqs_queue):
 
 
 def get_s3_file_list(s3_client, bucket, S3Prefix, del_prefix=False):
-
     # For delete prefix in des_prefix
     if S3Prefix == '' or S3Prefix == '/':
         # 目的bucket没有设置 Prefix
@@ -438,20 +437,25 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                     chunkdata_md5 = hashlib.md5(getBody)
                     md5list[partnumber - 1] = chunkdata_md5
                     break  # 完成下载，不用重试
-                except Exception as err:
-                    logger.warning(f"DownloadThreadFunc - {Src_bucket}/{Src_key} - Exception log: {str(err)}. "
-                                   f"Download part fail, retry part: {partnumber} Attempts: {retryTime}")
-                    if retryTime > MaxRetry:
-                        logger.error(f"Quit for Max Download retries: {retryTime} - {Src_bucket}/{Src_key}")
-                        # 超过次数退出，改为跳下一个文件
+                except ClientError as err:
+                    if err.response['Error']['Code'] in ['NoSuchKey', 'AccessDenied']:
+                        # 没这个ID，文件已经删除，或者无权限访问
+                        logger.error(f"Fail to access {Src_bucket}/{Src_key} - ERR: {str(err)}.")
                         stop_signal.set()
-                        return "MaxRetry"  # 退出Thread
+                        return "QUIT"
+                    logger.warning(f"Fail to download {Src_bucket}/{Src_key} - ERR: : {str(err)}. "
+                                   f"Retry part: {partnumber} - Attempts: {retryTime}")
+                    if retryTime > MaxRetry:  # 超过次数退出
+                        logger.error(f"Quit for Max Download retries: {retryTime} - {Src_bucket}/{Src_key}")
+                        stop_signal.set()
+                        return "TIMEOUT"  # 退出Thread
                     else:
                         time.sleep(5 * retryTime)
                         # 递增延迟，返回重试
+                except Exception as e:
+                    logger.error(f'Fail Downloading {str(e)}')
         # 上传文件
         if not dryrun:  # 这里就不用考虑 ifVerifyMD5Twice 了，
-
             retryTime = 0
             while retryTime <= MaxRetry and not stop_signal.is_set():
                 retryTime += 1
@@ -473,26 +477,18 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                         logger.warning(f'ClientError: Fail to upload part - might be duplicated job:'
                                        f' {Des_bucket}/{Des_key}, {str(err)}')
                         stop_signal.set()
-                        return "ERR"
+                        return "QUIT"
                     logger.warning(f"ClientError: Fail to upload part - {Des_bucket}/{Des_key} -  {str(err)}, "
                                    f"retry part: {partnumber} Attempts: {retryTime}")
                     if retryTime > MaxRetry:
                         logger.error(f"ClientError: Quit for Max Upload retries: {retryTime} - {Des_bucket}/{Des_key}")
                         # 改为跳下一个文件
                         stop_signal.set()
-                        return "MaxRetry"
+                        return "TIMEOUT"
                     else:
                         time.sleep(5 * retryTime)  # 递增延迟重试
-                except Exception as err:
-                    logger.warning(f"Exception: Fail to upload part - {Des_bucket}/{Des_key} -  {str(err)}, "
-                                   f"retry part: {partnumber} Attempts: {retryTime}")
-                    if retryTime > MaxRetry:
-                        logger.error(f"Exception: Quit for Max Upload retries: {retryTime} - {Des_bucket}/{Des_key}")
-                        # 改为跳下一个文件
-                        stop_signal.set()
-                        return "MaxRetry"
-                    else:
-                        time.sleep(5 * retryTime)  # 递增延迟重试
+                except Exception as e:
+                    logger.error(f'Fail Uploading {str(e)}')
 
         if not stop_signal.is_set():
             complete_list.append(partnumber)
@@ -501,7 +497,9 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                     f'--->Complete {ChunkSize} Bytes {Src_bucket}/{Src_key} - {partnumber}/{total} {len(complete_list) / total:.2%}')
         else:
             return "TIMEOUT"
-        return "Complete"
+        return "COMPLETE"
+
+    # woker_thread END
 
     # job_processor Main
     partnumber = 1  # 当前循环要上传的Partnumber
@@ -518,15 +516,24 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                                       partnumber, total, md5list, partnumberList, complete_list))
 
             result = concurrent.futures.wait(threads, timeout=JobTimeout, return_when="ALL_COMPLETED")
-            if len(result[1]) > 0:
-                logger.warning(f'Canceling {len(result[1])} waiting threads in pool ...')
+
+            # 异常退出
+            if "QUIT" in [t.result() for t in result[0]]:  # result[0] 是函数done
+                logger.warning(f'QUIT. Canceling {len(result[1])} waiting threads in pool ...')
                 stop_signal.set()
                 for t in result[1]:
                     t.cancel()
+                logger.warning(f'QUIT Job: {job["Src_bucket"]}/{job["Src_key"]}')
+                return "QUIT"
+            # 超时
+            if len(result[1]) > 0:  # # result[0] 是函数not_done, 即timeout有未完成的
+                logger.warning(f'TIMEOUT. Canceling {len(result[1])} waiting threads in pool ...')
+                stop_signal.set()
+                for t in result[1]:
+                    t.cancel()
+                logger.warning(f'TIMEOUT {JobTimeout}S Job: {job["Src_bucket"]}/{job["Src_key"]}')
+                return "TIMEOUT"
 
-        if stop_signal.is_set():
-            logger.warning(f'TIMEOUT {JobTimeout}S or MaxRetry, Job: {job["Src_bucket"]}/{job["Src_key"]}')
-            return "TIMEOUT"
         # 线程池End
         logger.info(f'All parts uploaded: {job["Src_bucket"]}/{job["Src_key"]} - Size:{job["Size"]}')
 
@@ -669,7 +676,8 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                         logger.warning('Try to handle next message')
                         time.sleep(1)
                         continue
-                    ######## 主流程
+
+                    # 主流程
                     if 'Event' not in job:
                         if job['Size'] > ResumableThreshold:
                             upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
@@ -684,17 +692,17 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                             upload_etag_full = "s3:TestEvent"
                         else:
                             upload_etag_full = "OtherEvent"
-                    ########
+
                     # Del Job on sqs
-                    if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
-                        # 如果是超时或ERR的就不删SQS消息，是正常结束就删
-                        # 大文件会在退出线程时设 MaxRetry 为 TIMEOUT，小文件则会返回 MaxRetry
-                        # 小文件出现该问题可以认为没必要再让下一个worker再试了，不是因为文件下载太大导致，而是权限设置导致
+                    logger.info(f'upload_etag_full={upload_etag_full}, job={str(sqs_job)}')
+                    if upload_etag_full != "TIMEOUT":
+                        # 如果是超时的就不删SQS消息，是正常结束或QUIT就删
+                        # QUIT 是 NoSuchUpload, NoSuchKey, AccessDenied，可以认为没必要再让下一个worker再试了
                         # 直接删除SQS，并且DDB并不会记录结束状态
-                        # 如果希望小文件也继续让SQS消息恢复，并让下一个worker再试，则在上面判断加upload_etag_full != "MaxRetry"
+
                         for retry in range(MaxRetry + 1):
                             try:
-                                logger.info(f'Try to finsh job message on sqs.')
+                                logger.info(f'Try to finsh job message on sqs. {str(sqs_job)}')
                                 sqs.delete_message(
                                     QueueUrl=sqs_queue,
                                     ReceiptHandle=job_receipt
@@ -796,7 +804,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
         percent = int(len(partnumberList) / len(indexList) * 100)
         ddb_this_round(table, percent, Src_bucket, Src_key, instance_id, MaxRetry)
 
-        # Job Thread: uploadPart, 加入超时机制之后返回 "TIMEOUT"
+        # Job Thread: uploadPart, 超时或Key不对返回 TIMEOUT/QUIT
         upload_etag_full = job_processor(
             reponse_uploadId,
             indexList,
@@ -810,8 +818,8 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
             JobTimeout,
             ifVerifyMD5Twice
         )
-        if upload_etag_full == "TIMEOUT":
-            break  # 超时退出处理该Job，因为sqs超时会被其他worker拿到
+        if upload_etag_full == "TIMEOUT" or upload_etag_full == "QUIT":
+            break  # 退出处理该Job
         elif upload_etag_full == "ERR":
             multipart_uploaded_list = []  # 清掉已上传id列表，以便重新上传
             continue  # 循环重试
@@ -846,8 +854,10 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                 else:
                     logger.warning(f'Retry {Des_bucket}/{Des_key}')
                     continue
-        # 结束 Job
+        # 正常结束 md5_retry 循环
         break
+    # END md5_retry 超过次数
+
     # DynamoDB log: ADD status: DONE/ERR(upload_etag_full)
     ddb_complete(upload_etag_full, table, Src_bucket, Src_key, MaxRetry)
     # complete one job
@@ -1008,7 +1018,7 @@ def step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
 
     # Write DDB log for first round
     ddb_start_small(table, Src_bucket, Src_key, Size, MaxRetry, instance_id)
-
+    upload_etag_full = []
     for retryTime in range(MaxRetry + 1):
         try:
             # Get object
@@ -1034,14 +1044,19 @@ def step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
             upload_etag_full = response_put_object['ETag']
             # 结束 Upload/download
             break
-        except Exception as e:
+        except ClientError as e:
+            if e.response['Error']['Code'] in ['NoSuchKey', 'AccessDenied']:
+                logger.error(f"Fail to access {Src_bucket}/{Src_key} - ERR: {str(e)}.")
+                return "QUIT"
             logger.warning(f'Download/Upload small file Fail: {Src_bucket}/{Src_key}, '
                            f'{str(e)}, Attempts: {retryTime}')
             if retryTime >= MaxRetry:
                 logger.error(f'Fail MaxRetry Download/Upload small file: {Des_bucket}/{Des_key}')
-                return "MaxRetry"
+                return "TIMEOUT"
             else:
                 time.sleep(5 * retryTime)
+        except Exception as e:
+            logger.error(f'Fail in step_fn_small {str(e)}')
 
     # Write DDB log for complete
     ddb_complete(upload_etag_full, table, Src_bucket, Src_key, MaxRetry)
