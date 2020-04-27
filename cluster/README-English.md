@@ -130,9 +130,9 @@ Amazon EC2 Autoscaling Policy
 AWS SSM Parameter Store: s3_migration_bucket_para as bucket information for Jobsender to scan   
 Amazon EC2 all needed IAM Role  
 Amazon CloudWatch Dashboard  
-Amazon CloudWatch Alarm to email notification 
-Amazon S3 Bucket - s3-migration-cluster-resource-newbucket - New created object in this bucket will trigger SQS and start transmission.
-Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket - code deploy bucket: For CDK to upload the application source code. All EC2 start will first download these codes and config. If you want to change the config.ini, you can change it in this bucket.
+Amazon CloudWatch Alarm to email notification  
+Amazon S3 Bucket - s3-migration-cluster-resource-newbucket - New created object in this bucket will trigger SQS and start transmission.  
+Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket - code deploy bucket: For CDK to upload the application source code. All EC2 start will first download these codes and config. If you want to change the config.ini, you can change it in this bucket.  
 
 * Amazon EC2 User Data will install CloudWatch Logs Agent to collect EC2 initial logs and s3_migrate application logs  
 * Amazon EC2 User Data enable TCP BBR  

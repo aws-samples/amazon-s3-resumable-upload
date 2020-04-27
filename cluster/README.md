@@ -131,13 +131,13 @@ Amazon SQS Queue DLQ: s3_migrate_file_list-DLQ,
 Amazon DynamoDB 表: s3_migrate_file_list,  
 Amazon EC2 JobSender Autoscaling Group with only 1 instance: t3.micro,  
 Amazon EC2 Workers Autoscaling Group capacity 1-10: c5.large 可以在 cdk_ec2_stack.py 中修改,  
-Amazon EC2 Autoscaling Policy
+Amazon EC2 Autoscaling Policy  
 Amazon SSM Parameter Store: s3_migration_bucket_para 作为S3桶信息给Jobsender去扫描比对  
 Amazon EC2 所需要访问各种资源的 IAM Role  
-Amazon CloudWatch Dashboard 监控
-Amazon CloudWatch Alarm 自动Email告警
-Amazon S3 Bucket - s3-migration-cluster-resource-newbucket 新增内容桶，新增内容自动触发SQS，所有新存入的对象都会被传输
-Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket 代码部署桶，这个桶是给部署的时候CDK上传应用程序代码的，每个EC2启动的时候都会从这个桶下载代码。如果要修改配置文件，可以直接在这个桶修改。
+Amazon CloudWatch Dashboard 监控  
+Amazon CloudWatch Alarm 自动Email告警  
+Amazon S3 Bucket - s3-migration-cluster-resource-newbucket 新增内容桶，新增内容自动触发SQS，所有新存入的对象都会被传输  
+Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket 代码部署桶，这个桶是给部署的时候CDK上传应用程序代码的，每个EC2启动的时候都会从这个桶下载代码。如果要修改配置文件，可以直接在这个桶修改。  
   
 * Amazon EC2 User Data 自动安装 CloudWatch Logs Agent 收集 EC2 初始化运行 User Data 时候的 Logs，以及收集 s3_migrate 程序运行产生的 Logs 
 * Amazon EC2 User Data 自动启用 TCP BBR  
