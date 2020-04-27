@@ -15,8 +15,8 @@ Upload from local disk, copy files between Global AWS and China AWS S3, or migra
 * Support source: local files, Amazon S3, AliCloud OSS  
 支持的源：本地文件、Amazon S3、阿里云 OSS  
 
-* Support destination: Amazon S3  
-支持的目的地：Amazon S3  
+* Support destination: Amazon S3, local files  
+支持的目的地：Amazon S3、本地文件  
 
 * Multi-files concurrently transmission and each file multi-threads download and upload.    
 多文件并发传输，且每个文件再多线程并发传输，充分压榨带宽。S3_TO_S3 或 ALIOSS_TO_S3 中间只过中转服务器的内存，不落盘，节省时间和存储。  
