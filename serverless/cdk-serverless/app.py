@@ -19,10 +19,10 @@ import json
 
 # Define bucket parameter before deploy CDK
 bucket_para = [{
-    "src_bucket": "huangzb-tokyo-video",
-    "src_prefix": "zip",
-    "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "zip"
+    "src_bucket": "broad-references",
+    "src_prefix": "",
+    "des_bucket": "s3-lambda-test",
+    "des_prefix": ""
 }]
 StorageClass = 'STANDARD'
 
