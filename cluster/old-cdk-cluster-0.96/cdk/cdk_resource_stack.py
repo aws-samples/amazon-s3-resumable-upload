@@ -17,14 +17,8 @@ class CdkResourceStack(core.Stack):
 
         self.ddb_file_list = ddb.Table(self, "s3_migrate_ddb",
                                        partition_key=ddb.Attribute(name="Key", type=ddb.AttributeType.STRING),
-                                       billing_mode=ddb.BillingMode.PAY_PER_REQUEST,
-                                       )
-        self.ddb_file_list.add_global_secondary_index(
-            partition_key=ddb.Attribute(name="desBucket", type=ddb.AttributeType.STRING),
-            index_name="desBucket-index",
-            projection_type=ddb.ProjectionType.INCLUDE,
-            non_key_attributes=["desKey", "versionId"]
-        )
+                                       billing_mode=ddb.BillingMode.PAY_PER_REQUEST)
+
         self.sqs_queue_DLQ = sqs.Queue(self, "s3_migrate_sqs_DLQ",
                                        visibility_timeout=core.Duration.hours(1),
                                        retention_period=core.Duration.days(14)
@@ -33,7 +27,7 @@ class CdkResourceStack(core.Stack):
                                    visibility_timeout=core.Duration.hours(1),
                                    retention_period=core.Duration.days(14),
                                    dead_letter_queue=sqs.DeadLetterQueue(
-                                       max_receive_count=12,
+                                       max_receive_count=24,
                                        queue=self.sqs_queue_DLQ
                                    )
                                    )

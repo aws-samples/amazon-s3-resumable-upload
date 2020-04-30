@@ -23,19 +23,17 @@ checkip_url = os.environ['checkip_url']
 
 # 内部参数
 JobType = "PUT"
-MaxRetry = 20  # 最大请求重试次数
+MaxRetry = 10  # 最大请求重试次数
 MaxThread = 50  # 最大线程数
 MaxParallelFile = 1  # Lambda 中暂时没用到
-JobTimeout = 870
+JobTimeout = 900
 
 ResumableThreshold = 5 * 1024 * 1024  # Accelerate to ignore small file
 CleanUnfinishedUpload = False  # For debug
 ChunkSize = 5 * 1024 * 1024  # For debug, will be auto-change
 ifVerifyMD5Twice = False  # For debug
-UpdateVersionId = False  # get lastest version id from s3 before get object
-GetObjectWithVersionId = False  # get object with version id
 
-s3_config = Config(max_pool_connections=50, retries={'max_attempts': MaxRetry})  # 最大连接数
+s3_config = Config(max_pool_connections=30)  # 最大连接数
 
 # Set environment
 logger = logging.getLogger()
@@ -105,10 +103,6 @@ def lambda_handler(event, context):
                     Src_key = One_record['s3']['object']['key']
                     Src_key = urllib.parse.unquote_plus(Src_key)
                     Size = One_record['s3']['object']['size']
-                    if "versionId" in One_record['s3']['object']:
-                        versionId = One_record['s3']['object']['versionId']
-                    else:
-                        versionId = 'null'
                     Des_bucket, Des_prefix = Des_bucket_default, Des_prefix_default
                     Des_key = str(PurePosixPath(Des_prefix) / Src_key)
                     if Src_key[-1] == '/':  # 针对空目录对象
@@ -118,25 +112,20 @@ def lambda_handler(event, context):
                         'Src_key': Src_key,
                         'Size': Size,
                         'Des_bucket': Des_bucket,
-                        'Des_key': Des_key,
-                        'versionId': versionId
+                        'Des_key': Des_key
                     }
         if 'Des_bucket' not in job:  # 消息结构不对
             logger.warning(f'Wrong sqs job: {json.dumps(job, default=str)}')
             logger.warning('Try to handle next message')
             raise WrongRecordFormat
-        if 'versionId' not in job:
-            job['versionId'] = 'null'
-
-        # TODO: 如果是一次多条Job并且出现一半失败的问题未处理，所以目前只设置SQS Batch=1
+        # TODO: 如果是一次多条Job进来这里暂时没做并发处理，并且一半失败的问题未处理，所以目前不要处理SQS Batch
         if job['Size'] > ResumableThreshold:
             upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
                                              StorageClass, ChunkSize, MaxRetry, MaxThread,
-                                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
-                                             UpdateVersionId, GetObjectWithVersionId)
+                                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload)
         else:
             upload_etag_full = step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
-                                                  StorageClass, MaxRetry, UpdateVersionId, GetObjectWithVersionId)
+                                                  StorageClass, MaxRetry)
         if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
             # 如果是超时或ERR的就不删SQS消息，是正常结束就删
             # 大文件会在退出线程时设 MaxRetry 为 TIMEOUT，小文件则会返回 MaxRetry

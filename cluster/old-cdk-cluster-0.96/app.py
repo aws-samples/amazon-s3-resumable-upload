@@ -23,6 +23,11 @@ bucket_para = [{
         "src_prefix": "",
         "des_bucket": "s3-open-data",
         "des_prefix": "giab"
+    }, {
+        "src_bucket": "covid19-lake",
+        "src_prefix": "",
+        "des_bucket": "covid19-lake",
+        "des_prefix": ""
     }]
 
 # key_name = "id_rsa"  # Optional if use SSM-SessionManager

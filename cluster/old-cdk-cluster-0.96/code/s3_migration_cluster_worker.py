@@ -29,13 +29,13 @@ try:
     LoggingLevel = cfg.get('Debug', 'LoggingLevel')
     CleanUnfinishedUpload = cfg.getboolean('Debug', 'CleanUnfinishedUpload')
     LocalProfileMode = cfg.getboolean('Debug', 'LocalProfileMode')
-    UpdateVersionId = cfg.getboolean('Mode', 'UpdateVersionId')
-    GetObjectWithVersionId = cfg.getboolean('Mode', 'GetObjectWithVersionId')
     try:
         Des_bucket_default = cfg.get('Basic', 'Des_bucket_default')
-        Des_prefix_default = cfg.get('Basic', 'Des_prefix_default')
     except Exception as e:
         Des_bucket_default = 'foo'
+    try:
+        Des_prefix_default = cfg.get('Basic', 'Des_prefix_default')
+    except Exception as e:
         Des_prefix_default = ''
 except Exception as e:
     print("ERR loading s3_migration_cluster_config.ini", str(e))
@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \
-        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials, MaxRetry)
+        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials)
 
     #######
     # Program start processing here
@@ -71,5 +71,5 @@ if __name__ == '__main__':
                             sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                             StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
-                            Des_bucket_default, Des_prefix_default, UpdateVersionId, GetObjectWithVersionId
+                            Des_bucket_default, Des_prefix_default
                             )

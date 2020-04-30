@@ -1,0 +1,2 @@
+gatk-test-data/README
+covid19-lake/cfn/

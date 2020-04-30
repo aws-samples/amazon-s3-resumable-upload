@@ -19,17 +19,22 @@ import json
 
 # Define bucket parameter before deploy CDK
 bucket_para = [{
-    "src_bucket": "huangzb-tokyo-video",
-    "src_prefix": "zip",
+    "src_bucket": "broad-references",
+    "src_prefix": "",
     "des_bucket": "s3-migration-test-nx",
-    "des_prefix": "zip"
+    "des_prefix": "broad-references-20200405b"
+}, {
+    "src_bucket": "covid19-lake",
+    "src_prefix": "",
+    "des_bucket": "covid19-lake",
+    "des_prefix": ""
 }]
 StorageClass = 'STANDARD'
 
 # Des_bucket_default is only used for non-jobsender senario: S3 trigger SQS then to Lambda,
 # There is no destination buckets information in SQS message in this case, so you need to setup Des_bucket_default
 Des_bucket_default = 's3-migration-test-nx'
-Des_prefix_default = 's3-migration-cdk-from-jp'
+Des_prefix_default = 's3-migration-cdk-from-us'
 
 # The region credential (not the same account as Lambda) setting in SSM Parameter Store
 ssm_parameter_credentials = 's3_migration_credentials'
@@ -84,12 +89,6 @@ class CdkResourceStack(core.Stack):
         ddb_file_list = ddb.Table(self, "s3migrate_serverless",
                                   partition_key=ddb.Attribute(name="Key", type=ddb.AttributeType.STRING),
                                   billing_mode=ddb.BillingMode.PAY_PER_REQUEST)
-        ddb_file_list.add_global_secondary_index(
-            partition_key=ddb.Attribute(name="desBucket", type=ddb.AttributeType.STRING),
-            index_name="desBucket-index",
-            projection_type=ddb.ProjectionType.INCLUDE,
-            non_key_attributes=["desKey", "versionId"]
-        )
 
         # Setup SQS
         sqs_queue_DLQ = sqs.Queue(self, "s3migrate_serverless_Q_DLQ",
@@ -100,7 +99,7 @@ class CdkResourceStack(core.Stack):
                               visibility_timeout=core.Duration.minutes(15),
                               retention_period=core.Duration.days(14),
                               dead_letter_queue=sqs.DeadLetterQueue(
-                                  max_receive_count=60,
+                                  max_receive_count=3,
                                   queue=sqs_queue_DLQ
                               )
                               )
@@ -236,23 +235,12 @@ class CdkResourceStack(core.Stack):
                                             metric_value="1",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '"WARNING"'))
-        # Task timed out
-        handler.log_group.add_metric_filter("TIMEOUT",
-                                            metric_name="TIMEOUT-Logs",
-                                            metric_namespace="s3_migrate",
-                                            metric_value="1",
-                                            filter_pattern=logs.FilterPattern.literal(
-                                                '"Task timed out"'))
         log_metric_ERROR = cw.Metric(namespace="s3_migrate",
                                      metric_name="ERROR-Logs",
                                      statistic="Sum",
                                      period=core.Duration.minutes(1))
         log_metric_WARNING = cw.Metric(namespace="s3_migrate",
                                        metric_name="WARNING-Logs",
-                                       statistic="Sum",
-                                       period=core.Duration.minutes(1))
-        log_metric_TIMEOUT = cw.Metric(namespace="s3_migrate",
-                                       metric_name="TIMEOUT-Logs",
                                        statistic="Sum",
                                        period=core.Duration.minutes(1))
 
@@ -291,7 +279,7 @@ class CdkResourceStack(core.Stack):
                                              )]),
                           cw.GraphWidget(title="ERROR/WARNING Logs",
                                          left=[log_metric_ERROR],
-                                         right=[log_metric_WARNING, log_metric_TIMEOUT]),
+                                         right=[log_metric_WARNING]),
                           cw.SingleValueWidget(title="Running/Waiting and Dead Jobs",
                                                metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
                                                    period=core.Duration.minutes(1)

@@ -1,6 +1,6 @@
 # Amazon S3 MultiThread Resume Migration Serverless Solution  
   
-Cluster & Serverless Version 0.94  
+Cluster & Serverless Version 0.98  
   
 ## Serverless Version  
 Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed together, or seperated used in different senario  
@@ -138,17 +138,70 @@ default value: 0
 ```
 So Lambda traffic bytes/min will be emit to CloudWatch Metric for monitoring. Config monitor Statistic: Sum with 1 min.
 
+## Amazon S3 Versioning
+### Why S3 Versioning
+If not enable S3 Versioning, when transfering a large file, if the file is replaced with a new file but same name at this time, the copy file on destination will be half old half new, integrity is broken. What we used to do is not to change the source file when transfering, or only allow adding new file.  
+But there is some case, you have to replace source file, then you can enable S3 versioning feature. So can avoid file integrity broken. This project has supported S3 Versioning, you need to config:
+* Source S3 bucket enable Versioning feature
+* Source S3 bucket must allow ListBucketVersions and GetObjectVersion in bucket policy
+* Config below application parameters:
+
+### The parameter for S3 Versioning
+* JobsenderCompareVersionId(True/False):  
+Default: False  
+True means: When Jobsender comparing S3 buckets, get versionId from source buckets. The destination S3 bucket versionId are saved in DynamoDB when start transfer every object. Jobsender will get destination versionId list from DynamoDB for comparing. The SQS Job message will contain versionId.  
+
+* UpdateVersionId(True/False):  
+Default: False  
+True means: Before Work start transfer a object, it update the versionId this the Job message. This feature is for the case that Jobsender has not sent versionId, but you still need to enable versionId for integrity protection.  
+
+* GetObjectWithVersionId(True/False):  
+Default: False  
+True means: When Worker get object from source bucket, get with specified versionId. If set the switch to False, it will get the lastest version of the object.  
+  
+For Cluster version, the above parameters are in s3_migration_config.ini  
+For Serverless version, the above parameters are in head lines in lambda_function_jobsender and lambda_function_worker python files.  
+
+### Senario of choosing parameters
+* S3 new object trigger SQS Jobs:  
+```
+  UpdateVersionId = False  
+  GetObjectWithVersionId = True   
+```
+  In this S3 trigger SQS case, when S3 Versioning enable, the SQS message contains versionId. Worker just follow this versionId to get source S3 bucket. If broken while transfering and recovering, it still get object with the same versionId.  
+  If you don't have the GetObjectVersion permission, you need to set these parameters to False, otherwise get object will fail because of AccessDenied.
+
+* Jobsender compare S3 and send SQS Jobs. Here are two purposes:  
+  
+  1. Integrity: For fully ensure even file is replaced while transfering, the file is still a complete file, not half new half old.  
+  ```
+  JobsenderCompareVersionId = False  
+  UpdateVersionId = True  
+  GetObjectWithVersionId = True  
+  ```
+  For better performance, not to compare versionId in Jobsender, so send SQS message with versionId 'null'. And before Worker get object with versionId, it get the real versionId from source S3 and save to DynamoDB. When this object transfer complete, it will check the versionId matching again. 
+
+  2. Integrity and consistency: For compare source/destination S3 buckets existing files size and also compare version, and fully ensure even file is replaced while transfering, the file is still a complete file, not half new half old.  
+  ```
+  JobsenderCompareVersionId = True  
+  UpdateVersionId = False  
+  GetObjectWithVersionId = True  
+  ```
+  Jobsender compare versionId in source bucket and in DynamoDB. Send SQS message with real versionId. Worker will follow this versioinId to get object.
+
+* For case that no need to compare version, and the file will not be replaced while transfering, or you don't have GetObjectVersion permission source bucket. Just set the three parameters to False. (Default)
+
+### Why not enable all by defult?  
+* Performance: Get the source versionId list will spend much more time than just List objects. If you have lots of objects (such as more than 10K), and you are using Lambda as Jobsender, it might exceed the 15 minutes limit.  
+
+* Permission: Not every bucket permits to GetObjectVersion. Some bucket might open read for GetObject, but not GetObjectVersion for you, e.g. some Open Data Set, even enabled Versioning.
+
 ## Limitation and Notice: 
 * Required memory = concurrency * ChunckSize. For the file < 50GB, ChunckSize is 5MB. For the file >50GB, ChunkSize will be auto change to Size/10000  
 So for example is file average Size is 500GB , ChunckSize will be auto change to 50MB, and the default concurrency setting 5 File x 10 Concurrency/File = 50. So required 50 x 50MB = 2.5GB memory to run in EC2 or Lambda.  
 If you need to increase the concurrency, can change it in config, but remember provision related memory for EC2 or Lambda.  
 
-* This project doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
-If you change, it will cause the destination file wrong. Workaround is to run the Jobsender(cluster version) after each batch of migration job. Jobsender will compare source and destination s3 file key and size, if different size, it will send jobs to sqs to trigger copy again. But if size is same, it will take it as same file.  
-
 * Don't change the chunksize while start data copying.  
-
-* Jobsender only compare the file Bucket/Key and Size. That means the same filename in the same folder and same size, will be taken as the same by jobsender or single node s3_uploader. If the jobs are trigger by S3 new created object to SQS, then no compare, just copy directly.  
 
 * To delete the resources only need one command: cdk destroy  
 But you need to delete these resources manually: DynamoDB, CloudWatch Log Group, new created S3 bucket 

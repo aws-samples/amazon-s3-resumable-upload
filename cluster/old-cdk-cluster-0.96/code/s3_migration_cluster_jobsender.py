@@ -5,10 +5,8 @@ import os
 import sys
 import time
 from configparser import ConfigParser
-from s3_migration_lib import set_env, set_log, job_upload_sqs_ddb, delta_job_list, check_sqs_empty, \
-    get_des_file_list, get_src_file_list
+from s3_migration_lib import set_env, set_log, get_s3_file_list, job_upload_sqs_ddb, delta_job_list, check_sqs_empty
 from operator import itemgetter
-from pathlib import Path
 
 # Read config.ini
 cfg = ConfigParser()
@@ -21,11 +19,9 @@ try:
     ssm_parameter_credentials = cfg.get('Basic', 'ssm_parameter_credentials')
     LocalProfileMode = cfg.getboolean('Debug', 'LocalProfileMode')
     JobType = cfg.get('Basic', 'JobType')
-    MaxRetry = cfg.getint('Mode', 'MaxRetry')
     MaxThread = cfg.getint('Mode', 'MaxThread')
     MaxParallelFile = cfg.getint('Mode', 'MaxParallelFile')
     LoggingLevel = cfg.get('Debug', 'LoggingLevel')
-    JobsenderCompareVersionId = cfg.getboolean('Mode', 'JobsenderCompareVersionId')
 except Exception as e:
     print("s3_migration_cluster_config.ini ERR: ", str(e))
     sys.exit(0)
@@ -47,7 +43,7 @@ if __name__ == '__main__':
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \
-        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials, MaxRetry)
+        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials)
 
     #######
     # Program start processing here
@@ -86,35 +82,16 @@ if __name__ == '__main__':
             des_prefix = bucket_para['des_prefix']
 
             # Get List on S3
-            logger.info('Get source bucket')
-            src_file_list = get_src_file_list(s3_src_client, src_bucket, src_prefix, JobsenderCompareVersionId)
-            logger.info('Get destination bucket')
-            des_file_list = get_des_file_list(s3_des_client, des_bucket, des_prefix, table, JobsenderCompareVersionId)
+            src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
+            des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix, True)
             # Generate job list
-            job_list, ignore_records = delta_job_list(src_file_list, des_file_list,
-                                                      src_bucket, src_prefix, des_bucket, des_prefix, ignore_list,
-                                                      JobsenderCompareVersionId)
-
-            # Upload jobs to sqs
-            if len(job_list) != 0:
-                job_upload_sqs_ddb(sqs, sqs_queue, job_list)
-                max_object = max(job_list, key=itemgetter('Size'))
-                MaxChunkSize = int(max_object['Size'] / 10000) + 1024
-                if max_object['Size'] > 50*1024*1024*1024:
-                    logger.warning(f'Max object size in job_list: {str(max_object)}\n Remember to check instance memory'
-                                   f' >= MaxChunksize x MaxThread x MaxParallelFile, i.e. '
-                                   f'{MaxChunkSize} x {MaxThread} x {MaxParallelFile} = '
-                                   f'{MaxChunkSize*MaxThread*MaxParallelFile}\n If less memory, instance may crash!')
-                else:
-                    logger.info(f'Max object size in job_list is {str(max_object)}')
-            else:
-                logger.info('Source list are all in Destination, no job to send.')
+            job_list, ignore_records = delta_job_list(src_file_list, des_file_list, src_bucket, src_prefix, des_bucket, des_prefix, ignore_list)
 
             # Just backup for debug
             logger.info('Writing job and ignore list to local file backup...')
             t = time.localtime()
             start_time = f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}'
-            log_path = str(Path(log_file_name).parent)
+            log_path = os.path.split(os.path.abspath(__file__))[0] + '/s3_migration_log'
             if job_list:
                 local_backup_list = f'{log_path}/job-list-{src_bucket}-{start_time}.json'
                 with open(local_backup_list, 'w') as f:
@@ -125,6 +102,21 @@ if __name__ == '__main__':
                 with open(local_ignore_records, 'w') as f:
                     json.dump(ignore_records, f)
                 logger.info(f'Write Ignore List: {os.path.abspath(local_ignore_records)}')
+
+            # Upload jobs to sqs
+            if len(job_list) != 0:
+                job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
+                max_object = max(job_list, key=itemgetter('Size'))
+                MaxChunkSize = int(max_object['Size'] / 10000) + 1024
+                if max_object['Size'] > 50*1024*1024*1024:
+                    logger.warning(f'Max object in job_list is {str(max_object)}. Remember to check instance memory >= '
+                                   f'MaxChunksize x MaxThread x MaxParallelFile, i.e. '
+                                   f'{MaxChunkSize} x {MaxThread} x {MaxParallelFile} = '
+                                   f'{MaxChunkSize*MaxThread*MaxParallelFile}')
+                else:
+                    logger.info(f'Max object in job_list is {str(max_object)}')
+            else:
+                logger.info('Source list are all in Destination, no job to send.')
 
     else:
         logger.error('Job sqs queue is not empty or fail to get_queue_attributes. Stop process.')

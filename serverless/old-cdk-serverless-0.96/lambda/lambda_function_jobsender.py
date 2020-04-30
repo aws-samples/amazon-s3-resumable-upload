@@ -6,8 +6,8 @@ import os
 import ssl
 import urllib.request
 from operator import itemgetter
-from s3_migration_lib import get_des_file_list, get_src_file_list, job_upload_sqs_ddb, delta_job_list, check_sqs_empty
-from botocore.config import Config
+from s3_migration_lib import get_s3_file_list, job_upload_sqs_ddb, delta_job_list, check_sqs_empty
+
 import boto3
 
 # 环境变量
@@ -21,9 +21,6 @@ ssm_parameter_bucket = os.environ['ssm_parameter_bucket']
 
 # 内部参数
 JobType = "PUT"
-MaxRetry = 20  # 最大请求重试次数
-s3_config = Config(max_pool_connections=50, retries={'max_attempts': MaxRetry})  # 最大连接数
-JobsenderCompareVersionId = False
 
 # Set environment
 logger = logging.getLogger()
@@ -53,8 +50,8 @@ load_bucket_para = json.loads(ssm.get_parameter(Name=ssm_parameter_bucket)['Para
 logger.info(f'Recieved ssm {json.dumps(load_bucket_para)}')
 
 # Default Jobtype is PUT
-s3_src_client = boto3.client('s3', config=s3_config)
-s3_des_client = credentials_session.client('s3', config=s3_config)
+s3_src_client = boto3.client('s3')
+s3_des_client = credentials_session.client('s3')
 if JobType.upper() == "GET":
     s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
@@ -92,16 +89,26 @@ def lambda_handler(event, context):
 
             # Get List on S3
             logger.info('Get source bucket')
-            src_file_list = get_src_file_list(s3_src_client, src_bucket, src_prefix, JobsenderCompareVersionId)
+            src_file_list = get_s3_file_list(s3_src_client, src_bucket, src_prefix)
             logger.info('Get destination bucket')
-            des_file_list = get_des_file_list(s3_des_client, des_bucket, des_prefix, table, JobsenderCompareVersionId)
+            des_file_list = get_s3_file_list(s3_des_client, des_bucket, des_prefix, True)
             # Generate job list
             job_list, ignore_records = delta_job_list(src_file_list, des_file_list,
-                                                      src_bucket, src_prefix, des_bucket, des_prefix, ignore_list,
-                                                      JobsenderCompareVersionId)
+                                                      src_bucket, src_prefix, des_bucket, des_prefix, ignore_list)
+
+            # Output for debug
+            print("job_list: ")
+            if job_list:
+                for n in job_list:
+                    print(str(n))
+            print("ignore_records: ")
+            if ignore_records:
+                for n in ignore_records:
+                    print(str(n))
+
             # Upload jobs to sqs
             if len(job_list) != 0:
-                job_upload_sqs_ddb(sqs, sqs_queue, job_list)
+                job_upload_sqs_ddb(sqs, sqs_queue, table, job_list)
                 max_object = max(job_list, key=itemgetter('Size'))
                 MaxChunkSize = int(max_object['Size'] / 10000) + 1024
                 if max_object['Size'] >= 50 * 1024 * 1024 * 1024:

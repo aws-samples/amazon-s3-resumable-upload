@@ -3,7 +3,7 @@
 [English Readme](./README-English.md)
   
   PROJECT LONGBOW  -  Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国Amazon S3之间传输   
-Cluster & Serverless Version 0.96  
+Cluster & Serverless Version 0.98  
 
   集群和无服务器版架构图如下：  
   
@@ -236,6 +236,64 @@ CDK 默认部署时启动了 Amazon EC2 服务器上的 TCP BBR: Congestion-Base
 ```
 * 另外，注意 s3_migration_cluster_config.ini 设置为 JobType = GET 
 
+## Amazon S3 版本控制支持
+### 为什么要启用 S3 版本控制
+如果不启用S3版本控制，在大文件正在传输的过程中，如果此时原文件被新的同名文件替换，会导致复制的文件部分是老的文件，部分是新的文件，从而破坏了文件的完整性。以前做法是强调不要在传输过程中去替换源文件，或者只允许新增文件。  
+而对于无法避免会覆盖源文件的场景下，可以启用S3版本控制，则可以避免破坏文件完整性的情况。本项目已支持S3版本控制，需要配置：
+* 对源文件的S3桶“启用版本控制”（Versioning）
+* 源S3桶必须开放 ListBucketVersions, GetObjectVersion 这两个权限
+* 以及设置以下的配置参数，分不同场景说明如下
+### 支持S3 版本控制的配置参数 
+* JobsenderCompareVersionId(True/False)：  
+默认 Flase。  
+True意味着：Jobsender 在对比S3桶的时候，对源桶获取对象列表时同时获取每个对象的 versionId，来跟目标桶比对。目标桶的 versionId 是在每个对象开始下载的时候保存在 DynamoDB 中。Jobsener 会从 DynamoDB 获取目标桶 versionId 列表。Jobsender发给SQS的Job会带上versionId。  
+
+
+* UpdateVersionId(True/False)：  
+默认 Flase。  
+True意味着：Worker 在开始下载源文件之前是否更新Job所记录的versionId。这功能主要是面向 Jobsender 并没有送 versionId 过来，但又需要启用 versionId 的场景。  
+
+* GetObjectWithVersionId(True/False)：  
+默认 Flase。  
+True意味着：Worker 在获取源文件的时候，是否带 versionId 去获取。如果不带 versionId 则获取当前最新文件。  
+  
+对于Cluster版本，以上参数都在配置文件 s3_migration_config.ini 
+对于Serverless版本，以上参数分别在 Lambda jobsender 和 worker Python 文件的头部，内部参数定义的位置  
+
+### 场景
+* S3新增文件触发的SQS Jobs：  
+```
+  UpdateVersionId = False  
+  GetObjectWithVersionId = True   
+```
+  S3新增文件直接触发SQS的情况下，S3启用了版本控制功能，那么SQS消息里面是带 versionId 的，Worker 以这个versionId 去 GetObject。如果出现中断，恢复时仍以该 versionId 去再次获取。
+  如果你没有GetObjectVersion 权限，则需要把这两个开关设False，否则会因为没权限而获取文件失败 (AccessDenied)。  
+
+* Jobsender比对S3发送SQS Jobs这里又分两种目的：  
+  
+  1. 完整性：为了绝对保证文件复制过程中，即使被同名文件覆盖，也不至于文件半新半旧。  
+  ```
+  JobsenderCompareVersionId = False  
+  UpdateVersionId = True  
+  GetObjectWithVersionId = True  
+  ```
+  为了比对速度更快，所以在比对的时候不获取versionId，这样发送SQS的 versionId 是 'null'
+  在 Get object 之前获取真实 versionId，并写入 DynamoDB，完成传输之后对比DDB记录的 versionId 。在文件传输结束时，再次校验 DynamoDB 中保存的 versionId，如果因为发生中断重启，而刚好文件被替换，此时versionId会不一致，程序会重新执行传输。
+
+  2. 完整性和一致性：为了对比现存源和目的S3的文件不仅仅Size一致，版本也要一致性。并绝对保证文件复制过程中，即使被同名文件覆盖，也不至于文件半新半旧。
+  ```  
+  JobsenderCompareVersionId = True  
+  UpdateVersionId = False  
+  GetObjectWithVersionId = True  
+  ```
+  Jobsender会比对 versionId，并且发送SQS带真实 versionId。此时已经有真实的 versionId了，就没必要启用worker UpdateVersionId了，节省时间和请求数。
+    
+* 对于觉得没必要比对文件 version，文件传输过程中也不会被替换，或者没有源S3的 GetObjectVersion 权限，则三个开关都设置False即可（默认情况）
+
+### 为什么不默认就把所有开关全部打开
+* 速度问题：获取源S3 List VersionId 列表，会比只获取 Object 列表慢的多，如果文件很多（例如1万条记录以上），又是 Lambda 做 Jobsender 则可能会超过15分钟限制。
+* 权限问题：不是所有桶都会开放 GetObjectVersion 权限。例如某些 OpenDataSet 即使打开了 Versioning 功能，但却没有开放 GetObjectVersion 权限。
+
 ## 局限与提醒
 * 所需内存 = 并发数 * ChunckSize 。小于50GB的文件，ChunckSize为5MB，大于50GB的文件，则ChunkSize会自动调整为约等于: 文件Size/10000。  
 例如如果平均要处理的文件 Size 是 500GB ，ChunckSize 会自动调整为50MB，并发设置是 5 File x 10 Concurrency/File = 50，所以需要的EC2或Lambda的可运行内存约为 50 x 50MB = 2.5GB。 
@@ -244,11 +302,7 @@ CDK 默认部署时启动了 Amazon EC2 服务器上的 TCP BBR: Congestion-Base
 * CDK 默认配置的是EC2启动之后，自动通过 Userdata 脚本去yum安装 python，pip安装boto3, CloudwatchAgent，以及下载S3上面的代码和配置。  
 另外，如果你在中国区部署EC2，下载boto3, CWAgent的速度会慢，建议放到自己的S3上面，或不用userdata（包括jobsender和worker），而是自己手工部署，然后打包成AMI给EC2启动。
 
-* 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。解决方法是在完成批次迁移之后再运行一次Jobsender，比对源文件和目标文件的Size不一致则会启动任务重新传输。但如果Size一致的情况，目前不能识别。  
-
 * 不要在开始数据复制之后修改Chunksize。  
-
-* Jobsender 只对比文件 Bucket/Key 和 Size。即相同的目录下的相同文件名，而且文件大小是一样的，则会被认为是相同文件，jobsender或者单机版都会跳过这样的相同文件。如果是S3新增文件触发的复制，则不做文件是否一样的判断，直接复制。  
 
 * 删除资源则 cdk destroy 。  
 另外 DynamoDB、CloudWatch Log Group 、自动新建的 S3 bucket 需要手工删除  
