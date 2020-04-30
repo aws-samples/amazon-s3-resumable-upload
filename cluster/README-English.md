@@ -162,10 +162,10 @@ Select target Amazon S3 Storage Class, default STANDARD
 * ResumableThreshold  (default 5MB)
 Unit MBytes, the file size equal or less than this value will not go through multipart upload procedue, no resumable upload to save performance.   
 
-* MaxRetry  (default 10)
+* MaxRetry  (default 20)
 MaxRetry for single API call on application level
 
-* MaxThread  (default 10)
+* MaxThread  (default 20)
 Max thread concurrency for single file  
 
 * MaxParallelFile  (default 5)

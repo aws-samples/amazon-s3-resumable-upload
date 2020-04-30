@@ -166,10 +166,10 @@ Amazon S3 Bucket - s3-migration-cluster-resourc-deploybucket 代码部署桶，�
 * ResumableThreshold  (default 5MB)
 单位MBytes，小于该值的文件，则开始传文件时不走Multipart Upload，不做断点续传，节省性能  
 
-* MaxRetry  (default 10)
+* MaxRetry  (default 20)
 API Call在应用层面的最大重试次数
 
-* MaxThread  (default 10)
+* MaxThread  (default 20)
 单文件同时working的Thread进程数量  
 
 * MaxParallelFile  (default 5)

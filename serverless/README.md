@@ -83,7 +83,7 @@ alarm_email = "alarm_your_email@email.com"
 * Option1: 新建了一个 Amazon S3 Bucket，这个Bucket所有新增的文件都会触发SQS，从而触发Lambda进行传输。  
 如果你的 Bucket 是现有的，则可以手工配置这个Bucket触发SQS。
 * Option2: 如果你没有权限配置现有的Bucket去触发SQS，例如别人的 Bucket 只开放了读权限给你，则本CDK部署 Lambda Jobsender 定时任务去扫描这些 Bucekt，并生成传输任务给 Lambda Worker 去执行。你只需要在 CDK 中的 app.py 配置对应的 Bucekts 信息即可。
-* CDK 新建了 Amazon SQS Queue 队列和 一个相应的 SQS Queue DLQ 死信队列。InVisibleTime 15 分钟，有效期 14 天，重试 100 次后送 DLQ  
+* CDK 新建了 Amazon SQS Queue 队列和 一个相应的 SQS Queue DLQ 死信队列。InVisibleTime 15 分钟，有效期 14 天，重试 60 次后送 DLQ  
 * 新建 Amazon DynamoDB 表  
 * 上传 AWS Lambda 代码并配置函数相关参数，配置 AWS Lambda 的运行超时时间 15 分钟，内存 1GB，自动配置 AWS Lambda 访问 S3，SQS 和 DynamoDB 的 IAM 权限。Lambda 函数有两个：Jobsender 和 Worker。一个由CloudWatch Evnet 定时任务触发，负责根据Bucket信息扫描S3，生成任务发给SQS；一个是由SQS触发去传输S3上的对象。  
 * AWS CDK 会新建一个 CloudWatch Dashboard: s3_migrate_serverless 监控 SQS 消息和 Lambda 运行状态
@@ -147,6 +147,7 @@ default value: 0
 * 对源文件的S3桶“启用版本控制”（Versioning）
 * 源S3桶必须开放 ListBucketVersions, GetObjectVersion 这两个权限
 * 以及设置以下的配置参数，分不同场景说明如下
+
 ### 支持S3 版本控制的配置参数 
 * JobsenderCompareVersionId(True/False)：  
 Jobsender 在对比S3桶的时候，对源桶获取对象列表时同时获取每个对象的 versionId，来跟目标桶比对。目标桶的 versionId 是在每个对象开始下载的时候保存在 DynamoDB 中。Jobsener 会从 DynamoDB 获取目标桶 versionId 列表。Jobsender发给SQS的Job会带上versionId。默认 Flase。  
@@ -160,6 +161,7 @@ Worker 在获取源文件的时候，是否带 versionId 去获取。如果不�
   
 对于Cluster版本，以上参数都在配置文件 s3_migration_config.ini 
 对于Serverless版本，以上参数分别在 Lambda jobsender 和 worker Python 文件的头部，内部参数定义的位置
+
 ### 场景
 * S3新增文件触发的SQS Jobs：  
 ```

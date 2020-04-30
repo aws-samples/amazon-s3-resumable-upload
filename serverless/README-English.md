@@ -80,7 +80,7 @@ alarm_email = "alarm_your_email@email.com"
 * Option1: Create S3 Bucket, all new objects in this bucket will be transmitted by Lambda Worker.   
 If you want an exist S3 bucekt to trigger SQS/Lambda, you can set the trigger manually. (This is not config in this CDK)
 * Option2: If you can setup S3 bucket to trigger SQS/Lambda, e.g. only allow the read access to theses S3 buckets, then this CDK deploy Lambda Jobsender to cron scan these Buckets, compare and create jobs to SQS then trigger Lambda Worker to transmit. You only need to config the buckets information in app.py
-* Create Amazon SQS Queue and a related SQS Queue Death Letter Queue. Set InVisibleTime 15 minutes, valid 14 days, 100 Maximum Receives Redrive Policy to DLQ  
+* Create Amazon SQS Queue and a related SQS Queue Death Letter Queue. Set InVisibleTime 15 minutes, valid 14 days, 60 Maximum Receives Redrive Policy to DLQ  
 * Create Amazon DynamoDB Table for statistic purpose.   
 * Upload AWS Lambda code and config environment variable. Config Lambda timeout 15 mintues and 1GB mem. Auto config Lambda role to access the S3, SQS queue and DynamoDB Table under least priviledge.  
 There are two Lambda functions, one is Jobsender which is triggered by CloudWatch Cron Event to scan S3 buckets and creat jobs to SQS; The other is Worker, triggered by SQS then to transmit S3 objects.    
