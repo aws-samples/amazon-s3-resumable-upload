@@ -17,8 +17,8 @@ Cluster and Serverless version: Amazon S3
 单机版支持的源：本地目录/文件、Amazon S3、阿里云 OSS  
 集群与Serverless版支持源：Amazon S3  
 
-* Support destination: Amazon S3  
-支持的目的地：Amazon S3  
+* Support destination: Amazon S3, local  
+支持的目的地：Amazon S3, local   
 
 * In S3_TO_S3 or ALIOSS_TO_S3 mode, the data is only transimitted through memory of the middle node by single part, not saving to local disk of the node, for high performance, no storage needed and better security. This project can support data from 0 Size to TBytes level.  
 S3_TO_S3 或 ALIOSS_TO_S3 模式下，传输数据只以单个分片的形式过中转节点的内存，不落该节点本地盘，节省时间、存储并且数据更安全。可支撑 0 Size 至 TB 级别。  
@@ -29,21 +29,18 @@ S3_TO_S3 或 ALIOSS_TO_S3 模式下，传输数据只以单个分片的形式过
 ## Module Selection - 版本选择  
 
 ### Single Node - 单机版  
-Single Python file can run anywhere - 单个 Python 文件可在任何地方运行  
+Single Python file can run anywhere, suitable for one time transmission. - 单个 Python 文件可在任何地方运行。一次性的搬迁工作。  
 * LOCAL_TO_S3: - 本地上传   
 * S3_TO_S3: In one batch - 轻中量级，一次性运行的   
 * ALIOSS_TO_S3: - 阿里云OSS到S3  
 ### Serverless - 无服务器版:  
 AWS Lambda + Amazon SQS  
-* S3_TO_S3: Unpredictable transimission tasks, or instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB ). Leverage break-point resuming and SQS redrive, no worry of Lambda 15 minutes timeout.  
-轻中量(建议单文件< 50GB)，不定期传输，或即时数据同步。利用断点续传和SQS重驱动，Lambda不用担心15分钟超时。  
+* S3_TO_S3: Unpredictable transimission tasks, or instantly sync data. Light weight to mid-weight ( Recommanded Single file < 50GB ). Leverage break-point resuming and SQS redrive, no worry of Lambda 15 minutes timeout. Support new object in S3 bucket trigger transmission, or Jobsender scan existing S3 files.  
+轻中量(建议单文件< 50GB)，不定期传输，或即时数据同步。利用断点续传和SQS重驱动，Lambda不用担心15分钟超时。支持S3新增文件触发传输，或Jobsender定时扫描现有S3文件。  
 ### Cluster - 集群版:  
 Amazon EC2 Autoscaling + Amazon SQS 
-* S3_TO_S3: Mass of files with single size from 0 to TByte. Cron scan tasks or instantly sync data ( S3 trigger SQS ).  
-大量文件，单文件从0到TB级别。定时任务扫描或即时数据同步（S3触发SQS）。  
-### Jobsender - 任务调度:  
-* Scan S3 exist objects, create delta job list to trigger SQS. Can work with Cluster or Serverless. The code is in the folder of Cluster. The Cluster CDK will deploy Jobsender Server. The Serverless CDK has not deploy this, you can manually deploy if needed.  
-扫描S3现有文件，生成差异列表发任务到SQS。可以与Cluster或Serverless一起工作。代码在Cluster目录下，Cluster 的 CDK 会自动部署 Jobsender 服务器，Serverless 的 CDK 暂时没做这个部署，如果需要可以手工部署。  
+* S3_TO_S3: Mass of files with single size from 0 to TByte. Cron scan tasks or instantly sync data ( S3 trigger SQS ). Support new object in S3 bucket trigger transmission, or Jobsender scan existing S3 files.  
+大量文件，单文件从0到TB级别。定时任务扫描或即时数据同步（S3触发SQS）。支持S3新增文件触发传输，或Jobsender定时扫描现有S3文件。  
 
 ## Description - 说明
 ### Single Node Module Detail - 单机版  
@@ -87,7 +84,12 @@ Amazon EC2 自动扩展集群版本和无服务器 AWS Lambda版本，可以分�
   Cluster&Serverless Module Architeture - 集群和无服务器版架构图如下：  
   
 ![Cluster Diagram](./img/02.png)  
-  
-## License
 
+## License
+  
 This library is licensed under the MIT-0 License. See the LICENSE file.
+  
+  ******
+  Author: Huang, Zhuobin
+  ******
+  
