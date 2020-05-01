@@ -18,14 +18,12 @@ checkip_url = os.environ['checkip_url']
 sqs_queue_name = os.environ['sqs_queue']
 ssm_parameter_ignore_list = os.environ['ssm_parameter_ignore_list']
 ssm_parameter_bucket = os.environ['ssm_parameter_bucket']
-
-# 内部参数
-JobType = "PUT"
-MaxRetry = 20  # 最大请求重试次数
-s3_config = Config(max_pool_connections=50, retries={'max_attempts': MaxRetry})  # 最大连接数
-JobsenderCompareVersionId = False
+JobType = os.environ['JobType']
+MaxRetry = int(os.environ['MaxRetry'])  # 最大请求重试次数
+JobsenderCompareVersionId = os.environ['JobsenderCompareVersionId'].upper() == 'TRUE'
 
 # Set environment
+s3_config = Config(max_pool_connections=50, retries={'max_attempts': MaxRetry})  # 最大连接数
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 

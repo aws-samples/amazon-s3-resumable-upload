@@ -20,21 +20,19 @@ except Exception as e:
     Des_bucket_default, Des_prefix_default = "", ""
 ssm_parameter_credentials = os.environ['ssm_parameter_credentials']
 checkip_url = os.environ['checkip_url']
+JobType = os.environ['JobType']
+MaxRetry = int(os.environ['MaxRetry'])  # 最大请求重试次数
+MaxThread = int(os.environ['MaxThread'])  # 最大线程数
+MaxParallelFile = int(os.environ['MaxParallelFile'])  # Lambda 中暂时没用到
+JobTimeout = int(os.environ['JobTimeout'])
+UpdateVersionId = os.environ['UpdateVersionId'].upper() == 'TRUE'  # get lastest version id from s3 before get object
+GetObjectWithVersionId = os.environ['GetObjectWithVersionId'].upper() == 'TRUE'  # get object with version id
 
 # 内部参数
-JobType = "PUT"
-MaxRetry = 20  # 最大请求重试次数
-MaxThread = 50  # 最大线程数
-MaxParallelFile = 1  # Lambda 中暂时没用到
-JobTimeout = 870
-
 ResumableThreshold = 5 * 1024 * 1024  # Accelerate to ignore small file
 CleanUnfinishedUpload = False  # For debug
 ChunkSize = 5 * 1024 * 1024  # For debug, will be auto-change
 ifVerifyMD5Twice = False  # For debug
-UpdateVersionId = False  # get lastest version id from s3 before get object
-GetObjectWithVersionId = False  # get object with version id
-
 s3_config = Config(max_pool_connections=50, retries={'max_attempts': MaxRetry})  # 最大连接数
 
 # Set environment
@@ -61,7 +59,6 @@ s3_des_client = credentials_session.client('s3', config=s3_config)
 if JobType.upper() == "GET":
     s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
-
 try:
     context = ssl._create_unverified_context()
     response = urllib.request.urlopen(
@@ -82,7 +79,6 @@ class WrongRecordFormat(Exception):
 
 
 def lambda_handler(event, context):
-
     print("Lambda or NAT IP Address:", instance_id)
     logger.info(json.dumps(event, default=str))
 

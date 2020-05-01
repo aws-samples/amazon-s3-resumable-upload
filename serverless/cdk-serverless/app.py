@@ -17,19 +17,34 @@ import aws_cdk.aws_logs as logs
 import aws_cdk.aws_apigateway as api
 import json
 
-# Define bucket parameter before deploy CDK
+# Define bucket and prefix for Jobsender to compare
 bucket_para = [{
-    "src_bucket": "broad-references",
+    "src_bucket": "huangzb-tokyo-video",
     "src_prefix": "",
-    "des_bucket": "s3-lambda-test",
+    "des_bucket": "s3-migration-test-nx",
     "des_prefix": ""
 }]
 StorageClass = 'STANDARD'
 
-# Des_bucket_default is only used for non-jobsender senario: S3 trigger SQS then to Lambda,
+# Des_bucket_default is only used for non-jobsender use case, S3 trigger SQS then to Lambda.
 # There is no destination buckets information in SQS message in this case, so you need to setup Des_bucket_default
 Des_bucket_default = 's3-migration-test-nx'
-Des_prefix_default = 's3-migration-cdk-from-jp'
+Des_prefix_default = 'from-jp'
+
+JobType = 'PUT'
+# 'PUT': Destination Bucket is not the same account as Lambda.
+# 'GET': Source bucket is not the same account as Lambda.
+
+MaxRetry = '20'  # Max retry for requests
+MaxThread = '50'  # Max threads per file
+MaxParallelFile = '1'  # Recommend to be 1 in AWS Lambda
+JobTimeout = '870'  # Timeout for each job, should be less than AWS Lambda timeout
+JobsenderCompareVersionId = 'False'  # Jobsender should compare versioinId of source B3 bucket and versionId in DDB
+UpdateVersionId = 'False'  # get lastest version id from s3 before before get object
+GetObjectWithVersionId = 'False'  # get object together with the specified version id
+
+# Setup your alarm email
+alarm_email = "alarm_your_email@email.com"
 
 # The region credential (not the same account as Lambda) setting in SSM Parameter Store
 ssm_parameter_credentials = 's3_migration_credentials'
@@ -49,9 +64,6 @@ And then in this template will assign ec2 role to access it.
 例如EC2在Global，则这个是China Account access_key，反之EC2在中国，这就是Global Account
 CDK 不允许直接部署加密Key，所以你需要先去手工创建，然后在CDK中会赋予EC2角色有读取权限
 '''
-
-# Setup your alarm email
-alarm_email = "alarm_your_email@email.com"
 
 # Setup ignore files list, you can put the file name/wildcard for ignoring in this txt file:
 try:
@@ -137,7 +149,14 @@ class CdkResourceStack(core.Stack):
                                    'Des_prefix_default': Des_prefix_default,
                                    'StorageClass': StorageClass,
                                    'checkip_url': checkip.url,
-                                   'ssm_parameter_credentials': ssm_parameter_credentials
+                                   'ssm_parameter_credentials': ssm_parameter_credentials,
+                                   'JobType': JobType,
+                                   'MaxRetry': MaxRetry,
+                                   'MaxThread': MaxThread,
+                                   'MaxParallelFile': MaxParallelFile,
+                                   'JobTimeout': JobTimeout,
+                                   'UpdateVersionId': UpdateVersionId,
+                                   'GetObjectWithVersionId':GetObjectWithVersionId
                                })
 
         handler_jobsender = lam.Function(self, "s3-migrate-jobsender",
@@ -154,7 +173,10 @@ class CdkResourceStack(core.Stack):
                                              'sqs_queue': sqs_queue.queue_name,
                                              'ssm_parameter_credentials': ssm_parameter_credentials,
                                              'ssm_parameter_ignore_list': ssm_parameter_ignore_list.parameter_name,
-                                             'ssm_parameter_bucket': ssm_bucket_para.parameter_name
+                                             'ssm_parameter_bucket': ssm_bucket_para.parameter_name,
+                                             'JobType': JobType,
+                                             'MaxRetry': MaxRetry,
+                                             'JobsenderCompareVersionId': JobsenderCompareVersionId
                                          })
 
         # Allow lambda read/write DDB, SQS
