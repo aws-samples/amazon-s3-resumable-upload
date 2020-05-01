@@ -6,6 +6,9 @@ Muliti-thread Amazon S3 upload tool, breaking-point resume supported, suitable f
 Upload from local disk, copy files between Global AWS and China AWS S3, or migrate from AliCloud OSS to Amazon S3  
 从本地硬盘上传，或海外与中国区 Amazon S3 之间互相拷贝，或从阿里云 OSS 迁移到 Amazon S3。  
 
+Single Python file can run anywhere, suitable for one time transmission.  
+单个 Python 文件可在任何地方运行。适合一次性的搬迁工作。  
+
 ### Features:  
 具体功能包括：  
 
