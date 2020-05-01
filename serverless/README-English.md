@@ -160,7 +160,7 @@ Default: False
 True means: When Worker get object from source bucket, get with specified versionId. If set the switch to False, it will get the lastest version of the object.  
   
 For Cluster version, the above parameters are in s3_migration_config.ini  
-For Serverless version, the above parameters are in head lines in lambda_function_jobsender and lambda_function_worker python files.  
+For Serverless version, the above parameters are in Lambda Environment Variable of Jobsender and Worker.  
 
 ### Senario of choosing parameters
 * S3 new object trigger SQS Jobs:  

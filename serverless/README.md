@@ -160,7 +160,7 @@ Worker 在获取源文件的时候，是否带 versionId 去获取。如果不�
 默认 Flase。  
   
 对于Cluster版本，以上参数都在配置文件 s3_migration_config.ini 
-对于Serverless版本，以上参数分别在 Lambda jobsender 和 worker Python 文件的头部，内部参数定义的位置
+对于Serverless版本，以上参数分别在 Lambda jobsender 和 worker 的环境变量中
 
 ### 场景
 * S3新增文件触发的SQS Jobs：  
