@@ -15,7 +15,7 @@ Amazon EC2 Autoscaling Group Cluster and Serverless AWS Lambda can be deployed t
   
   Serverless Version Architecture  
   
-![Serverless Diagram](./img/05.png)  
+![Serverless Diagram](./img/02.png)  
 
 ### Performance Test:
 * us-east-1 AWS Lambda ( No need of NAT) 1310 of files, from 4MB to 1.3GB, totally 50GB. Accomplish transmission to China cn-northwest-1 in 10 minutes. Max Lambda concurrency runtime 153. As file size growing up, transmission spent time is no growing up significantly. Each file is handled by one Lambda runtime, bigger file, will be more threads running concurrently in one runtime. In this case, Lambda setup as 1GB mem, according to your job file size, you can optimize to best cost.
