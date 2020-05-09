@@ -195,32 +195,22 @@ S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Buc
 * It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
 本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。  
 
+## 自动安装脚本
+[ec2_init.sh](./ec2_init.sh)  
+If you are going to run on a EC2, the above link is a shell script to help to setup:  
+如果你准备在 EC2 上运行，上面这个Link是一个Shell脚本，帮助你快速安装：  
+* python3
+* boto3(AWS SDK)
+* git
+* Enable TCP BBR
+* Download this code repository
+
 ## TCP BBR improve Network performance - 提高网络性能
 If copy cross AWS Global and China, recommend to enable TCP BBR: Congestion-Based Congestion Control, which can improve performance.   
 如果是跨 AWS Global 和中国区，推荐启用 TCP BBR: Congestion-Based Congestion Control，可以提高传输效率  
 
 [Amazon Linux AMI 2017.09.1 Kernel 4.9.51](https://aws.amazon.com/cn/amazon-linux-ami/2017.09-release-notes/) or later version supported TCP Bottleneck Bandwidth and RTT (BBR) .  
 
-BBR is `NOT` enabled by default. You can enable it on your EC2 Instance via:：
-```
-$ sudo modprobe tcp_bbr
-$ sudo modprobe sch_fq
-$ sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
-```
-Persistent configuration should look like:
-```
-$ sudo su -
-
-# cat <<EOF>> /etc/sysconfig/modules/tcpcong.modules
->#!/bin/bash
-> exec /sbin/modprobe tcp_bbr >/dev/null 2>&1
-> exec /sbin/modprobe sch_fq >/dev/null 2>&1
-> EOF
-
-# chmod 755 /etc/sysconfig/modules/tcpcong.modules
-
-# echo "net.ipv4.tcp_congestion_control = bbr" >> /etc/sysctl.d/00-tcpcong.conf
-```
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
