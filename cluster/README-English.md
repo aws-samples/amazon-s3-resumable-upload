@@ -3,9 +3,13 @@
   PROJECT LONGBOW  -  Amazon EC2 Autoscaling Cluster. Support mass scale of large objects trasmission between AWS Global Amazon S3 and China Amazon S3   
 Cluster & Serverless Version 0.98  
 
-  Cluster and Serverless Version Architecture:  
+  Architecture:  
+  Amazon S3 New Create Object trigger transmission:  
+![Cluster Diagram New created object in S3](./img/02-new.png)  
   
-![Cluster Diagram](./img/02.png)  
+  Jobsender scan Amazon S3 to send jobs:
+![Cluster Diagram Jobsender scan buckets](./img/02-jobsender.png)  
+  If need to cron run Jobsender, you can logon to the EC2 to setup (crontab -e ) to run s3_migration_cluster_jobsender.py  
   
 ## Highlight 
 * Transmit between Global and China Amazon S3: Cluster Version suitable of mass scale transmission, Serverless Version suitable for unpredictable burst transmission  

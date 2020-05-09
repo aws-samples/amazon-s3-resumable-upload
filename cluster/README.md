@@ -5,9 +5,13 @@
   PROJECT LONGBOW  -  Amazon EC2 Autoscaling 集群，支撑海量文件于海外和中国Amazon S3之间传输   
 Cluster & Serverless Version 0.98  
 
-  集群和无服务器版架构图如下：  
+  架构图如下：  
+  Amazon S3 新增文件触发传输：
+![Cluster Diagram New created object in S3](./img/02-new.png)  
   
-![Cluster Diagram](./img/02.png)  
+  Jobsender 扫描 Amazon S3 派发传输任务：
+![Cluster Diagram Jobsender scan buckets](./img/02-jobsender.png)  
+  如果需要定时运行Jobsender任务，可以登录EC2设置定时任务（crontab -e 命令）运行s3_migration_cluster_jobsender.py。  
   
 ## 特点
 * **海外和国内Amazon S3互传**：集群版适用于海量文件传输，无服务器版适合不定期突发传输。  
