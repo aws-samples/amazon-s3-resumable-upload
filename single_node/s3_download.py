@@ -555,7 +555,7 @@ if __name__ == '__main__':
     logger, log_file_name = set_log()
 
     # Define s3 client
-    s3_config = Config(max_pool_connections=100, retries={'max_attempts': MaxRetry})
+    s3_config = Config(max_pool_connections=200, retries={'max_attempts': MaxRetry})
     s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
 
     # Define DB table
