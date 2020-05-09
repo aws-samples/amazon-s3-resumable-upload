@@ -57,7 +57,7 @@ if JobType.upper() == "GET":
     s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
 try:
-    context = ssl._create_unverified_context()
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     response = urllib.request.urlopen(
         urllib.request.Request(checkip_url), timeout=3, context=context
     ).read()

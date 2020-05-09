@@ -23,7 +23,7 @@ checkip_url = os.environ['checkip_url']
 JobType = os.environ['JobType']
 MaxRetry = int(os.environ['MaxRetry'])  # 最大请求重试次数
 MaxThread = int(os.environ['MaxThread'])  # 最大线程数
-MaxParallelFile = int(os.environ['MaxParallelFile'])  # Lambda 中固定为1
+MaxParallelFile = int(os.environ['MaxParallelFile'])  # Lambda 中暂时没用到
 JobTimeout = int(os.environ['JobTimeout'])
 UpdateVersionId = os.environ['UpdateVersionId'].upper() == 'TRUE'  # get lastest version id from s3 before get object
 GetObjectWithVersionId = os.environ['GetObjectWithVersionId'].upper() == 'TRUE'  # get object with version id
@@ -33,8 +33,8 @@ ResumableThreshold = 5 * 1024 * 1024  # Accelerate to ignore small file
 CleanUnfinishedUpload = False  # For debug
 ChunkSize = 5 * 1024 * 1024  # For debug, will be auto-change
 ifVerifyMD5Twice = False  # For debug
-s3_config = Config(max_pool_connections=200, retries={
-                   'max_attempts': MaxRetry})  # 最大连接数
+s3_config = Config(max_pool_connections=200,
+                   retries={'max_attempts': MaxRetry})  # 最大连接数
 
 # Set environment
 logger = logging.getLogger()
@@ -61,7 +61,7 @@ if JobType.upper() == "GET":
     s3_src_client, s3_des_client = s3_des_client, s3_src_client
 
 try:
-    context = ssl._create_unverified_context()
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     response = urllib.request.urlopen(
         urllib.request.Request(checkip_url), timeout=3, context=context
     ).read()
@@ -100,7 +100,7 @@ def lambda_handler(event, context):
                 if 's3' in One_record:
                     Src_bucket = One_record['s3']['bucket']['name']
                     Src_key = One_record['s3']['object']['key']
-                    Src_key = urllib.parse.unquote_plus(Src_key)
+                    Src_key = urllib.parse.unquote_plus(Src_key)  # 加号转回空格
                     Size = One_record['s3']['object']['size']
                     if "versionId" in One_record['s3']['object']:
                         versionId = One_record['s3']['object']['versionId']

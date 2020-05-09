@@ -156,7 +156,7 @@ class CdkResourceStack(core.Stack):
                                    'MaxParallelFile': MaxParallelFile,
                                    'JobTimeout': JobTimeout,
                                    'UpdateVersionId': UpdateVersionId,
-                                   'GetObjectWithVersionId':GetObjectWithVersionId
+                                   'GetObjectWithVersionId': GetObjectWithVersionId
                                })
 
         handler_jobsender = lam.Function(self, "s3-migrate-jobsender",
@@ -283,12 +283,10 @@ class CdkResourceStack(core.Stack):
 
         board.add_widgets(cw.GraphWidget(title="Lambda-NETWORK",
                                          left=[lambda_metric_Download, lambda_metric_Upload, lambda_metric_Complete]),
-                          # TODO: here monitor all lambda concurrency not just the working one. Limitation from CDK
-                          # Lambda now supports monitor single lambda concurrency, will change this after CDK support
-                          cw.GraphWidget(title="Lambda-all-concurrent",
-                                         left=[handler.metric_all_concurrent_executions(
-                                             period=core.Duration.minutes(1))]),
-
+                          cw.GraphWidget(title="Lambda-concurrent",
+                                         left=[handler.metric(metric_name="ConcurrentExecutions",
+                                                              period=core.Duration.minutes(1)
+                                                              )]),
                           cw.GraphWidget(title="Lambda-invocations/errors/throttles",
                                          left=[handler.metric_invocations(period=core.Duration.minutes(1)),
                                                handler.metric_errors(period=core.Duration.minutes(1)),
@@ -341,7 +339,7 @@ class CdkResourceStack(core.Stack):
         alarm_DLQ.add_alarm_action(action.SnsAction(alarm_topic))
 
         core.CfnOutput(self, "Dashboard", value="CloudWatch Dashboard name s3_migrate_serverless")
-        
+
         # Alarm for queue empty, i.e. no visible message and no in-visible message
         # metric_all_message = cw.MathExpression(
         #     expression="a + b",
@@ -363,6 +361,7 @@ class CdkResourceStack(core.Stack):
         # alarm_topic = sns.Topic(self, "SQS queue empty-Serverless")
         # alarm_topic.add_subscription(subscription=sub.EmailSubscription(alarm_email))
         # alarm_0.add_alarm_action(action.SnsAction(alarm_topic))
+
 
 ###############
 app = core.App()
