@@ -3,7 +3,7 @@
 import os
 import sys
 import concurrent.futures
-from configparser import ConfigParser
+from configparser import ConfigParser, NoOptionError
 
 from s3_migration_lib import set_env, set_log, job_looper
 
@@ -34,7 +34,7 @@ try:
     try:
         Des_bucket_default = cfg.get('Basic', 'Des_bucket_default')
         Des_prefix_default = cfg.get('Basic', 'Des_prefix_default')
-    except Exception as e:
+    except NoOptionError:
         Des_bucket_default = 'foo'
         Des_prefix_default = ''
 except Exception as e:
@@ -46,8 +46,8 @@ try:
     table_queue_name = os.environ['table_queue_name']
     sqs_queue_name = os.environ['sqs_queue_name']
     ssm_parameter_bucket = os.environ['ssm_parameter_bucket']
-except Exception:
-    print("No Environment Variable from CDK, use the para from config.ini")
+except Exception as e:
+    print("No Environment Variable from CDK, use the para from config.ini", str(e))
 
 # Main
 if __name__ == '__main__':
@@ -57,7 +57,12 @@ if __name__ == '__main__':
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \
-        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials, MaxRetry)
+        set_env(JobType=JobType,
+                LocalProfileMode=LocalProfileMode,
+                table_queue_name=table_queue_name,
+                sqs_queue_name=sqs_queue_name,
+                ssm_parameter_credentials=ssm_parameter_credentials,
+                MaxRetry=MaxRetry)
 
     #######
     # Program start processing here
@@ -68,8 +73,22 @@ if __name__ == '__main__':
     with concurrent.futures.ThreadPoolExecutor(max_workers=MaxParallelFile) as job_pool:
         for i in range(MaxParallelFile):  # 这里只控制多个Job同时循环进行，每个Job的并发和超时在内层控制
             job_pool.submit(job_looper,
-                            sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
-                            StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
-                            JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
-                            Des_bucket_default, Des_prefix_default, UpdateVersionId, GetObjectWithVersionId
+                            sqs=sqs,
+                            sqs_queue=sqs_queue,
+                            table=table,
+                            s3_src_client=s3_src_client,
+                            s3_des_client=s3_des_client,
+                            instance_id=instance_id,
+                            StorageClass=StorageClass,
+                            ChunkSize=ChunkSize,
+                            MaxRetry=MaxRetry,
+                            MaxThread=MaxThread,
+                            ResumableThreshold=ResumableThreshold,
+                            JobTimeout=JobTimeout,
+                            ifVerifyMD5Twice=ifVerifyMD5Twice,
+                            CleanUnfinishedUpload=CleanUnfinishedUpload,
+                            Des_bucket_default=Des_bucket_default,
+                            Des_prefix_default=Des_prefix_default,
+                            UpdateVersionId=UpdateVersionId,
+                            GetObjectWithVersionId=GetObjectWithVersionId
                             )

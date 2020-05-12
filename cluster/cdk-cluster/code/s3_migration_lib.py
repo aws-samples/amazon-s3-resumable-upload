@@ -11,7 +11,7 @@ import urllib.parse
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
-from boto3.dynamodb import conditions
+# from boto3.dynamodb import conditions
 import json
 import os
 import sys
@@ -44,7 +44,7 @@ def set_log(LoggingLevel, this_file_name):
 
 
 # Set environment
-def set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials, MaxRetry):
+def set_env(*, JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials, MaxRetry):
     s3_config = Config(max_pool_connections=200, retries={'max_attempts': MaxRetry})  # boto default 10
 
     if os.uname()[0] == 'Linux' and not LocalProfileMode:  # on EC2, use EC2 role
@@ -101,12 +101,15 @@ def set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_par
 
     table = dynamodb.Table(table_queue_name)
     table.wait_until_exists()
-    sqs_queue = wait_sqs_available(sqs, sqs_queue_name)
+    sqs_queue = wait_sqs_available(
+        sqs=sqs,
+        sqs_queue_name=sqs_queue_name
+    )
 
     return sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm
 
 
-def wait_sqs_available(sqs, sqs_queue_name):
+def wait_sqs_available(*, sqs, sqs_queue_name):
     while True:
         try:
             return sqs.get_queue_url(QueueName=sqs_queue_name)['QueueUrl']
@@ -135,7 +138,7 @@ def check_sqs_empty(sqs, sqs_queue):
 
 
 # Get source S3 bucket file list with versionId
-def get_src_file_list(s3_client, bucket, S3Prefix, JobsenderCompareVersionId):
+def get_src_file_list(*, s3_client, bucket, S3Prefix, JobsenderCompareVersionId):
     # get s3 file list
     file_list = []
     if JobsenderCompareVersionId:
@@ -176,9 +179,12 @@ def get_src_file_list(s3_client, bucket, S3Prefix, JobsenderCompareVersionId):
 
 
 # Get Destination S3 bucket file list with versionId from DDB
-def get_des_file_list(s3_client, bucket, S3Prefix, table, JobsenderCompareVersionId):
+def get_des_file_list(*, s3_client, bucket, S3Prefix, table, JobsenderCompareVersionId):
     if JobsenderCompareVersionId:
-        ver_list = get_versionid_from_ddb(bucket, table)
+        ver_list = get_versionid_from_ddb(
+            des_bucket=bucket,
+            table=table
+        )
     else:
         ver_list = {}
     # For delete prefix in des_prefix
@@ -219,7 +225,7 @@ def get_des_file_list(s3_client, bucket, S3Prefix, table, JobsenderCompareVersio
 
 
 # Get s3 object versionId record in DDB
-def get_versionid_from_ddb(des_bucket, table):
+def get_versionid_from_ddb(*, des_bucket, table):
     logger.info(f'Get des_bucket versionId list from DDB')
     ver_list = {}
     try:
@@ -238,7 +244,7 @@ def get_versionid_from_ddb(des_bucket, table):
 
 
 # Jobsender compare source and destination bucket list
-def delta_job_list(src_file_list, des_file_list, src_bucket, src_prefix, des_bucket, des_prefix, ignore_list,
+def delta_job_list(*, src_file_list, des_file_list, src_bucket, src_prefix, des_bucket, des_prefix, ignore_list,
                    JobsenderCompareVersionId):
     # Delta list，只对比key&size，version不做对比，只用来发Job
     logger.info(f'Compare source s3://{src_bucket}/{src_prefix} and destination s3://{des_bucket}/{des_prefix}')
@@ -287,7 +293,7 @@ def delta_job_list(src_file_list, des_file_list, src_bucket, src_prefix, des_buc
     return job_list, ignore_records
 
 
-def job_upload_sqs_ddb(sqs, sqs_queue, job_list):
+def job_upload_sqs_ddb(*, sqs, sqs_queue, job_list):
     sqs_batch = 0
     sqs_message = []
     logger.info(f'Start uploading jobs to queue: {sqs_queue}')
@@ -328,7 +334,7 @@ def split(Size, ChunkSize):
 
 
 # Get S3 versionID
-def head_s3_version(s3_src_client, Src_bucket, Src_key):
+def head_s3_version(*, s3_src_client, Src_bucket, Src_key):
     logger.info(f'Try to update VersionId: {Src_bucket}/{Src_key}')
     try:
         head = s3_src_client.head_object(
@@ -345,7 +351,7 @@ def head_s3_version(s3_src_client, Src_bucket, Src_key):
 
 
 # Get unfinished multipart upload id from s3
-def get_uploaded_list(s3_client, Des_bucket, Des_key):
+def get_uploaded_list(*, s3_client, Des_bucket, Des_key):
     multipart_uploaded_list = []
     paginator = s3_client.get_paginator('list_multipart_uploads')
     try:
@@ -370,7 +376,7 @@ def get_uploaded_list(s3_client, Des_bucket, Des_key):
 
 
 # Check file on the list from get_uploaded_list and get created multipart id
-def check_file_exist(prefix_and_key, UploadIdList):
+def check_file_exist(*, prefix_and_key, UploadIdList):
     # 查Key是否有未完成的UploadID
     keyIDList = []
     for u in UploadIdList:
@@ -390,7 +396,7 @@ def check_file_exist(prefix_and_key, UploadIdList):
 
 
 # Check uploaded part number list on Des_bucket
-def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client):
+def checkPartnumberList(*, Des_bucket, Des_key, uploadId, s3_des_client):
     partnumberList = []
     logger.info(f'Get partnumber list - {Des_bucket}/{Des_key}')
     paginator = s3_des_client.get_paginator('list_parts')
@@ -418,7 +424,7 @@ def checkPartnumberList(Des_bucket, Des_key, uploadId, s3_des_client):
 
 
 # Process one job
-def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_des_client,
+def job_processor(*, uploadId, indexList, partnumberList, job, s3_src_client, s3_des_client,
                   MaxThread, ChunkSize, MaxRetry, JobTimeout, ifVerifyMD5Twice, GetObjectWithVersionId):
     # 线程生成器，配合thread pool给出每个线程的对应关系，便于设置超时控制
     def thread_gen(woker_thread, pool,
@@ -429,13 +435,20 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                 dryrun = False  # dryrun 是为了沿用现有的流程做出完成列表，方便后面计算 MD5
             else:
                 dryrun = True
-            th = pool.submit(woker_thread, stop_signal, partnumber, partStartIndex,
-                             total, md5list, dryrun, complete_list)
+            th = pool.submit(woker_thread,
+                             stop_signal=stop_signal,
+                             partnumber=partnumber,
+                             partStartIndex=partStartIndex,
+                             total=total,
+                             md5list=md5list,
+                             dryrun=dryrun,
+                             complete_list=complete_list
+                             )
             partnumber += 1
             yield th
 
     # download part from src. s3 and upload to dest. s3
-    def woker_thread(stop_signal, partnumber, partStartIndex, total, md5list, dryrun, complete_list):
+    def woker_thread(*, stop_signal, partnumber, partStartIndex, total, md5list, dryrun, complete_list):
         if stop_signal.is_set():
             return "TIMEOUT"
         Src_bucket = job['Src_bucket']
@@ -443,6 +456,7 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
         Des_bucket = job['Des_bucket']
         Des_key = job['Des_key']
         versionId = job['versionId']
+        getBody, chunkdata_md5 = b'', b''  # init
 
         # 下载文件
         if ifVerifyMD5Twice or not dryrun:  # 如果 ifVerifyMD5Twice 则无论是否已有上传过都重新下载，作为校验整个文件用
@@ -483,7 +497,8 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
                     logger.warning(f"ClientError: Fail to download {Src_bucket}/{Src_key} - ERR: {str(err)}. "
                                    f"Retry part: {partnumber} - Attempts: {retryTime}")
                     if retryTime >= MaxRetry:  # 超过次数退出
-                        logger.error(f"ClientError: Quit for Max Download retries: {retryTime} - {Src_bucket}/{Src_key}")
+                        logger.error(f"ClientError: Quit for Max Download retries: {retryTime} - "
+                                     f"{Src_bucket}/{Src_key}")
                         stop_signal.set()
                         return "TIMEOUT"  # 退出Thread
                     else:
@@ -606,9 +621,8 @@ def job_processor(uploadId, indexList, partnumberList, job, s3_src_client, s3_de
 
 # Complete multipart upload
 # 通过查询回来的所有Part列表uploadedListParts来构建completeStructJSON
-def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client):
+def completeUpload(*, uploadId, Des_bucket, Des_key, len_indexList, s3_des_client):
     # 查询S3的所有Part列表uploadedListParts构建completeStructJSON
-    # 发现跟checkPartnumberList有点像，但计算Etag不同，隔太久了，懒得合并了 :)
     uploadedListPartsClean = []
     logger.info(f'Get partnumber list - {Des_bucket}/{Des_key}')
     paginator = s3_des_client.get_paginator('list_parts')
@@ -627,6 +641,14 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client):
                         "ETag": p["ETag"],
                         "PartNumber": p["PartNumber"]
                     })
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'NoSuchUpload':
+            # 没这个ID，则是别人已经完成这个Job了。
+            logger.warning(f'ClientError: Fail to list parts while completeUpload - might be duplicated job:'
+                           f' {Des_bucket}/{Des_key}, {str(err)}')
+            return "QUIT"
+        logger.error(f'ClientError: Fail to list parts while completeUpload - {Des_bucket}/{Des_key} - {str(e)}')
+        return "ERR"
     except Exception as e:
         logger.error(f'Fail to list parts while completeUpload - {Des_bucket}/{Des_key} - {str(e)}')
         return "ERR"
@@ -646,6 +668,7 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client):
             MultipartUpload=completeStructJSON
         )
         result = response_complete['ETag']
+        logger.info(f'Merged: {Des_bucket}/{Des_key}')
     except Exception as e:
         logger.error(f'Fail to complete multipart upload {Des_bucket}/{Des_key}, {str(e)}')
         return "ERR"
@@ -655,7 +678,7 @@ def completeUpload(uploadId, Des_bucket, Des_key, len_indexList, s3_des_client):
 
 
 # Continuely get job message to invoke one processor per job
-def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
+def job_looper(*, sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                StorageClass, ChunkSize, MaxRetry, MaxThread, ResumableThreshold,
                JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
                Des_bucket_default, Des_prefix_default, UpdateVersionId, GetObjectWithVersionId):
@@ -712,13 +735,34 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
                     # 主流程
                     if 'Event' not in job:
                         if job['Size'] > ResumableThreshold:
-                            upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
-                                                             StorageClass, ChunkSize, MaxRetry, MaxThread,
-                                                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
-                                                             UpdateVersionId, GetObjectWithVersionId)
+                            upload_etag_full = step_function(
+                                job=job,
+                                table=table,
+                                s3_src_client=s3_src_client,
+                                s3_des_client=s3_des_client,
+                                instance_id=instance_id,
+                                StorageClass=StorageClass,
+                                ChunkSize=ChunkSize,
+                                MaxRetry=MaxRetry,
+                                MaxThread=MaxThread,
+                                JobTimeout=JobTimeout,
+                                ifVerifyMD5Twice=ifVerifyMD5Twice,
+                                CleanUnfinishedUpload=CleanUnfinishedUpload,
+                                UpdateVersionId=UpdateVersionId,
+                                GetObjectWithVersionId=GetObjectWithVersionId
+                            )
                         else:
-                            upload_etag_full = step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
-                                                      StorageClass, MaxRetry, UpdateVersionId, GetObjectWithVersionId)
+                            upload_etag_full = step_fn_small_file(
+                                job=job,
+                                table=table,
+                                s3_src_client=s3_src_client,
+                                s3_des_client=s3_des_client,
+                                instance_id=instance_id,
+                                StorageClass=StorageClass,
+                                MaxRetry=MaxRetry,
+                                UpdateVersionId=UpdateVersionId,
+                                GetObjectWithVersionId=GetObjectWithVersionId
+                            )
                     else:
                         if job['Event'] == 's3:TestEvent':
                             logger.info('Skip s3:TestEvent')
@@ -749,10 +793,10 @@ def job_looper(sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id,
 
 
 # 清理S3上现有未完成的Multipart Upload ID（当前Job）
-def clean_multipart_upload(multipart_uploaded_list, Des_bucket):
+def clean_multipart_upload(*, s3_client, multipart_uploaded_list, Des_bucket):
     for clean_i in multipart_uploaded_list:
         try:
-            s3_des_client.abort_multipart_upload(
+            s3_client.abort_multipart_upload(
                 Bucket=Des_bucket,
                 Key=clean_i["Key"],
                 UploadId=clean_i["UploadId"]
@@ -763,7 +807,7 @@ def clean_multipart_upload(multipart_uploaded_list, Des_bucket):
 
 
 # Steps func for multipart upload for one job
-def step_function(job, table, s3_src_client, s3_des_client, instance_id,
+def step_function(*, job, table, s3_src_client, s3_des_client, instance_id,
                   StorageClass, ChunkSize, MaxRetry, MaxThread,
                   JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload, UpdateVersionId, GetObjectWithVersionId):
     # 正常开始处理
@@ -777,12 +821,20 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
     logger.info(f'Start multipart: {Src_bucket}/{Src_key}, Size: {Size}, versionId: {versionId}')
 
     # Get dest s3 unfinish multipart upload of this file
-    multipart_uploaded_list = get_uploaded_list(s3_des_client, Des_bucket, Des_key)
+    multipart_uploaded_list = get_uploaded_list(
+        s3_client=s3_des_client,
+        Des_bucket=Des_bucket,
+        Des_key=Des_key
+    )
 
     # 设置了CleanUnfinishedUpload，就清理S3上现有未完成的Multipart Upload ID（当前Job），不做断点续传
     if multipart_uploaded_list and CleanUnfinishedUpload:
         logger.warning(f'You set CleanUnfinishedUpload. Now clean: {str(multipart_uploaded_list)}')
-        clean_multipart_upload(multipart_uploaded_list, Des_bucket)
+        clean_multipart_upload(
+            s3_client=s3_des_client,
+            multipart_uploaded_list=multipart_uploaded_list,
+            Des_bucket=Des_bucket
+        )
         multipart_uploaded_list = []
 
     # 开始 Job 步骤
@@ -791,8 +843,8 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
         # Job 准备
         # 检查文件没Multipart UploadID要新建, 有则 return UploadID
         response_check_upload = check_file_exist(
-            Des_key,
-            multipart_uploaded_list
+            prefix_and_key=Des_key,
+            UploadIdList=multipart_uploaded_list
         )
         if response_check_upload == 'UPLOAD':
             try:
@@ -805,7 +857,11 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                 # If update versionID enabled, update s3 versionID
                 # 但可能会出现中断重传的时候，拿到了另一个新version，从而导致文件半老半新，所以需要在最后完成时候校验一次versionId
                 if UpdateVersionId:
-                    versionId, Size = head_s3_version(s3_src_client, Src_bucket, Src_key)
+                    versionId, Size = head_s3_version(
+                        s3_src_client=s3_src_client,
+                        Src_bucket=Src_bucket,
+                        Src_key=Src_key
+                    )
                     if versionId == "ERR":
                         break
                     job['versionId'] = versionId
@@ -823,14 +879,18 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
             logger.info(f'Resume upload id: {Des_bucket}/{Des_key}')
             # 获取已上传partnumberList
             partnumberList = checkPartnumberList(
-                Des_bucket,
-                Des_key,
-                reponse_uploadId,
-                s3_des_client
+                Des_bucket=Des_bucket,
+                Des_key=Des_key,
+                uploadId=reponse_uploadId,
+                s3_des_client=s3_des_client
             )
             # Get versionId/Size from DDB，如果传输前或中断后文件被替换，Size可能改变，所以重新取启动时候的versionId和当时的Size
             if UpdateVersionId:
-                versionId, Size = ddb_get(table, Src_bucket, Src_key)
+                versionId, Size = ddb_get(
+                    table=table,
+                    Src_bucket=Src_bucket,
+                    Src_key=Src_key
+                )
                 if versionId == "ERR":
                     break
                 job['versionId'] = versionId
@@ -852,25 +912,30 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
 
         # Job Thread: uploadPart, 超时或Key不对返回 TIMEOUT/QUIT
         upload_etag_full = job_processor(
-            reponse_uploadId,
-            indexList,
-            partnumberList,
-            job,
-            s3_src_client,
-            s3_des_client,
-            MaxThread,
-            ChunkSize_auto,  # 对单个文件使用自动调整的 Chunksize_auto
-            MaxRetry,
-            JobTimeout,
-            ifVerifyMD5Twice,
-            GetObjectWithVersionId
+            uploadId=reponse_uploadId,
+            indexList=indexList,
+            partnumberList=partnumberList,
+            job=job,
+            s3_src_client=s3_src_client,
+            s3_des_client=s3_des_client,
+            MaxThread=MaxThread,
+            ChunkSize=ChunkSize_auto,  # 对单个文件使用自动调整的 Chunksize_auto
+            MaxRetry=MaxRetry,
+            JobTimeout=JobTimeout,
+            ifVerifyMD5Twice=ifVerifyMD5Twice,
+            GetObjectWithVersionId=GetObjectWithVersionId
         )
         if upload_etag_full == "TIMEOUT" or upload_etag_full == "QUIT":
             logger.error(f'Quit job upload_etag_full TIMEOUT - {upload_etag_full} - {str(job)}')
             break  # 退出处理该Job
         elif upload_etag_full == "ERR":
             # 清掉已上传id，以便重新上传
-            clean_multipart_upload(multipart_uploaded_list, Des_bucket)
+            logger.error(f'upload_etag_full ERR - {str(job)}')
+            clean_multipart_upload(
+                s3_client=s3_des_client,
+                multipart_uploaded_list=multipart_uploaded_list,
+                Des_bucket=Des_bucket
+            )
             multipart_uploaded_list = []
             if md5_retry >= Max_md5_retry:
                 logger.error(f'Quit job upload_etag_full ERR - {upload_etag_full} - {str(job)}')
@@ -879,12 +944,21 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
             # 循环重试Job
 
         # 合并S3上的文件
-        complete_etag = completeUpload(reponse_uploadId, Des_bucket, Des_key,
-                                       len(indexList), s3_des_client)
-        logger.info(f'Merged: {Des_bucket}/{Des_key}')
+        complete_etag = completeUpload(
+            uploadId=reponse_uploadId,
+            Des_bucket=Des_bucket,
+            Des_key=Des_key,
+            len_indexList=len(indexList),
+            s3_des_client=s3_des_client
+        )
         if complete_etag == "ERR":
             # 清掉已上传id，以便重新上传
-            clean_multipart_upload(multipart_uploaded_list, Des_bucket)
+            logger.error(f'complete_etag ERR - {str(job)}')
+            clean_multipart_upload(
+                s3_client=s3_des_client,
+                multipart_uploaded_list=multipart_uploaded_list,
+                Des_bucket=Des_bucket
+            )
             multipart_uploaded_list = []
             if md5_retry >= Max_md5_retry:
                 logger.error(f'Quit job complete_etag - {upload_etag_full} - {str(job)}')
@@ -893,16 +967,25 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
             # 循环重试Job
 
         # 检查文件MD5
-        if ifVerifyMD5Twice:
+        if ifVerifyMD5Twice and complete_etag != "QUIT":  # QUIT是因为重复ID，所以就不检查了
             if complete_etag == upload_etag_full:
                 logger.info(f'MD5 ETag Matched - {Des_bucket}/{Des_key} - {complete_etag}')
                 break  # 结束本文件，下一个sqs job
             else:  # ETag 不匹配，删除目的S3的文件，重试
                 logger.error(f'MD5 ETag NOT MATCHED {Des_bucket}/{Des_key}( Destination / Origin ): '
                              f'{complete_etag} - {upload_etag_full}')
-                del_des_s3_object(s3_des_client, Des_bucket, Des_key)
+                del_des_s3_object(
+                    s3_des_client=s3_des_client,
+                    Des_bucket=Des_bucket,
+                    Des_key=Des_key
+                )
                 # 清掉已上传id，以便重新上传
-                clean_multipart_upload(multipart_uploaded_list, Des_bucket)
+                logger.error(f'complete_etag != upload_etag_full ERR - {str(job)}')
+                clean_multipart_upload(
+                    s3_client=s3_des_client,
+                    multipart_uploaded_list=multipart_uploaded_list,
+                    Des_bucket=Des_bucket
+                )
                 multipart_uploaded_list = []
                 if md5_retry >= Max_md5_retry:
                     logger.error(f'Quit job ifVerifyMD5Twice - {upload_etag_full} - {str(job)}')
@@ -911,7 +994,12 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
                 # 重新执行Job
 
         # DynamoDB log: ADD status: DONE/ERR(upload_etag_full)
-        ddb_complete(upload_etag_full, table, Src_bucket, Src_key)
+        ddb_complete(
+            upload_etag_full=upload_etag_full,
+            table=table,
+            Src_bucket=Src_bucket,
+            Src_key=Src_key
+        )
 
         # 正常结束 md5_retry 循环
         break
@@ -922,7 +1010,7 @@ def step_function(job, table, s3_src_client, s3_des_client, instance_id,
 
 
 # delete des s3 object
-def del_des_s3_object(s3_des_client, Des_bucket, Des_key):
+def del_des_s3_object(*, s3_des_client, Des_bucket, Des_key):
     logger.info(f'Delete {Des_bucket}/{Des_key}')
     try:
         s3_des_client.delete_object(
@@ -934,7 +1022,7 @@ def del_des_s3_object(s3_des_client, Des_bucket, Des_key):
 
 
 # Get iteam versionId and Size from DDB
-def ddb_get(table, Src_bucket, Src_key):
+def ddb_get(*, table, Src_bucket, Src_key):
     logger.info(f'Get versionId and Size from DDB - {Src_bucket}/{Src_key}')
     table_key = str(PurePosixPath(Src_bucket) / Src_key)
     if Src_key[-1] == '/':  # 针对空目录对象
@@ -995,7 +1083,7 @@ def ddb_start(*, table, percent, job, instance_id, new_upload):
 
 
 # DynamoDB log: ADD status: DONE/ERR(upload_etag_full)
-def ddb_complete(upload_etag_full, table, Src_bucket, Src_key):
+def ddb_complete(*, upload_etag_full, table, Src_bucket, Src_key):
     if upload_etag_full not in ["TIMEOUT", "ERR", "QUIT"]:
         status = "DONE"
     else:
@@ -1030,7 +1118,7 @@ def ddb_complete(upload_etag_full, table, Src_bucket, Src_key):
     return
 
 
-def step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id, StorageClass, MaxRetry,
+def step_fn_small_file(*, job, table, s3_src_client, s3_des_client, instance_id, StorageClass, MaxRetry,
                        UpdateVersionId, GetObjectWithVersionId):
     # 开始处理小文件
     Src_bucket = job['Src_bucket']
@@ -1041,7 +1129,11 @@ def step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id, St
     versionId = job['versionId']
     # If update versionID enabled, update s3 versionID
     if UpdateVersionId:
-        versionId = head_s3_version(s3_src_client, Src_bucket, Src_key)
+        versionId = head_s3_version(
+                        s3_src_client=s3_src_client,
+                        Src_bucket=Src_bucket,
+                        Src_key=Src_key
+                    )
         job['versionId'] = versionId
 
     logger.info(f'Start small: {Src_bucket}/{Src_key}, Size: {Size}, versionId: {versionId}')
@@ -1101,6 +1193,11 @@ def step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id, St
             return "TIMEOUT"
 
     # Write DDB log for complete
-    ddb_complete(upload_etag_full, table, Src_bucket, Src_key)
+    ddb_complete(
+        upload_etag_full=upload_etag_full,
+        table=table,
+        Src_bucket=Src_bucket,
+        Src_key=Src_key
+    )
     # complete one job
     return upload_etag_full

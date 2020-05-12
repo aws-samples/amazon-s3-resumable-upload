@@ -5,6 +5,7 @@ import logging
 import os
 import ssl
 import urllib.request
+import urllib.error
 from operator import itemgetter
 from s3_migration_lib import get_des_file_list, get_src_file_list, job_upload_sqs_ddb, delta_job_list, check_sqs_empty
 from botocore.config import Config
@@ -62,8 +63,8 @@ try:
         urllib.request.Request(checkip_url), timeout=3, context=context
     ).read()
     instance_id = "lambda-" + response.decode('utf-8')
-except Exception as e:
-    logger.warning(f'Fail to connect to checkip.amazonaws.com')
+except urllib.error.URLError as e:
+    logger.warning(f'Fail to connect to checkip api: {checkip_url} - {str(e)}')
     instance_id = 'lambda-ip-timeout'
 
 
@@ -76,8 +77,8 @@ def lambda_handler(event, context):
         logger.info('Try to get ignore list from ssm parameter')
         ignore_list = ssm.get_parameter(Name=ssm_parameter_ignore_list)['Parameter']['Value'].splitlines()
         logger.info(f'Get ignore list: {str(ignore_list)}')
-    except Exception:
-        logger.info(f'No ignore list in ssm parameter')
+    except Exception as e:
+        logger.info(f'No ignore list in ssm parameter - {str(e)}')
 
     # Check SQS is empty or not
     if check_sqs_empty(sqs, sqs_queue):
@@ -90,16 +91,39 @@ def lambda_handler(event, context):
 
             # Get List on S3
             logger.info('Get source bucket')
-            src_file_list = get_src_file_list(s3_src_client, src_bucket, src_prefix, JobsenderCompareVersionId)
+            src_file_list = get_src_file_list(
+                s3_client=s3_src_client,
+                bucket=src_bucket,
+                S3Prefix=src_prefix,
+                JobsenderCompareVersionId=JobsenderCompareVersionId
+            )
             logger.info('Get destination bucket')
-            des_file_list = get_des_file_list(s3_des_client, des_bucket, des_prefix, table, JobsenderCompareVersionId)
+            des_file_list = get_des_file_list(
+                s3_client=s3_des_client,
+                bucket=des_bucket,
+                S3Prefix=des_prefix,
+                table=table,
+                JobsenderCompareVersionId=JobsenderCompareVersionId
+            )
             # Generate job list
-            job_list, ignore_records = delta_job_list(src_file_list, des_file_list,
-                                                      src_bucket, src_prefix, des_bucket, des_prefix, ignore_list,
-                                                      JobsenderCompareVersionId)
+            job_list, ignore_records = delta_job_list(
+                src_file_list=src_file_list,
+                des_file_list=des_file_list,
+                src_bucket=src_bucket,
+                src_prefix=src_prefix,
+                des_bucket=des_bucket,
+                des_prefix=des_prefix,
+                ignore_list=ignore_list,
+                JobsenderCompareVersionId=JobsenderCompareVersionId
+            )
+
             # Upload jobs to sqs
             if len(job_list) != 0:
-                job_upload_sqs_ddb(sqs, sqs_queue, job_list)
+                job_upload_sqs_ddb(
+                    sqs=sqs,
+                    sqs_queue=sqs_queue,
+                    job_list=job_list
+                )
                 max_object = max(job_list, key=itemgetter('Size'))
                 MaxChunkSize = int(max_object['Size'] / 10000) + 1024
                 if max_object['Size'] >= 50 * 1024 * 1024 * 1024:

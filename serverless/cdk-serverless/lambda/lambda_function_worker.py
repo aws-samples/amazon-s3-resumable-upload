@@ -1,13 +1,20 @@
 # PROJECT LONGBOW
 # AWS LAMBDA WORKER NODE FOR TRANSMISSION BETWEEN AMAZON S3
 
-import json, os, urllib, ssl, logging
-import boto3
-from s3_migration_lib import step_function, step_fn_small_file
-from botocore.config import Config
-from pathlib import PurePosixPath
-import urllib.request
+import json
+import logging
+import os
+import ssl
+import urllib
+import urllib.error
 import urllib.parse
+import urllib.request
+from pathlib import PurePosixPath
+
+import boto3
+from botocore.config import Config
+
+from s3_migration_lib import step_function, step_fn_small_file
 
 # 环境变量
 table_queue_name = os.environ['table_queue_name']
@@ -66,8 +73,8 @@ try:
         urllib.request.Request(checkip_url), timeout=3, context=context
     ).read()
     instance_id = "lambda-" + response.decode('utf-8')
-except Exception as e:
-    logger.warning(f'Fail to connect to checkip.amazonaws.com')
+except urllib.error.URLError as e:
+    logger.warning(f'Fail to connect to checkip api: {checkip_url} - {str(e)}')
     instance_id = 'lambda-ip-timeout'
 
 
@@ -127,13 +134,34 @@ def lambda_handler(event, context):
 
         # TODO: 如果是一次多条Job并且出现一半失败的问题未处理，所以目前只设置SQS Batch=1
         if job['Size'] > ResumableThreshold:
-            upload_etag_full = step_function(job, table, s3_src_client, s3_des_client, instance_id,
-                                             StorageClass, ChunkSize, MaxRetry, MaxThread,
-                                             JobTimeout, ifVerifyMD5Twice, CleanUnfinishedUpload,
-                                             UpdateVersionId, GetObjectWithVersionId)
+            upload_etag_full = step_function(
+                                job=job,
+                                table=table,
+                                s3_src_client=s3_src_client,
+                                s3_des_client=s3_des_client,
+                                instance_id=instance_id,
+                                StorageClass=StorageClass,
+                                ChunkSize=ChunkSize,
+                                MaxRetry=MaxRetry,
+                                MaxThread=MaxThread,
+                                JobTimeout=JobTimeout,
+                                ifVerifyMD5Twice=ifVerifyMD5Twice,
+                                CleanUnfinishedUpload=CleanUnfinishedUpload,
+                                UpdateVersionId=UpdateVersionId,
+                                GetObjectWithVersionId=GetObjectWithVersionId
+                            )
         else:
-            upload_etag_full = step_fn_small_file(job, table, s3_src_client, s3_des_client, instance_id,
-                                                  StorageClass, MaxRetry, UpdateVersionId, GetObjectWithVersionId)
+            upload_etag_full = step_fn_small_file(
+                                job=job,
+                                table=table,
+                                s3_src_client=s3_src_client,
+                                s3_des_client=s3_des_client,
+                                instance_id=instance_id,
+                                StorageClass=StorageClass,
+                                MaxRetry=MaxRetry,
+                                UpdateVersionId=UpdateVersionId,
+                                GetObjectWithVersionId=GetObjectWithVersionId
+                            )
         if upload_etag_full != "TIMEOUT" and upload_etag_full != "ERR":
             # 如果是超时或ERR的就不删SQS消息，是正常结束就删
             # 大文件会在退出线程时设 MaxRetry 为 TIMEOUT，小文件则会返回 MaxRetry

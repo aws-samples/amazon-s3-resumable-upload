@@ -35,8 +35,8 @@ try:
     table_queue_name = os.environ['table_queue_name']
     sqs_queue_name = os.environ['sqs_queue_name']
     ssm_parameter_bucket = os.environ['ssm_parameter_bucket']
-except Exception:
-    print("No Environment Variable from CDK, use the para from config.ini")
+except Exception as e:
+    print("No Environment Variable from CDK, use the para from config.ini", str(e))
 
 
 # Main
@@ -47,7 +47,12 @@ if __name__ == '__main__':
 
     # Get Environment
     sqs, sqs_queue, table, s3_src_client, s3_des_client, instance_id, ssm = \
-        set_env(JobType, LocalProfileMode, table_queue_name, sqs_queue_name, ssm_parameter_credentials, MaxRetry)
+        set_env(JobType=JobType,
+                LocalProfileMode=LocalProfileMode,
+                table_queue_name=table_queue_name,
+                sqs_queue_name=sqs_queue_name,
+                ssm_parameter_credentials=ssm_parameter_credentials,
+                MaxRetry=MaxRetry)
 
     #######
     # Program start processing here
@@ -87,17 +92,39 @@ if __name__ == '__main__':
 
             # Get List on S3
             logger.info('Get source bucket')
-            src_file_list = get_src_file_list(s3_src_client, src_bucket, src_prefix, JobsenderCompareVersionId)
+            src_file_list = get_src_file_list(
+                s3_client=s3_src_client,
+                bucket=src_bucket,
+                S3Prefix=src_prefix,
+                JobsenderCompareVersionId=JobsenderCompareVersionId
+            )
             logger.info('Get destination bucket')
-            des_file_list = get_des_file_list(s3_des_client, des_bucket, des_prefix, table, JobsenderCompareVersionId)
+            des_file_list = get_des_file_list(
+                s3_client=s3_des_client,
+                bucket=des_bucket,
+                S3Prefix=des_prefix,
+                table=table,
+                JobsenderCompareVersionId=JobsenderCompareVersionId
+            )
             # Generate job list
-            job_list, ignore_records = delta_job_list(src_file_list, des_file_list,
-                                                      src_bucket, src_prefix, des_bucket, des_prefix, ignore_list,
-                                                      JobsenderCompareVersionId)
+            job_list, ignore_records = delta_job_list(
+                src_file_list=src_file_list,
+                des_file_list=des_file_list,
+                src_bucket=src_bucket,
+                src_prefix=src_prefix,
+                des_bucket=des_bucket,
+                des_prefix=des_prefix,
+                ignore_list=ignore_list,
+                JobsenderCompareVersionId=JobsenderCompareVersionId
+            )
 
             # Upload jobs to sqs
             if len(job_list) != 0:
-                job_upload_sqs_ddb(sqs, sqs_queue, job_list)
+                job_upload_sqs_ddb(
+                    sqs=sqs,
+                    sqs_queue=sqs_queue,
+                    job_list=job_list
+                )
                 max_object = max(job_list, key=itemgetter('Size'))
                 MaxChunkSize = int(max_object['Size'] / 10000) + 1024
                 if max_object['Size'] > 50*1024*1024*1024:
