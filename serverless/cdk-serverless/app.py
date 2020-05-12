@@ -216,8 +216,8 @@ class CdkResourceStack(core.Stack):
                    targets=[target.LambdaFunction(handler_jobsender)])
 
         # Create Lambda logs filter to create network traffic metric
-        handler.log_group.add_metric_filter("Complete-bytes",
-                                            metric_name="Complete-bytes",
+        handler.log_group.add_metric_filter("Completed-bytes",
+                                            metric_name="Completed-bytes",
                                             metric_namespace="s3_migrate",
                                             metric_value="$bytes",
                                             filter_pattern=logs.FilterPattern.literal(
@@ -234,8 +234,15 @@ class CdkResourceStack(core.Stack):
                                             metric_value="$bytes",
                                             filter_pattern=logs.FilterPattern.literal(
                                                 '[info, date, sn, p="--->Downloading", bytes, key]'))
+        handler.log_group.add_metric_filter("MaxMemoryUsed",
+                                            metric_name="MaxMemoryUsed",
+                                            metric_namespace="s3_migrate",
+                                            metric_value="$memory",
+                                            filter_pattern=logs.FilterPattern.literal(
+                                                '[head="REPORT", a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, '
+                                                'a13, a14, a15, a16, memory, MB="MB", rest]'))
         lambda_metric_Complete = cw.Metric(namespace="s3_migrate",
-                                           metric_name="Complete-bytes",
+                                           metric_name="Completed-bytes",
                                            statistic="Sum",
                                            period=core.Duration.minutes(1))
         lambda_metric_Upload = cw.Metric(namespace="s3_migrate",
@@ -246,6 +253,10 @@ class CdkResourceStack(core.Stack):
                                            metric_name="Downloading-bytes",
                                            statistic="Sum",
                                            period=core.Duration.minutes(1))
+        lambda_metric_MaxMemoryUsed = cw.Metric(namespace="s3_migrate",
+                                                metric_name="MaxMemoryUsed",
+                                                statistic="Maximum",
+                                                period=core.Duration.minutes(1))
         handler.log_group.add_metric_filter("ERROR",
                                             metric_name="ERROR-Logs",
                                             metric_namespace="s3_migrate",
@@ -295,23 +306,18 @@ class CdkResourceStack(core.Stack):
                                          left=[handler.metric_duration(period=core.Duration.minutes(1))]),
                           )
 
-        board.add_widgets(cw.GraphWidget(title="SQS-Jobs",
+        board.add_widgets(cw.GraphWidget(title="Lambda_MaxMemoryUsed(MB)",
+                                         left=[lambda_metric_MaxMemoryUsed]),
+                          cw.GraphWidget(title="ERROR/WARNING Logs",
+                                         left=[log_metric_ERROR],
+                                         right=[log_metric_WARNING, log_metric_TIMEOUT]),
+                          cw.GraphWidget(title="SQS-Jobs",
                                          left=[sqs_queue.metric_approximate_number_of_messages_visible(
                                              period=core.Duration.minutes(1)
                                          ),
                                              sqs_queue.metric_approximate_number_of_messages_not_visible(
                                                  period=core.Duration.minutes(1)
                                              )]),
-                          cw.GraphWidget(title="SQS-DeadLetterQueue",
-                                         left=[sqs_queue_DLQ.metric_approximate_number_of_messages_visible(
-                                             period=core.Duration.minutes(1)
-                                         ),
-                                             sqs_queue_DLQ.metric_approximate_number_of_messages_not_visible(
-                                                 period=core.Duration.minutes(1)
-                                             )]),
-                          cw.GraphWidget(title="ERROR/WARNING Logs",
-                                         left=[log_metric_ERROR],
-                                         right=[log_metric_WARNING, log_metric_TIMEOUT]),
                           cw.SingleValueWidget(title="Running/Waiting and Dead Jobs",
                                                metrics=[sqs_queue.metric_approximate_number_of_messages_not_visible(
                                                    period=core.Duration.minutes(1)

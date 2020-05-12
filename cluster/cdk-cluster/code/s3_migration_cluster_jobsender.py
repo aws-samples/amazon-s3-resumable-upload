@@ -127,13 +127,12 @@ if __name__ == '__main__':
                 )
                 max_object = max(job_list, key=itemgetter('Size'))
                 MaxChunkSize = int(max_object['Size'] / 10000) + 1024
-                if max_object['Size'] > 50*1024*1024*1024:
-                    logger.warning(f'Max object size in job_list: {str(max_object)}\n Remember to check instance memory'
-                                   f' >= MaxChunksize x MaxThread x MaxParallelFile, i.e. '
-                                   f'{MaxChunkSize} x {MaxThread} x {MaxParallelFile} = '
-                                   f'{MaxChunkSize*MaxThread*MaxParallelFile}\n If less memory, instance may crash!')
-                else:
-                    logger.info(f'Max object size in job_list is {str(max_object)}')
+                if MaxChunkSize < 5*1024*1024:
+                    MaxChunkSize = 5*1024*1024
+                logger.warning(f'Max object size in job_list: {max_object["Size"]}.\n Require instance memory'
+                               f' > MaxChunksize x MaxThread x MaxParallelFile, i.e. '
+                               f'{MaxChunkSize} x {MaxThread} x {MaxParallelFile} = '
+                               f'{MaxChunkSize*MaxThread*MaxParallelFile}.\n If less memory, instance may crash!')
             else:
                 logger.info('Source list are all in Destination, no job to send.')
 
