@@ -926,7 +926,7 @@ def step_function(*, job, table, s3_src_client, s3_des_client, instance_id,
             GetObjectWithVersionId=GetObjectWithVersionId
         )
         if upload_etag_full == "TIMEOUT" or upload_etag_full == "QUIT":
-            logger.error(f'Quit job upload_etag_full TIMEOUT - {upload_etag_full} - {str(job)}')
+            logger.warning(f'Quit job upload_etag_full == {upload_etag_full} - {str(job)}')
             break  # 退出处理该Job
         elif upload_etag_full == "ERR":
             # 清掉已上传id，以便重新上传
