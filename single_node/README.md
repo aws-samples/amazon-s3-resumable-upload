@@ -189,11 +189,16 @@ If you need to change ChunkSize when files are transmitting, please stop applica
 由于 Amazon S3 API 最大只支持单文件10,000个分片。目前程序已经有自动调整 ChunkSize 机制，无需人工干预。  
 如果某个文件传输到一半，要修改 ChunkSize 的话。请中断，然后在启动时选择CLEAN unfinished upload，程序会清除未完成文件，并重新上传整个文件，否则文件断点会不正确。  
 
-* S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. If you need more flexible prefix setting, please use s3_migrate Cluster version.  
-S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。如果需要更灵活的设置，请使用s3_migrate集群版本.   
+* S3_TO_S3 Senario, there is only one Prefix in config, source and destination S3 bucekt are the same prefix. If you need more flexible prefix setting, please use s3_migrate Cluster or Serverless version.  
+S3_TO_S3 场景，配置中只做了一个 Prefix 设置项，源和目的S3 Bucket都是相同的 Prefix。如果需要更灵活的设置，请使用s3_migrate集群或无服务器版本。   
 
-* It doesn't support version control, but only get the lastest version of object from S3. Don't change the original file while copying.  
-本项目不支持S3版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。  
+* S3_TO_S3 Senario, it doesn't support source bucket S3 Version Control, but only get the lastest version of object from S3. Don't change the original file while copying. If you need to support S3 Versioning, please use s3_migrate Cluster or Serverless version 
+S3_TO_S3 场景，本项目不支持源桶 S3 版本控制，相同对象的不同版本是只访问对象的最新版本，而忽略掉版本ID。即如果启用了版本控制，也只会读取S3相同对象的最后版本。目前实现方式不对版本做检测，也就是说如果传输一个文件的过程中，源文件更新了，会到导致最终文件出错。如果需要支持 S3 版本控制，请使用s3_migrate集群或无服务器版本。  
+
+* LOCAL_TO_S3 Senario, if you replace the source file while transmission, that will break the integrity of the file. While all file transmitted, application will compare file size, found unmatch, and report this case at the end.   
+If you don't want to see this case happen, you should enable ifverifymd5 = True , application will re-read the local file to calculate MD5 and compare with S3 Etag on every file complete transmisson. If it is not match, it will re-transmit.  
+LOCAL_TO_S3 场景，如果你在传输某个文件过程中覆盖了源文件，则文件完整性会被破坏，到所有文件传输结束后再对比的时候会发现文件Size不一致，并报告出来。  
+如果希望防止这种情况，应该启用 ifverifymd5 = True ，则会在传输完单个文件的时候，重新读取本地文件并计算MD5与S3上的Etag做对比，不一致则会重新传输。
 
 ## 自动安装脚本
 [ec2_init.sh](./ec2_init.sh)  

@@ -359,7 +359,7 @@ def set_log():
 
 
 # Get local file list
-def get_local_file_list():
+def get_local_file_list(str_key=False):
     __src_file_list = []
     try:
         if SrcFileIndex == "*":
@@ -368,8 +368,11 @@ def get_local_file_list():
                     file_absPath = os.path.join(parent, filename)
                     file_relativePath = file_absPath[len(SrcDir) + 1:]
                     file_size = os.path.getsize(file_absPath)
+                    key = Path(file_relativePath)
+                    if str_key:
+                        key = str(key)
                     __src_file_list.append({
-                        "Key": Path(file_relativePath),
+                        "Key": key,
                         "Size": file_size
                     })
         else:
@@ -391,13 +394,21 @@ def get_local_file_list():
 
 
 # Get object list on S3
-def get_s3_file_list(s3_client, bucket, S3Prefix):
+def get_s3_file_list(*, s3_client, bucket, S3Prefix, no_prefix=False):
     logger.info('Get s3 file list ' + bucket)
+    if S3Prefix[-1] == '/':
+        S3Prefix = S3Prefix[:-1]
+    # For delete prefix in des_prefix
+    if S3Prefix == '':
+        # 目的bucket没有设置 Prefix
+        dp_len = 0
+    else:
+        # 目的bucket的 "prefix/"长度
+        dp_len = len(S3Prefix) + 1
+
     paginator = s3_client.get_paginator('list_objects_v2')
     __des_file_list = []
     try:
-        if S3Prefix == '/':
-            S3Prefix = ''
         response_iterator = paginator.paginate(
             Bucket=bucket,
             Prefix=S3Prefix
@@ -406,6 +417,8 @@ def get_s3_file_list(s3_client, bucket, S3Prefix):
             if "Contents" in page:
                 for n in page["Contents"]:
                     key = n["Key"]
+                    if no_prefix:
+                        key = key[dp_len:]
                     __des_file_list.append({
                         "Key": key,
                         "Size": n["Size"]
@@ -520,7 +533,7 @@ class NextFile(Exception):
     pass
 
 
-def uploadTheard_small(srcfile, prefix_and_key):
+def uploadThread_small(srcfile, prefix_and_key):
     print(f'\033[0;32;1m--->Uploading\033[0m {srcfile["Key"]} - small file')
     with open(os.path.join(SrcDir, srcfile["Key"]), 'rb') as data:
         for retryTime in range(MaxRetry + 1):
@@ -631,7 +644,7 @@ def alioss_download_uploadThread_small(srcfileKey):
 
 
 # Upload file with different JobType
-def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # UploadIdList就是multipart_uploaded_list
+def upload_file(*, srcfile, desFilelist, UploadIdList, ChunkSize_default):  # UploadIdList就是multipart_uploaded_list
     logger.info(f'Start file: {srcfile["Key"]}')
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
@@ -641,7 +654,9 @@ def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # Uploa
             # 循环重试3次（如果MD5计算的ETag不一致）
             for md5_retry in range(3):
                 # 检查文件是否已存在，存在不继续、不存在且没UploadID要新建、不存在但有UploadID得到返回的UploadID
-                response_check_upload = check_file_exist(srcfile, desFilelist, UploadIdList)
+                response_check_upload = check_file_exist(srcfile=srcfile,
+                                                         desFilelist=desFilelist,
+                                                         UploadIdList=UploadIdList)
                 if response_check_upload == 'UPLOAD':
                     logger.info(f'New upload: {srcfile["Key"]}')
                     response_new_upload = s3_dest_client.create_multipart_upload(
@@ -665,12 +680,16 @@ def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # Uploa
                 response_indexList, ChunkSize_auto = split(srcfile, ChunkSize_default)
 
                 # 执行分片upload
-                upload_etag_full = uploadPart(reponse_uploadId, response_indexList, partnumberList, srcfile,
-                                              ChunkSize_auto)
+                upload_etag_full = uploadPart(uploadId=reponse_uploadId,
+                                              indexList=response_indexList,
+                                              partnumberList=partnumberList,
+                                              srcfile=srcfile,
+                                              ChunkSize_auto=ChunkSize_auto)
 
                 # 合并S3上的文件
-                response_complete = completeUpload(
-                    reponse_uploadId, srcfile["Key"], len(response_indexList))
+                response_complete = completeUpload(reponse_uploadId=reponse_uploadId,
+                                                   srcfileKey=srcfile["Key"],
+                                                   len_indexList=len(response_indexList))
                 logger.info(f'FINISH: {srcfile["Key"]} TO {response_complete["Location"]}')
 
                 # 检查文件MD5
@@ -704,7 +723,7 @@ def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # Uploa
                 return
         # 找不到文件，或文件Size不一致 Submit upload
         if JobType == 'LOCAL_TO_S3':
-            uploadTheard_small(srcfile, prefix_and_key)
+            uploadThread_small(srcfile, prefix_and_key)
         elif JobType == 'S3_TO_S3':
             download_uploadThread_small(srcfile["Key"])
         elif JobType == 'ALIOSS_TO_S3':
@@ -713,7 +732,7 @@ def upload_file(srcfile, desFilelist, UploadIdList, ChunkSize_default):  # Uploa
 
 
 # Compare file exist on desination bucket
-def check_file_exist(srcfile, desFilelist, UploadIdList):
+def check_file_exist(*, srcfile, desFilelist, UploadIdList):
     # 检查源文件是否在目标文件夹中
     prefix_and_key = srcfile["Key"]
     if JobType == 'LOCAL_TO_S3':
@@ -786,7 +805,7 @@ def split(srcfile, ChunkSize):
 
 
 # upload parts in the list
-def uploadPart(uploadId, indexList, partnumberList, srcfile, ChunkSize_auto):
+def uploadPart(*, uploadId, indexList, partnumberList, srcfile, ChunkSize_auto):
     partnumber = 1  # 当前循环要上传的Partnumber
     total = len(indexList)
     md5list = [hashlib.md5(b'')] * total
@@ -801,19 +820,48 @@ def uploadPart(uploadId, indexList, partnumberList, srcfile, ChunkSize_auto):
                 dryrun = True
             # upload 1 part/thread, or dryrun to only caculate md5
             if JobType == 'LOCAL_TO_S3':
-                pool.submit(uploadThread, uploadId, partnumber,
-                            partStartIndex, srcfile["Key"], total, md5list, dryrun, complete_list, ChunkSize_auto)
+                pool.submit(uploadThread,
+                            uploadId=uploadId,
+                            partnumber=partnumber,
+                            partStartIndex=partStartIndex,
+                            srcfileKey=srcfile["Key"],
+                            total=total,
+                            md5list=md5list,
+                            dryrun=dryrun,
+                            complete_list=complete_list,
+                            ChunkSize=ChunkSize_auto)
             elif JobType == 'S3_TO_S3':
-                pool.submit(download_uploadThread, uploadId, partnumber,
-                            partStartIndex, srcfile["Key"], total, md5list, dryrun, complete_list, ChunkSize_auto)
+                pool.submit(download_uploadThread,
+                            uploadId=uploadId,
+                            partnumber=partnumber,
+                            partStartIndex=partStartIndex,
+                            srcfileKey=srcfile["Key"],
+                            total=total,
+                            md5list=md5list,
+                            dryrun=dryrun,
+                            complete_list=complete_list,
+                            ChunkSize=ChunkSize_auto)
             elif JobType == 'ALIOSS_TO_S3':
-                pool.submit(alioss_download_uploadThread, uploadId, partnumber,
-                            partStartIndex, srcfile["Key"], srcfile["Size"], total, md5list,
-                            dryrun, complete_list, ChunkSize_auto)
+                pool.submit(alioss_download_uploadThread,
+                            uploadId=uploadId,
+                            partnumber=partnumber,
+                            partStartIndex=partStartIndex,
+                            srcfileKey=srcfile["Key"],
+                            srcfileSize=srcfile["Size"],
+                            total=total,
+                            md5list=md5list,
+                            dryrun=dryrun,
+                            complete_list=complete_list,
+                            ChunkSize=ChunkSize_auto)
             partnumber += 1
     # 线程池End
     logger.info(f'All parts uploaded - {srcfile["Key"]} - size: {srcfile["Size"]}')
 
+    # Local upload 的时候考虑传输过程中文件会变更的情况，重新扫描本地文件的MD5，而不是用之前读取的body去生成的md5list
+    if ifVerifyMD5 and JobType == 'LOCAL_TO_S3':
+        md5list = cal_md5list(indexList=indexList,
+                              srcfileKey=srcfile["Key"],
+                              ChunkSize=ChunkSize_auto)
     # 计算所有分片列表的总etag: cal_etag
     digests = b"".join(m.digest() for m in md5list)
     md5full = hashlib.md5(digests)
@@ -839,8 +887,21 @@ def size_to_str(size):
     return f'{integer+remainder} {units[level]}'
 
 
+# 本地文件重新计算一次MD5
+def cal_md5list(*, indexList, srcfileKey, ChunkSize):
+    logger.info(f'Re-read local file to calculate MD5 again: {srcfileKey}')
+    md5list = []
+    with open(os.path.join(SrcDir, srcfileKey), 'rb') as data:
+        for partStartIndex in indexList:
+            data.seek(partStartIndex)
+            chunkdata = data.read(ChunkSize)
+            chunkdata_md5 = hashlib.md5(chunkdata)
+            md5list.append(chunkdata_md5)
+    return md5list
+
+
 # Single Thread Upload one part, from local to s3
-def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list, ChunkSize):
+def uploadThread(*, uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list, ChunkSize):
     prefix_and_key = str(PurePosixPath(S3Prefix) / srcfileKey)
     if not dryrun:
         print(f'\033[0;32;1m--->Uploading\033[0m {srcfileKey} - {partnumber}/{total}')
@@ -862,7 +923,7 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
                         UploadId=uploadId,
                         ContentMD5=base64.b64encode(chunkdata_md5.digest()).decode('utf-8')
                     )
-                    # 这里对单个part上传加了 MD5 校验，后面多part合并的时候会再做一次整个文件的
+                    # 这里对单个part上传做了 MD5 校验，后面多part合并的时候会再做一次整个文件的
                 break
             except Exception as err:
                 retryTime += 1
@@ -884,9 +945,10 @@ def uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5lis
 
 
 # download part from src. s3 and upload to dest. s3
-def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list,
+def download_uploadThread(*, uploadId, partnumber, partStartIndex, srcfileKey, total, md5list, dryrun, complete_list,
                           ChunkSize):
     pstart_time = time.time()
+    getBody, chunkdata_md5 = b'', b''  # init
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -949,9 +1011,10 @@ def download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, tota
 
 
 # download part from src. ali_oss and upload to dest. s3
-def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKey, srcfileSize, total, md5list, dryrun,
-                                 complete_list, ChunkSize):
+def alioss_download_uploadThread(*, uploadId, partnumber, partStartIndex, srcfileKey, srcfileSize, total, md5list,
+                                 dryrun, complete_list, ChunkSize):
     pstart_time = time.time()
+    getBody, chunkdata_md5 = b'', b''  # init
     if ifVerifyMD5 or not dryrun:
         # 下载文件
         if not dryrun:
@@ -1020,7 +1083,7 @@ def alioss_download_uploadThread(uploadId, partnumber, partStartIndex, srcfileKe
 
 
 # Complete multipart upload, get uploadedListParts from S3 and construct completeStructJSON
-def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
+def completeUpload(*, reponse_uploadId, srcfileKey, len_indexList):
     # 查询S3的所有Part列表uploadedListParts构建completeStructJSON
     prefix_and_key = srcfileKey
     if JobType == 'LOCAL_TO_S3':
@@ -1068,18 +1131,16 @@ def completeUpload(reponse_uploadId, srcfileKey, len_indexList):
 # Compare local file list and s3 list
 def compare_local_to_s3():
     logger.info('Comparing destination and source ...')
-    fileList = get_local_file_list()
-    desFilelist = get_s3_file_list(s3_dest_client, DesBucket, S3Prefix)
+    fileList = get_local_file_list(str_key=True)
+    desFilelist = get_s3_file_list(s3_client=s3_dest_client,
+                                   bucket=DesBucket,
+                                   S3Prefix=S3Prefix,
+                                   no_prefix=True)
     deltaList = []
     for source_file in fileList:
-        match = False
-        for destination_file in desFilelist:
-            if (str((PurePosixPath(S3Prefix) / source_file["Key"])) == destination_file["Key"]) and \
-                    (source_file["Size"] == destination_file["Size"]):
-                match = True  # source 在 destination找到，并且Size一致
-                break
-        if not match:
+        if source_file not in desFilelist:
             deltaList.append(source_file)
+
     if not deltaList:
         logger.warning('All source files are in destination Bucket/Prefix. Job well done.')
     else:
@@ -1092,26 +1153,29 @@ def compare_local_to_s3():
 # Compare S3 buckets
 def compare_buckets():
     logger.info('Comparing destination and source ...')
+    deltaList = []
+    desFilelist = get_s3_file_list(s3_client=s3_dest_client,
+                                   bucket=DesBucket,
+                                   S3Prefix=S3Prefix)
     if JobType == 'S3_TO_S3':
         if SrcFileIndex == "*":
-            fileList = get_s3_file_list(s3_src_client, SrcBucket, S3Prefix)
+            fileList = get_s3_file_list(s3_client=s3_src_client,
+                                        bucket=SrcBucket,
+                                        S3Prefix=S3Prefix)
         else:
             fileList = head_s3_single_file(s3_src_client, SrcBucket)
-    if JobType == 'ALIOSS_TO_S3':
+    elif JobType == 'ALIOSS_TO_S3':
         if SrcFileIndex == "*":
             fileList = get_ali_oss_file_list(ali_bucket)
         else:
             fileList = head_oss_single_file(ali_bucket)
-    desFilelist = get_s3_file_list(s3_dest_client, DesBucket, S3Prefix)
-    deltaList = []
+    else:
+        return
+
     for source_file in fileList:
-        match = False
-        for destination_file in desFilelist:
-            if source_file == destination_file:
-                match = True  # source 在 destination找到，并且Size一致
-                break
-        if not match:
+        if source_file not in desFilelist:
             deltaList.append(source_file)
+
     if not deltaList:
         logger.warning('All source files are in destination Bucket/Prefix. Job well done.')
     else:
@@ -1130,14 +1194,6 @@ if __name__ == '__main__':
     # Define s3 client
     s3_config = Config(max_pool_connections=200)
     s3_dest_client = Session(profile_name=DesProfileName).client('s3', config=s3_config)
-    if JobType == 'S3_TO_S3':
-        s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
-    elif JobType == 'ALIOSS_TO_S3':
-        # For ALIOSS_TO_S3
-        import oss2
-
-        ali_bucket = oss2.Bucket(oss2.Auth(ali_access_key_id, ali_access_key_secret), ali_endpoint, ali_SrcBucket)
-
     # Check destination S3 writable
     try:
         logger.info(f'Checking write permission for: {DesBucket}')
@@ -1158,18 +1214,25 @@ if __name__ == '__main__':
         SrcDir = str(Path(SrcDir))
         src_file_list = get_local_file_list()
     elif JobType == "S3_TO_S3":
+        s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
         if SrcFileIndex == "*":
-            src_file_list = get_s3_file_list(s3_src_client, SrcBucket, S3Prefix)
+            src_file_list = get_s3_file_list(s3_client=s3_src_client,
+                                             bucket=SrcBucket,
+                                             S3Prefix=S3Prefix)
         else:
             src_file_list = head_s3_single_file(s3_src_client, SrcBucket)
     elif JobType == 'ALIOSS_TO_S3':
+        import oss2
+        ali_bucket = oss2.Bucket(oss2.Auth(ali_access_key_id, ali_access_key_secret), ali_endpoint, ali_SrcBucket)
         if SrcFileIndex == "*":
             src_file_list = get_ali_oss_file_list(ali_bucket)
         else:
             src_file_list = head_oss_single_file(ali_bucket)
 
     # 获取目标s3现存文件列表
-    des_file_list = get_s3_file_list(s3_dest_client, DesBucket, S3Prefix)
+    des_file_list = get_s3_file_list(s3_client=s3_dest_client,
+                                     bucket=DesBucket,
+                                     S3Prefix=S3Prefix)
 
     # 获取Bucket中所有未完成的Multipart Upload
     multipart_uploaded_list = get_uploaded_list(s3_dest_client)
@@ -1179,8 +1242,8 @@ if __name__ == '__main__':
         logger.warning(f'{len(multipart_uploaded_list)} Unfinished upload, clean them and restart?')
         logger.warning('NOTICE: IF CLEAN, YOU CANNOT RESUME ANY UNFINISHED UPLOAD')
         if not DontAskMeToClean:
-            keyboard_input = input(
-                "CLEAN unfinished upload and restart(input CLEAN) or resume loading(press enter)? Please confirm: (n/CLEAN)")
+            keyboard_input = input("CLEAN unfinished upload and restart(input CLEAN) or resume loading(press enter)? "
+                                   "Please confirm: (n/CLEAN)")
         else:
             keyboard_input = 'no'
         if keyboard_input == 'CLEAN':
@@ -1199,7 +1262,11 @@ if __name__ == '__main__':
     # 对文件列表中的逐个文件进行上传操作
     with futures.ThreadPoolExecutor(max_workers=MaxParallelFile) as file_pool:
         for src_file in src_file_list:
-            file_pool.submit(upload_file, src_file, des_file_list, multipart_uploaded_list, ChunkSize_default)
+            file_pool.submit(upload_file,
+                             srcfile=src_file,
+                             desFilelist=des_file_list,
+                             UploadIdList=multipart_uploaded_list,
+                             ChunkSize_default=ChunkSize_default)
 
     # 再次获取源文件列表和目标文件夹现存文件列表进行比较，每个文件大小一致，输出比较结果
     time_str = str(datetime.datetime.now() - start_time)
