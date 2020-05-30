@@ -322,6 +322,9 @@ def set_config():
                 print(f"Save config to {config_file}")
         # GUI window finish
 
+    S3Prefix = str(PurePosixPath(S3Prefix))  # 去掉结尾的'/'，如果有的话
+    if S3Prefix == '/' or S3Prefix == '.':
+        S3Prefix = ''
     # 校验
     if JobType not in JobType_list:
         print(f'ERR JobType: {JobType}, check config file: {config_file}')
@@ -396,8 +399,7 @@ def get_local_file_list(str_key=False):
 # Get object list on S3
 def get_s3_file_list(*, s3_client, bucket, S3Prefix, no_prefix=False):
     logger.info('Get s3 file list ' + bucket)
-    if S3Prefix[-1] == '/':
-        S3Prefix = S3Prefix[:-1]
+
     # For delete prefix in des_prefix
     if S3Prefix == '':
         # 目的bucket没有设置 Prefix
@@ -615,7 +617,8 @@ def alioss_download_uploadThread_small(srcfileKey):
             )
             getBody = b''
             for chunk in response_get_object:
-                getBody += chunk
+                if chunk != '':
+                    getBody += chunk
             chunkdata_md5 = hashlib.md5(getBody)
 
             # Put Object
@@ -1035,7 +1038,8 @@ def alioss_download_uploadThread(*, uploadId, partnumber, partStartIndex, srcfil
                 )
                 getBody = b''
                 for chunk in response_get_object:
-                    getBody += chunk
+                    if chunk != '':
+                        getBody += chunk
                 chunkdata_md5 = hashlib.md5(getBody)
                 md5list[partnumber - 1] = chunkdata_md5
                 break
