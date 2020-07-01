@@ -33,6 +33,7 @@ setuptools.setup(
         "aws-cdk.aws-iam>=1.30",
         "aws-cdk.aws_lambda_event_sources>=1.30",
         "aws-cdk.aws_s3_notifications>=1.30",
+        "aws-cdk.aws_events_targets>=1.30",
         "boto3"
     ],
 
