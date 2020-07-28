@@ -90,6 +90,6 @@ Amazon EC2 自动扩展集群版本和无服务器 AWS Lambda版本，可以分�
 This library is licensed under the MIT-0 License. See the LICENSE file.
   
   ******
-  Author: Huang, Zhuobin
+  Author: Huang, Zhuobin (James)
   ******
   
