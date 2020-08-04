@@ -15,6 +15,8 @@ import aws_cdk.aws_sns as sns
 import aws_cdk.aws_sns_subscriptions as sub
 import aws_cdk.aws_logs as logs
 import aws_cdk.aws_apigateway as api
+from aws_cdk.core import CustomResource
+import aws_cdk.custom_resources as cr
 import json
 
 # Define bucket and prefix for Jobsender to compare
@@ -201,8 +203,12 @@ class CdkResourceStack(core.Stack):
                 s3exist_bucket = s3.Bucket.from_bucket_name(self,
                                                             bucket_name,  # 用这个做id
                                                             bucket_name=bucket_name)
-                s3exist_bucket.grant_read(handler_jobsender)
-                s3exist_bucket.grant_read(handler)
+                if JobType == 'PUT':
+                    s3exist_bucket.grant_read(handler_jobsender)
+                    s3exist_bucket.grant_read(handler)
+                else:  # 'GET' mode
+                    s3exist_bucket.grant_read_write(handler_jobsender)
+                    s3exist_bucket.grant_read_write(handler)
 
         # Allow Lambda read ssm parameters
         ssm_bucket_para.grant_read(handler_jobsender)
@@ -214,6 +220,9 @@ class CdkResourceStack(core.Stack):
         event.Rule(self, 'cron_trigger_jobsender',
                    schedule=event.Schedule.rate(core.Duration.hours(1)),
                    targets=[target.LambdaFunction(handler_jobsender)])
+
+        # TODO: Trigger event imediately, add custom resource lambda to invoke handler_jobsender
+
 
         # Create Lambda logs filter to create network traffic metric
         handler.log_group.add_metric_filter("Completed-bytes",
