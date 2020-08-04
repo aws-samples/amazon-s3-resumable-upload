@@ -45,8 +45,7 @@ with open("./cdk/user_data_jobsender.sh") as f:
 
 class CdkEc2Stack(core.Stack):
 
-    def __init__(self, scope: core.Construct, _id: str, vpc, bucket_para,
-                 # key_name,
+    def __init__(self, scope: core.Construct, _id: str, *, vpc, bucket_para,  # key_name,
                  ddb_file_list, sqs_queue, sqs_queue_DLQ, ssm_bucket_para, ssm_credential_para, s3bucket, s3_deploy,
                  **kwargs) -> None:
         super().__init__(scope, _id, **kwargs)
@@ -85,7 +84,6 @@ class CdkEc2Stack(core.Stack):
                                                  min_capacity=0,
                                                  max_capacity=1
                                                  )
-
         # jobsender.connections.allow_from_any_ipv4(ec2.Port.tcp(22), "Internet access SSH")
         # Don't need SSH since we use Session Manager
 
@@ -95,11 +93,7 @@ class CdkEc2Stack(core.Stack):
         jobsender.role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchAgentServerPolicy"))
 
-        # jobsender.role.add_managed_policy(
-        #     iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess"))
-        # Don't give full access s3 to ec2, violate security rule
-
-        # Create Autoscaling Group with fixed 2*EC2 hosts
+        # Create Worker Autoscaling Group
         worker_asg = autoscaling.AutoScalingGroup(self, "worker-asg",
                                                   vpc=vpc,
                                                   vpc_subnets=ec2.SubnetSelection(
@@ -112,13 +106,9 @@ class CdkEc2Stack(core.Stack):
                                                   desired_capacity=2,
                                                   min_capacity=2,
                                                   max_capacity=10,
-                                                  spot_price="0.5"
+                                                  spot_price="0.5",
+                                                  group_metrics=[autoscaling.GroupMetrics.all()]
                                                   )
-
-        # TODO: There is no MetricsCollection in CDK autoscaling group high level API yet.
-        # You need to enable "Group Metrics Collection" in EC2 Console Autoscaling Group - Monitoring tab for metric:
-        # GroupDesiredCapacity, GroupInServiceInstances, GroupPendingInstances and etc.
-
         # worker_asg.connections.allow_from_any_ipv4(ec2.Port.tcp(22), "Internet access SSH")
         # Don't need SSH since we use Session Manager
 
