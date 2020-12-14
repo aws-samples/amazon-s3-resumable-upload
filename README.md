@@ -1,3 +1,8 @@
+**This repository is no longer maintained. The code has been merged into 
+[Data Replication Hub](https://github.com/awslabs/aws-data-replication-hub).** 
+
+**该代码仓库不再提供维护。代码已经被合并到 [Data Replication Hub](https://github.com/awslabs/aws-data-replication-hub) 项目.**
+
 # Amazon S3 MultiThread Resume Migration Solution  (Amazon S3多线程断点续传迁移)   
 
 Breaking-point resume supported, suitable for mass files transimission to Amazon S3  
