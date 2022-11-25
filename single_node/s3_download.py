@@ -6,7 +6,7 @@ import json
 from boto3.session import Session
 from botocore.client import Config
 from concurrent import futures
-from configparser import ConfigParser, RawConfigParser, NoOptionError
+from configparser import ConfigParser, RawConfigParser
 import uuid
 import datetime
 import logging
@@ -17,8 +17,8 @@ import sqlite3
 import time
 os.system("")  # workaround for some windows system to print color
 
-global SrcBucket, S3Prefix, SrcFileIndex, SrcProfileName, DesDir, MaxRetry, MaxThread, MaxParallelFile, LoggingLevel
-
+global SrcBucket, S3Prefix, SrcFileIndex, SrcProfileName, DesDir, MaxRetry, MaxThread, MaxParallelFile, LoggingLevel, endpoint_url
+max_get = 1000
 
 # Read config.ini with GUI
 def set_config():
@@ -33,6 +33,13 @@ def set_config():
         gui = True
     if '--nogui' in sys.argv:  # 带 nogui 就覆盖前面Win打开要求
         gui = False
+    
+    url_list = ('AWS',
+        'https://s3.amazonaws.com', 
+        'https://s3.us-east-1.amazonaws.com', 
+        'https://s3-accesspoint.us-east-1.amazonaws.com', 
+        'https://storage.googleapis.com', 
+        'https://oss-cn-beijing.aliyuncs.com')
 
     config_file = os.path.join(file_path, 's3_download_config.ini')
     # If no config file, read the default config
@@ -43,8 +50,9 @@ def set_config():
     print(f'Reading config file: {config_file}')
 
     try:
-        global SrcBucket, S3Prefix, SrcFileIndex, SrcProfileName, DesDir, MaxRetry, MaxThread, MaxParallelFile, LoggingLevel
+        global SrcBucket, S3Prefix, SrcFileIndex, SrcProfileName, DesDir, MaxRetry, MaxThread, MaxParallelFile, LoggingLevel, endpoint_url
         cfg.read(config_file, encoding='utf-8-sig')
+        endpoint_url = cfg.get('Basic', 'EndPointURL')
         SrcBucket = cfg.get('Basic', 'SrcBucket')
         S3Prefix = cfg.get('Basic', 'S3Prefix')
         SrcFileIndex = cfg.get('Basic', 'SrcFileIndex')
@@ -63,8 +71,9 @@ def set_config():
 
     if gui:
         # For GUI
-        from tkinter import Tk, filedialog, END, StringVar, BooleanVar, messagebox
+        from tkinter import Tk, filedialog, END, StringVar, BooleanVar, messagebox, Text
         from tkinter.ttk import Combobox, Label, Button, Entry, Spinbox, Checkbutton
+
         # get profile name list in ./aws/credentials
         pro_conf = RawConfigParser()
         pro_path = os.path.join(os.path.expanduser("~"), ".aws")
@@ -96,81 +105,115 @@ def set_config():
             file_txt.insert(0, "*")
             # Finsih browse folder
 
-        # Click List Buckets
-        def ListBuckets(*args):
+        def get_client():
+            # Setup client
+            endpoint_url = EndpointURL.get()
             SrcProfileName = SrcProfileName_txt.get()
-            client = Session(profile_name=SrcProfileName).client('s3')
+            if endpoint_url in ['AWS', 'aws', '']:
+                client = Session(profile_name=SrcProfileName).client('s3')
+            else: 
+                client = Session(profile_name=SrcProfileName).client('s3', endpoint_url=endpoint_url)
+            return client
+
+        def ListBuckets(*args):
             bucket_list = []
+            client = get_client()
             try:
+                log_text.insert('insert',f'Listing all buckets... ')
+                log_text.yview_moveto(1)
+                log_text.update()
                 response = client.list_buckets()
-                if 'Buckets' in response:
-                    bucket_list = [b['Name'] for b in response['Buckets']]
+                log_text.insert('insert','Done.\n')
             except Exception as e:
                 messagebox.showerror('Error', f'Failt to List buckets. \n'
                                               f'Please verify your aws_access_key of profile: [{SrcProfileName}]\n'
                                               f'{str(e)}')
                 bucket_list = ['CAN_NOT_GET_BUCKET_LIST']
+            if 'Buckets' in response:
+                bucket_list = [b['Name'] for b in response['Buckets']]
             SrcBucket_txt['values'] = bucket_list
-            SrcBucket_txt.current(0)
-            # Finish ListBuckets
+            # Finish ListBucket
+            
 
-        # Click List Prefix
         def ListPrefix(*args):
-            SrcProfileName = SrcProfileName_txt.get()
-            client = Session(profile_name=SrcProfileName).client('s3')
             prefix_list = []
             this_bucket = SrcBucket_txt.get()
-            max_get = 100
+            S3Prefix = S3Prefix_txt.get()
+            var_prefix.set(f"List Prefix {S3Prefix}")
+            if  S3Prefix == '' or S3Prefix == '/':
+                Prefix = ''
+            else:
+                Prefix = str(PurePosixPath(S3Prefix))+'/'
+            # Setup client
+            client = get_client()   
             try:
+                log_text.insert('insert',f'Listing prefixs in s3://{this_bucket}/{Prefix}... ')
+                log_text.yview_moveto(1)
+                log_text.update()                
                 response = client.list_objects_v2(
                     Bucket=this_bucket,
-                    Delimiter='/'
+                    Prefix=Prefix,
+                    Delimiter='/',
+                    MaxKeys=max_get
                 )  # Only get the max 1000 prefix for simply list
-                if 'CommonPrefixes' in response:
-                    prefix_list = [c['Prefix'] for c in response['CommonPrefixes']]
-                if not prefix_list:
-                    messagebox.showinfo('Message', f'There is no "/" Prefix in: {this_bucket}')
-                if response['IsTruncated']:
-                    messagebox.showinfo('Message', f'More than {max_get} Prefix, cannot fully list here.')
+                log_text.insert('insert','Done.\n')
             except Exception as e:
                 messagebox.showinfo('Error', f'Cannot get prefix list from bucket: {this_bucket}, {str(e)}')
+            if 'CommonPrefixes' in response:
+                prefix_list = [c['Prefix'] for c in response['CommonPrefixes']]
+            if response['IsTruncated']:
+                messagebox.showinfo('Message', f'More than {max_get} prefix, cannot fully list here.')
             S3Prefix_txt['values'] = prefix_list
-            S3Prefix_txt.current(0)
             # Finish list prefix
+            
+
+        # Click List Prefix
+        def ListAllPrefix(*args):
+            S3Prefix_txt.set('')
+            ListPrefix()
+
 
         def browse_file(*args):
-            SrcProfileName = SrcProfileName_txt.get()
-            S3Prefix = S3Prefix_txt.get()
-            client = Session(profile_name=SrcProfileName).client('s3')
             file_list = []
             this_bucket = SrcBucket_txt.get()
-            max_get = 100
+            S3Prefix = S3Prefix_txt.get()
+            # For delete prefix in des_prefix
+            if S3Prefix == '' or S3Prefix == '/':
+                # 目的bucket没有设置 Prefix
+                dp_len = 0
+                Prefix = ''
+            else:
+                # 目的bucket的 "prefix/"长度
+                dp_len = len(str(PurePosixPath(S3Prefix)))+1
+                Prefix = str(PurePosixPath(S3Prefix))+'/'
+            # Setup client
+            client = get_client()
             try:
+                log_text.insert('insert',f'Listing files in s3://{this_bucket}/{Prefix}... ')
+                log_text.yview_moveto(1)
+                log_text.update()
                 response = client.list_objects_v2(
                     Bucket=this_bucket,
-                    Prefix=str(PurePosixPath(S3Prefix))+'/',
-                    Delimiter='/'
-                )  # Only get the max 1000 files for simply list
-
-                # For delete prefix in des_prefix
-                if S3Prefix == '' or S3Prefix == '/':
-                    # 目的bucket没有设置 Prefix
-                    dp_len = 0
-                else:
-                    # 目的bucket的 "prefix/"长度
-                    dp_len = len(str(PurePosixPath(S3Prefix)))+1
-
-                if 'Contents' in response:
-                    file_list = [c['Key'][dp_len:] for c in response['Contents']]  # 去掉Prefix
-                if not file_list:
-                    messagebox.showinfo('Message', f'There is no files in s3://{this_bucket}/{S3Prefix}')
-                if response['IsTruncated']:
-                    messagebox.showinfo('Message', f'More than {max_get} files, cannot fully list here.')
+                    Prefix=Prefix,
+                    Delimiter='/',
+                    MaxKeys=max_get
+                )  # Only get the max 100 files for simply list
+                log_text.insert('insert','Done.\n')
             except Exception as e:
-                messagebox.showinfo('Error', f'Cannot get file list from bucket s3://{this_bucket}/{S3Prefix}, {str(e)}')
+                messagebox.showinfo('Error', f'Cannot get file list from bucket s3://{this_bucket}/{Prefix}, {str(e)}')
+            if 'Contents' in response:
+                file_list = [c['Key'][dp_len:] for c in response['Contents']]  # 去掉Prefix
+            if not file_list:
+                messagebox.showinfo('Message', f'No files in s3://{this_bucket}/{Prefix}')
+            if response['IsTruncated']:
+                messagebox.showinfo('Message', f'More than {max_get} files, cannot fully list here.')
             file_txt['values'] = file_list
-            file_txt.current(0)
             # Finish list files
+            
+
+        def all_file(*args):
+            file_txt.set("*")
+
 
         # Click START button
         def close():
@@ -189,40 +232,14 @@ def set_config():
         # Start GUI
         window = Tk()
         window.title("LONGBOW - AMAZON S3 DOWNLOAD TOOL WITH BREAK-POINT RESUMING")
-        window.geometry('705x350')
+        window.geometry('800x400')
         window.configure(background='#ECECEC')
         window.protocol("WM_DELETE_WINDOW", sys.exit)
 
-        Label(window, text="S3 Bucket").grid(column=0, row=1, sticky='w', padx=2, pady=2)
-        SrcBucket_txt = Combobox(window, width=48)
-        SrcBucket_txt.grid(column=1, row=1, sticky='w', padx=2, pady=2)
-        SrcBucket_txt['values'] = SrcBucket
-        SrcBucket_txt.current(0)
-        Button(window, text="List Buckets", width=10, command=ListBuckets) \
-            .grid(column=2, row=1, sticky='w', padx=2, pady=2)
-
-        Label(window, text="S3 Prefix").grid(column=0, row=2, sticky='w', padx=2, pady=2)
-        S3Prefix_txt = Combobox(window, width=48)
-        S3Prefix_txt.grid(column=1, row=2, sticky='w', padx=2, pady=2)
-        S3Prefix_txt['values'] = S3Prefix
-        if S3Prefix != '':
-            S3Prefix_txt.current(0)
-        Button(window, text="List Prefix", width=10, command=ListPrefix) \
-            .grid(column=2, row=2, sticky='w', padx=2, pady=2)
-
-        Label(window, text="Filename or *").grid(column=0, row=3, sticky='w', padx=2, pady=2)
-        file_txt = Combobox(window, width=48)
-        file_txt.grid(column=1, row=3, sticky='w', padx=2, pady=2)
-        file_txt['values'] = SrcFileIndex
-        if SrcFileIndex != '':
-            file_txt.current(0)
-        Button(window, text="Select File", width=10, command=browse_file) \
-            .grid(column=2, row=3, sticky='w', padx=2, pady=2)
-
-        Label(window, text="AWS Profile").grid(column=0, row=4, sticky='w', padx=2, pady=2)
+        Label(window, text="AWS Profile").grid(column=0, row=1, sticky='w', padx=2, pady=2)
         SrcProfileName_txt = Combobox(window, width=15, state="readonly")
         SrcProfileName_txt['values'] = tuple(profile_list)
-        SrcProfileName_txt.grid(column=1, row=4, sticky='w', padx=2, pady=2)
+        SrcProfileName_txt.grid(column=1, row=1, sticky='w', padx=2, pady=2)
         if SrcProfileName in profile_list:
             position = profile_list.index(SrcProfileName)
             SrcProfileName_txt.current(position)
@@ -231,28 +248,68 @@ def set_config():
         SrcProfileName = SrcProfileName_txt.get()
         SrcProfileName_txt.bind("<<ComboboxSelected>>", ListBuckets)
 
-        Label(window, text="Folder").grid(column=0, row=5, sticky='w', padx=2, pady=2)
-        url_txt = Entry(window, width=50)
-        url_txt.grid(column=1, row=5, sticky='w', padx=2, pady=2)
-        url_btn = Button(window, text="Select Folder", width=10, command=browse_folder)
-        url_btn.grid(column=2, row=5, sticky='w', padx=2, pady=2)
+        Label(window, text="Enpoint URL").grid(column=0, row=2, sticky='w', padx=2, pady=2)
+        EndpointURL = Combobox(window, width=58, values=(endpoint_url,)+url_list)
+        EndpointURL.grid(column=1, row=2, sticky='w', padx=2, pady=2)
+        EndpointURL.current(0)
+
+        Label(window, text="S3 Bucket").grid(column=0, row=3, sticky='w', padx=2, pady=2)
+        SrcBucket_txt = Combobox(window, width=58)
+        SrcBucket_txt.grid(column=1, row=3, sticky='w', padx=2, pady=2)
+        SrcBucket_txt['values'] = SrcBucket
+        SrcBucket_txt.current(0)
+        SrcBucket_txt.bind("<<ComboboxSelected>>", ListPrefix)
+        Button(window, text="List Buckets", width=10, command=ListBuckets) \
+            .grid(column=2, row=3, sticky='w', padx=2, pady=2)
+
+        Label(window, text="S3 Prefix").grid(column=0, row=4, sticky='w', padx=2, pady=2)
+        S3Prefix_txt = Combobox(window, width=58)
+        S3Prefix_txt.grid(column=1, row=4, sticky='w', padx=2, pady=2)
+        S3Prefix_txt['values'] = S3Prefix
+        if S3Prefix != '':
+            S3Prefix_txt.current(0)
+        S3Prefix_txt.bind("<<ComboboxSelected>>", ListPrefix)
+        var_prefix = StringVar()
+        var_prefix.set(f"This Prefix {S3Prefix_txt.get()}")
+        # var_prefix.trace("w", ListPrefix)  # 直接input不会触发trace event
+        Button(window, text='List Prefix /', width=10, command=ListAllPrefix) \
+            .grid(column=2, row=4, sticky='w', padx=2, pady=2)
+        Button(window, textvariable=var_prefix, width=22, command=ListPrefix) \
+            .grid(column=3, row=4, sticky='w', padx=2, pady=2, columnspan=2)
+
+        Label(window, text="Filename or *").grid(column=0, row=5, sticky='w', padx=2, pady=2)
+        file_txt = Combobox(window, width=58)
+        file_txt.grid(column=1, row=5, sticky='w', padx=2, pady=2)
+        file_txt['values'] = SrcFileIndex
+        if SrcFileIndex != '':
+            file_txt.current(0)
+        Button(window, text="List Files", width=10, command=browse_file) \
+            .grid(column=2, row=5, sticky='w', padx=2, pady=2)
+        Button(window, text="All Files", width=10, command=all_file) \
+            .grid(column=3, row=5, sticky='w', padx=2, pady=2)
+
+        Label(window, text="Download Folder").grid(column=0, row=6, sticky='w', padx=2, pady=2)
+        url_txt = Entry(window, width=60)
+        url_txt.grid(column=1, row=6, sticky='w', padx=2, pady=2)
+        url_btn = Button(window, text="Select", width=10, command=browse_folder)
+        url_btn.grid(column=2, row=6, sticky='w', padx=2, pady=2)
         url_txt.insert(0, DesDir)
 
-        Label(window, text="MaxThread/File").grid(column=0, row=6, sticky='w', padx=2, pady=2)
+        Label(window, text="MaxThread/File").grid(column=0, row=7, sticky='w', padx=2, pady=2)
         if MaxThread < 1 or MaxThread > 100:
             MaxThread = 5
         var_t = StringVar()
         var_t.set(str(MaxThread))
         MaxThread_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var_t)
-        MaxThread_txt.grid(column=1, row=6, sticky='w', padx=2, pady=2)
+        MaxThread_txt.grid(column=1, row=7, sticky='w', padx=2, pady=2)
 
-        Label(window, text="MaxParallelFile").grid(column=0, row=7, sticky='w', padx=2, pady=2)
+        Label(window, text="MaxParallelFile").grid(column=0, row=8, sticky='w', padx=2, pady=2)
         if MaxParallelFile < 1 or MaxParallelFile > 100:
             MaxParallelFile = 5
         var_f = StringVar()
         var_f.set(str(MaxParallelFile))
         MaxParallelFile_txt = Spinbox(window, from_=1, to=100, width=15, textvariable=var_f)
-        MaxParallelFile_txt.grid(column=1, row=7, sticky='w', padx=2, pady=2)
+        MaxParallelFile_txt.grid(column=1, row=8, sticky='w', padx=2, pady=2)
 
         save_config = BooleanVar()
         save_config.set(True)
@@ -260,6 +317,10 @@ def set_config():
         save_config_txt.grid(column=1, row=9, padx=2, pady=2)
 
         Button(window, text="Start Download", width=15, command=close).grid(column=1, row=10, padx=5, pady=5)
+
+        log_text = Text(window, width=112, height=7)
+        log_text.grid(column=0, row=11, padx=2, pady=2, columnspan=4)
+        log_text.insert('insert','Logging...\n')
         window.mainloop()
 
         DesDir = url_txt.get()
@@ -269,12 +330,14 @@ def set_config():
         SrcProfileName = SrcProfileName_txt.get()
         MaxThread = int(MaxThread_txt.get())
         MaxParallelFile = int(MaxParallelFile_txt.get())
+        endpoint_url = EndpointURL.get()
 
         if save_config:
             cfg['Basic']['SrcBucket'] = SrcBucket
             cfg['Basic']['S3Prefix'] = S3Prefix
             cfg['Basic']['SrcFileIndex'] = SrcFileIndex
             cfg['Basic']['SrcProfileName'] = SrcProfileName
+            cfg['Basic']['EndpointURL'] = endpoint_url
             cfg['Basic']['DesDir'] = DesDir
             cfg['Advanced']['MaxThread'] = str(MaxThread)
             cfg['Advanced']['MaxParallelFile'] = str(MaxParallelFile)
@@ -556,7 +619,10 @@ if __name__ == '__main__':
 
     # Define s3 client
     s3_config = Config(max_pool_connections=200, retries={'max_attempts': MaxRetry})
-    s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
+    if endpoint_url in ['AWS', 'aws', '']:
+        s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config)
+    else:
+        s3_src_client = Session(profile_name=SrcProfileName).client('s3', config=s3_config, endpoint_url=endpoint_url)
 
     # Define DB table
     with sqlite3.connect('s3_download.db') as db:

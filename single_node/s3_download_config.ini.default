@@ -1,16 +1,19 @@
 
 [Basic]
-SrcBucket = hawkey999
+SrcProfileName = default
+# 在~/.aws 中配置的能访问源S3的 profile name
+
+EndPointURL = AWS
+# by default AWS S3 endpoint or other vendor's url e.g. https://storage.googleapis.com
+
+SrcBucket = huangzb
 # 源Bucket
 
-S3Prefix = my-prefix
+S3Prefix =
 # 源Bucket的Prefix
 
 SrcFileIndex = *
 # 指定下载文件的文件名, 全部文件则用 "*"
-
-SrcProfileName = us
-# 在~/.aws 中配置的能访问源S3的 profile name
 
 DesDir = /Users/huangzb/Download
 # 文件本地存放目录
