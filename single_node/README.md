@@ -57,7 +57,7 @@ Single Python file can run anywhere, suitable for one time transmission.
   
 **本工具在Python3运行，如果不方便安装Python，并且是 Windows 系统，可以直接使用以下打包版本，并跳过 Install Python3 & SDK 说明小节。**  
 
-[Win64 Package with GUI **s3_upload.zip** No python installation needed](./win64/s3_upload.zip)  
+[Win64 Package with GUI **s3_upload.zip** No python installation needed](./win64/)  
 Download and unzip the s3_upload.zip then run **s3_upload.exe** , no python needed   
 #
 
