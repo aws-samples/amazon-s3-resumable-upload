@@ -1,7 +1,7 @@
 **This project cluster and serverless module is no longer maintained. The code has been merged into 
-[Data Replication Hub](https://github.com/awslabs/aws-data-replication-hub). For local upload/download and UI client module will keep updated, please refer to [single_node](https://github.com/aws-samples/amazon-s3-resumable-upload/tree/master/single_node)** 
+[Data Transfer Hub S3 Plugin](https://github.com/awslabs/amazon-s3-data-replication-hub-plugin). For local upload/download and UI client module will keep updated, please refer to [single_node](https://github.com/aws-samples/amazon-s3-resumable-upload/tree/master/single_node)** 
 
-**该项目的集群模块和无服务器模块不再提供维护。代码已经被合并到 [Data Replication Hub](https://github.com/awslabs/aws-data-replication-hub) 项目. 本地上传下载（断点续传）以及客户端模块将继续维护，请见[single_node](https://github.com/aws-samples/amazon-s3-resumable-upload/tree/master/single_node)**
+**该项目的集群模块和无服务器模块不再提供维护。代码已经被合并到 [Data Transfer Hub S3 Plugin](https://github.com/awslabs/amazon-s3-data-replication-hub-plugin) 项目. 本地上传下载（断点续传）以及客户端模块将继续维护，请见[single_node](https://github.com/aws-samples/amazon-s3-resumable-upload/tree/master/single_node)**
 
 # Amazon S3 MultiThread Resume Migration Solution  (Amazon S3多线程断点续传迁移)   
 
