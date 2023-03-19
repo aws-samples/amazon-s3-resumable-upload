@@ -1328,6 +1328,7 @@ def compare_local_to_s3():
                                    no_prefix=True)
     deltaList = []
     for source_file in fileList:
+        source_file["Key"] = str(PurePosixPath(source_file["Key"]))
         if source_file not in desFilelist:
             deltaList.append(source_file)
 
