@@ -317,15 +317,17 @@ def set_config():
         # Click START button
         def close():
             window.withdraw()
-            ok = messagebox.askokcancel('Start uploading job',
-                                        f'FROM s3://{SrcBucket_txt.get()}/{S3Prefix_txt.get()}\nTO s3://{DesBucket_txt.get()}/{S3Prefix_txt.get()}\n'
-                                        f'Click OK to START')
+            if JobType != 'LOCAL_TO_S3':
+                join_path_str = f"FROM s3://{SrcBucket_txt.get()}/{S3Prefix_txt.get()}\nTO s3://{DesBucket_txt.get()}/{S3Prefix_txt.get()}\n"
+            else:
+                join_path = str(PurePosixPath(SrcDir)/SrcFileIndex)
+                join_path_str = f"FROM {join_path}\nTO s3://{DesBucket_txt.get()}/{S3Prefix_txt.get()}\n"
+            ok = messagebox.askokcancel('Start uploading job', join_path_str+'Click OK to START')
             if not ok:
                 window.deiconify()
                 return
             window.quit()
             return
-            # Finish close()
 
         # Start GUI
         window = Tk()
