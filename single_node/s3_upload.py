@@ -558,7 +558,7 @@ def get_local_file_list(str_key=False):
                     file_size = os.path.getsize(file_absPath)
                     key = Path(file_relativePath)
                     if str_key:
-                        key = str(key)
+                        key = str(PurePosixPath(key))
                     __src_file_list.append({
                         "Key": key,
                         "Size": file_size
