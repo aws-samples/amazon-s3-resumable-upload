@@ -1,91 +1,93 @@
+
 # Amazon S3 Resumable Migration Version 2  (Amazon S3 断点续传迁移 Version 1)
 
-English README: [README.en.md](README.en.md)
-
-多线程断点续传，充分利用带宽，适合批量的大文件S3上传/上载/迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储，即将支持 Azure Blog Storage...
-本次 Version 2 主要修改是同一个应用通过配置即可用做单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能。
+中文 README: [README.md](README.md)
   
-## 功能  
+Multi-threaded resumable upload, fully utilize bandwidth, suitable for bulk large file S3 upload/migration, support Amazon S3, Ali OSS, Tencent COS, Google GCS and other object storage, Azure Blob Storage support coming soon...
+The main change in Version 2 is that the same application can be used for single machine upload, single machine download, deployed as a cluster for scanning source files, or as worker nodes for transfers, rewritten in Golang for better performance.
 
-* 多线程并发传输到多种对象存储，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在典型测试中，迁移1.2TB数据从 us-east-1 S3 到 cn-northwest-1 S3 只用1小时。
+## Features
 
-* 支持的源和目的地：本地目录/文件, Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储。无需区分工作模式，指定好源和目的URL或本地路径即可自动识别。可以是单个文件或对象，或整个目录，或S3桶/前缀等URL。
+* Multi-threaded concurrent transfers to multiple object storage, resumable upload, auto retry on failure. Concurrent transfers of multiple files, fully utilize bandwidth. Optimized flow control. In typical tests, migrating 1.2TB data from us-east-1 S3 to cn-northwest-1 S3 only takes 1 hour. 
 
-* 传输数据只以单个分片的形式过中转节点的内存，不落该节点本地盘，节省时间、存储并且数据更安全。可支撑 0 Size 至 TB 级别  
+* Supported sources and destinations: local directory/file, Amazon S3, Ali OSS, Tencent COS, Google GCS and other object storage. No need to differentiate work modes, just specify source and destination URLs or local paths and it will automatically detect. Can be a single file/object, entire directory, S3 bucket/prefix, etc.
 
-* 自动对比源/目的桶的文件名和大小，不一致的才传输。默认是一边List，一边传输，即逐个获取目的对象信息对比一个就传输一个，这样使用体验是输入命令之后就立马启动传输（类似AWS CLI）；可以使用时通过 -l 参数设置为全部List目的对象列表之后再进行传输，因为List比逐个Head效率更高，也节省请求次数的费用。本次Version 2支持了并行List，对于对象数量很多的情况，可以更快完成List。例如3千万对象的桶，如果按正常List（例如 aws s3 ls）要起码90分钟，而现在在使用64并发的情况(16vCPU)下缩减到只有1分钟。
+* Data is transferred via memory in single shard form through transit nodes, not saved on local disk, saving time, storage and more secure. Support sizes from 0 Bytes to TBs.
 
-* 支持设置目的地的各种对象存储级别，如：标准、S3-IA、Glacier或深度归档。支持指定目的S3的ACL。
+* Automatically compare filenames and sizes between source and destination buckets, only transfer inconsistencies. Default is to list and transfer concurrently, i.e. get destination object info one by one and transfer if not exists, so transfer starts immediately after command like AWS CLI. Use -l option to list all destination objects first before transferring, list is more efficient than head each, also saves API call costs. Version 2 supports parallel listing, for buckets with large number of objects, listing is much faster, e.g. 30 million objects bucket normally takes 90 mins to list, now only takes 1 min with 64 concurrency (16 vCPU).  
 
-* 支持设置源对象存储是no-sign-request和request-payer的情况
+* Support setting various storage classes for destination objects, e.g. STANDARD, S3-IA, Glacier or Deep Archive. Support specifying ACL for destination S3.
 
-* 支持把源对象存储的 Metadata 也复制到目的对象存储。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
+* Support source S3 buckets with no-sign-request or request-payer configurations.
 
-## 使用说明
+* Support copying metadata from source to destination S3 objects. Note this requires a Head call per object, impacting performance and API call costs.
 
-### 安装Go运行环境
+## Usage
 
-首次使用需要安装Golang运行环境，以Linux为例：
+### Install Go Runtime 
+
+For first time use, install Golang runtime, example for Linux:
 
 ```shell
 sudo yum install -y go git -y
 git clone https://github.com/aws-samples/amazon-s3-resumable-upload
 ```
 
-如果在中国区，可通过go代理来下载go依赖包，则多运行一句代理设置：go env -w GOPROXY=https://goproxy.cn,direct   
+For China regions, use go proxy to speed up downloading go packages, add: 
+go env -w GOPROXY=https://goproxy.cn,direct
 
-### 编译go代码
+### Compile Go Code
 
 ```shell
 cd amazon-s3-resumable-upload
-go build .  # 下载依赖包并编译程序
+go build .  # downloads dependencies and compiles
 ```
 
-可使用 ./s3trans -h 获取帮助信息
+Use ./s3trans -h to see help
 
-### 快速使用  
+### Quick Start
 
-* 下载S3文件到本地：  
+* Download S3 file to local:
 
-```shell
+```shell 
 ./s3trans s3://bucket-name/prefix /local/path
-# 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
+# Above uses default AWS profile in ~/.aws/credentials, or IAM Role if on EC2. To specify profile for source S3:  
 ./s3trans s3://bucket-name/prefix /local/path --from_profile=source_profile
 ```
 
-* 上传本地文件到S3：  
+* Upload local file to S3:
 
 ```shell
-./s3trans /local/path s3://bucket-name/prefix
-# 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
-./s3trans /local/path s3://bucket-name/prefix --to_profile=dest_profile
+./s3trans /local/path s3://bucket-name/prefix 
+# Above uses default AWS profile in ~/.aws/credentials, or IAM Role if on EC2. To specify profile for destination S3:
+./s3trans /local/path s3://bucket-name/prefix --to_profile=dest_profile 
 ```
 
-* 从S3到S3，如不指定region，则程序会先自动查询Bucket的Region：  
+* S3 to S3, region is auto detected if not specified:
 
-```shell
+```shell 
 ./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --to_profile=dest_profile
-# 以上from_profile没填则获取默认的profile或使用EC2 IAM Role。或用以下方式直接指定profile
-./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from_profile=source_profile --to_profile=dest_profile
+# Above from_profile not set uses default or EC2 IAM Role. Can also specify both:
+./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from_profile=source_profile --to_profile=dest_profile 
 ```
 
-* 对于非AWS的S3兼容存储，则需要指定endpoint
+* For non-AWS S3 compatible storage, specify endpoint: 
 
 ```shell
 ./s3trans s3://bucket-gcs-test s3://bucket-virginia --from_profile=gcs_profile --to_profile=aws_profile --from_endpoint=https://storage.googleapis.com
-# 以上endpoint也可以用简称替换，即：--from_endpoint=google_gcs，还可以是其他简称：ali_oss, tencent_cos, azure_blob(TODO: azure)
+# Can use short names for endpoints, e.g. --from_endpoint=google_gcs, also supports: ali_oss, tencent_cos, azure_blob(TODO: azure)
 ```
 
-* -l 指定先List再同步数据（节省请求次数费用，但会增加一次List的时间）
-* -n （n 即NumWorkers）指定并行List和并行传输线程数。最大并发对象数为n，每个对象最大并发为2n，List Bucket时最大并发为4n；推荐n <= vCPU numbe
-* -y 忽略确认命令，直接执行
+* -l to list target before transfer (less API calls but slower start)
+* -n (n is NumWorkers) to specify concurrency for listing and transfers. Max concurrent objects is n, max concurrent parts per object is 2n, max concurrent listing is 4n. Recommend n <= vCPU number 
+* -y to auto confirm prompt
 
 ```shell
-./s3trans C:\Users\Administrator\Downloads\test\ s3://huangzb-virginia/win2/ --to-profile sin  -l -n 8 -y
+./s3trans C:\Users\Administrator\Downloads\test\ s3://huangzb-virginia/win2/ --to-profile sin  -l -n 8 -y 
 ```
 
-* 其他使用帮助
-  
+* More usage help:
+
 ```shell
 ./s3trans -h
 
