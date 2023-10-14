@@ -1,12 +1,4 @@
-// 多线程并发上传/下载S3，支持断点续传，边List边下载
-// Usage: 在go文件所在的目录下运行
-// sudo yum install -y go
-// go mod init s3trans
-// 在中国区可通过go代理来下载依赖包，则多运行一句：go env -w GOPROXY=https://goproxy.cn,direct
-// go mod tidy
-// go build .
-// ./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
-// 使用 ./s3trans -h 获取更多帮助信息
+// 多线程并发上传/下载/转发S3和各种S3兼容存储，断点续传
 
 package main
 
@@ -144,7 +136,7 @@ func init() {
 	viper.BindPFlag("max-retries", rootCmd.PersistentFlags().Lookup("max-retries"))
 	rootCmd.PersistentFlags().Int64("resumable-threshold", 50, "When the file size (MB) is larger than this value, the file will be resumable transfered.")
 	viper.BindPFlag("resumable-threshold", rootCmd.PersistentFlags().Lookup("resumable-threshold"))
-	rootCmd.PersistentFlags().IntP("num-workers", "n", 4, "Concurrent threads = NumWorkers*NumWorkers (files*parts), recommend NumWorkers <= vCPU number")
+	rootCmd.PersistentFlags().IntP("num-workers", "n", 4, "NumWorkers*1 for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket; Recommend NumWorkers <= vCPU number")
 	viper.BindPFlag("num-workers", rootCmd.PersistentFlags().Lookup("num-workers"))
 	rootCmd.PersistentFlags().BoolP("y", "y", false, "Ignore waiting for confirming command")
 
@@ -350,17 +342,17 @@ func getSess(bInfo *BInfo) *session.Session {
 // 自动完善endpoint url
 func completeEndpointURL(bInfo *BInfo) {
 	switch bInfo.endpoint {
-	case "Aliyun_OSS":
+	case "ali_oss":
 		if bInfo.region == "" {
 			log.Fatalf("No region specified for bucket: %s\n", bInfo.bucket)
 		}
 		bInfo.endpoint = fmt.Sprintf("https://oss-%s.aliyuncs.com", bInfo.region)
-	case "Tencent_COS":
+	case "tencent_cos":
 		if bInfo.region == "" {
 			log.Fatalf("No region specified for bucket:%s\n", bInfo.bucket)
 		}
 		bInfo.endpoint = fmt.Sprintf("https://cos.%s.myqcloud.com", bInfo.region)
-	case "Google_GCS":
+	case "google_gcs":
 		bInfo.endpoint = "https://storage.googleapis.com"
 	}
 	// 都不是以上定义字符串则自直接使用endpoint url的字符串
