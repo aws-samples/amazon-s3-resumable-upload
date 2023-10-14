@@ -8,7 +8,7 @@
 
 * 多线程并发传输到多种对象存储，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在典型测试中，迁移1.2TB数据从 us-east-1 S3 到 cn-northwest-1 S3 只用1小时。
 
-* 支持的源和目的地：本地目录/文件, Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储，即将支持 Azure Blog Storage。无需区分工作模式，指定好源和目的URL或本地路径即可自动识别。可以是单个文件或对象，或整个目录，或S3桶/前缀等URL。
+* 支持的源和目的地：本地目录/文件, Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储。无需区分工作模式，指定好源和目的URL或本地路径即可自动识别。可以是单个文件或对象，或整个目录，或S3桶/前缀等URL。
 
 * 传输数据只以单个分片的形式过中转节点的内存，不落该节点本地盘，节省时间、存储并且数据更安全。可支撑 0 Size 至 TB 级别  
 
@@ -72,7 +72,7 @@ go build .  # 下载依赖包并编译程序
 
 ```shell
 ./s3trans s3://bucket-gcs-test s3://bucket-virginia --from_profile=gcs_profile --to_profile=aws_profile --from_endpoint=https://storage.googleapis.com
-# 以上endpoint也可以用简称替换，即：--from_endpoint=google_gcs，还可以是其他简称：ali_oss, tencent_cos, azure_blob(azure开发中...)
+# 以上endpoint也可以用简称替换，即：--from_endpoint=google_gcs，还可以是其他简称：ali_oss, tencent_cos, azure_blob(TODO: azure)
 ```
 
 * -l 指定先List再同步数据（节省请求次数费用，但会增加一次List的时间）
