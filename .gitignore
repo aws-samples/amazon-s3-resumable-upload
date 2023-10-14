@@ -2,4 +2,5 @@
 __*
 
 *.db
+*.log
 s3trans
