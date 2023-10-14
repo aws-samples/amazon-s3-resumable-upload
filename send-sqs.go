@@ -116,7 +116,7 @@ func sendSQS(jobList []FileInfo) error {
 	var sqsBatch int
 	var sqsMessage []*sqs.SendMessageBatchRequestEntry
 	var wg sync.WaitGroup
-	BatchSize := 5 //TODO: 10
+	BatchSize := 10
 
 	// Create a buffered channel to hold the jobs
 	jobs := make(chan []*sqs.SendMessageBatchRequestEntry, cfg.NumWorkers)

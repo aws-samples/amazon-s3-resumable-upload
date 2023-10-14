@@ -216,7 +216,6 @@ func concurrencyListObjects(svc *s3.S3, bucket, prefix string, sem *semaphore.We
 			mu.Lock()
 			*s3Objects = append(*s3Objects, page.Contents...)
 			mu.Unlock()
-			// TODO: workMode = listToSQS
 
 			for _, commonPrefix := range page.CommonPrefixes {
 				wg.Add(1)

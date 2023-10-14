@@ -1,3 +1,7 @@
-*.db
 .DS_Store
+__*
+.git/*
+.vscode/*
+
+*.db
 s3trans

@@ -155,7 +155,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("y", "y", false, "Ignore waiting for confirming command")
 	viper.BindPFlag("y", rootCmd.PersistentFlags().Lookup("y"))
 
-	// TODO: WorkMode = "SQS_SEND", "SQS_CONSUME"
+	// TODO: WorkMode = "SQS_CONSUME"
 	rootCmd.PersistentFlags().String("work-mode", "", "SQS_SEND | SQS_CONSUME; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3. ")
 	viper.BindPFlag("work-mode", rootCmd.PersistentFlags().Lookup("work-mode"))
 	rootCmd.PersistentFlags().String("sqs-url", "", "The SQS queue URL to send or consume message from, e.g. https://sqs.us-east-1.amazonaws.com/my_account/my_queue_name")
@@ -231,7 +231,7 @@ func getConfig() {
 			fmt.Printf("Bucket: %s, Prefix: %s, Profile: %s, Endpoint-URL: %s, Region:%s\n", binfo.bucket, binfo.prefix, binfo.profile, binfo.endpoint, binfo.region)
 		} else
 
-		// TODO: 不是S3兼容接口又不是本地目录，例如Azure Blog Storage
+		// TODO: Azure Blog Storage
 
 		{
 			// Verify the local path
