@@ -37,7 +37,7 @@ git clone https://github.com/aws-samples/amazon-s3-resumable-upload
 
 ```shell
 cd amazon-s3-resumable-upload
-go build .  # 编译程序
+go build .  # 下载依赖包并编译程序
 ```
 
 可使用 ./s3trans -h 获取帮助信息
@@ -47,39 +47,81 @@ go build .  # 编译程序
 * 下载S3文件到本地：  
 
 ```shell
-s3trans s3://bucket-name/prefix /local/path
+./s3trans s3://bucket-name/prefix /local/path
 # 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
-s3trans s3://bucket-name/prefix /local/path --from_profile=source_profile
+./s3trans s3://bucket-name/prefix /local/path --from_profile=source_profile
 ```
 
 * 上传本地文件到S3：  
 
 ```shell
-s3trans /local/path s3://bucket-name/prefix
+./s3trans /local/path s3://bucket-name/prefix
 # 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
-s3trans /local/path s3://bucket-name/prefix --to_profile=dest_profile
+./s3trans /local/path s3://bucket-name/prefix --to_profile=dest_profile
 ```
 
 * 从S3到S3，如不指定region，则程序会先自动查询Bucket的Region：  
 
 ```shell
-s3trans s3://bucket-name/prefix s3://bucket-name/prefix --to_profile=dest_profile
-以上from_profile没填则获取默认的profile或使用EC2 IAM Role。或用以下方式直接指定profile
-s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from_profile=source_profile --to_profile=dest_profile
+./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --to_profile=dest_profile
+# 以上from_profile没填则获取默认的profile或使用EC2 IAM Role。或用以下方式直接指定profile
+./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from_profile=source_profile --to_profile=dest_profile
 ```
 
 * 对于非AWS的S3兼容存储，则需要指定endpoint
 
 ```shell
-s3trans s3://bucket-gcs-test s3://bucket-virginia --from_profile=gcs_profile --to_profile=aws_profile --from_endpoint=https://storage.googleapis.com
+./s3trans s3://bucket-gcs-test s3://bucket-virginia --from_profile=gcs_profile --to_profile=aws_profile --from_endpoint=https://storage.googleapis.com
 # 以上endpoint也可以用简称替换，即：--from_endpoint=google_gcs，还可以是其他简称：ali_oss, tencent_cos, azure_blob(azure开发中...)
 ```
 
 * -l 指定先List再同步数据（节省请求次数费用，但会增加一次List的时间）
 * -n （n 即NumWorkers）指定并行List和并行传输线程数。最大并发对象数为n，每个对象最大并发为2n，List Bucket时最大并发为4n；推荐n <= vCPU numbe
+* -y 忽略确认命令，直接执行
 
 ```shell
-s3trans C:\Users\Administrator\Downloads\test\ s3://huangzb-virginia/win2/ --to-profile sin  -l -n 8
+./s3trans C:\Users\Administrator\Downloads\test\ s3://huangzb-virginia/win2/ --to-profile sin  -l -n 8
+```
+
+* 其他使用帮助
+  
+```shell
+./s3trans -h
+
+s3trans transfers data from source to target.
+	./s3trans FROM_URL TO_URL [OPTIONS]
+	FROM_URL: The url of data source, e.g. /home/user/data or s3://bucket/prefix
+	TO_URL: The url of data transfer target, e.g. /home/user/data or s3://bucket/prefix
+	For example:
+	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
+	./s3trans s3://bucket/prefix /home/user/data -from_profile sin
+
+Usage:
+  s3trans FROM_URL TO_URL [flags]
+
+Flags:
+      --acl string                The TARGET S3 bucket ACL, private means only the object owner can read&write, e.g. private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
+      --from-endpoint string      The endpoint of data source, e.g. https://storage.googleapis.com; https://oss-<region>.aliyuncs.com; https://cos.<region>.myqcloud.com . If AWS s3 or local path, no need to specify this.
+      --from-profile string       The AWS profile in ~/.aws/credentials of data source
+      --from-region string        The region of data transfer source, e.g. cn-north-1. If no specified, the region will be auto detected with the credentials you provided in profile.
+  -h, --help                      help for s3trans
+      --http-timeout int          API request timeout (seconds) (default 30)
+  -l, --list-target               List the TARGET S3 bucket, compare exist objects BEFORE transfer. List is more efficient than head each object to check if it exists, but transfer may start slower because it needs to wait for listing all objects to compare. To mitigate this, this app leverage Concurrency Listing for fast list; If no list-target para, transfer without listing the target S3 bucket, but before transfering each object, head each target object to check, this costs more API call, but start faster.
+      --max-retries int           API request max retries (default 5)
+      --no-sign-request           The SOURCE bucket is not needed to sign the request
+  -n, --num-workers int           NumWorkers*1 for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket; Recommend NumWorkers <= vCPU number (default 4)
+      --request-payer             The SOURCE bucket requires requester to pay, set this
+      --resumable-threshold int   When the file size (MB) is larger than this value, the file will be resumable transfered. (default 50)
+  -s, --skip-compare              If True, skip to compare the name and size between source and target S3 object. Just overwrite all objects. No list target nor head target object to check if it already exists.
+      --sqs-profile string        The SQS queue leverage which AWS profile in ~/.aws/credentials
+      --sqs-url string            The SQS queue URL to send or consume message from, e.g. https://sqs.us-east-1.amazonaws.com/my_account/my_queue_name
+      --storage-class string      The TARGET S3 bucket storage class, e.g. STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE|OUTPOSTS|GLACIER_IR|SNOW or others of S3 compatibale
+      --to-endpoint string        The endpoint of data transfer target, e.g. https://storage.googleapis.com . If AWS s3 or local path, no need to specify this.
+      --to-profile string         The AWS profile in ~/.aws/credentials of data transfer target
+      --to-region string          The region of data transfer target, e.g. us-east-1. If no specified, the region will be auto detected with the credentials you provided in profile.
+      --transfer-metadata         If True, get metadata from source S3 bucket and upload the metadata to target object. This costs more API calls.
+      --work-mode string          SQS_SEND | SQS_CONSUME; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3. 
+  -y, --y                         Ignore waiting for confirming command
 ```
 
 ## License

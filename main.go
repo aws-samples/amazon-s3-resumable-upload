@@ -89,12 +89,11 @@ var rootCmd = &cobra.Command{
 	FROM_URL: The url of data source, e.g. /home/user/data or s3://bucket/prefix
 	TO_URL: The url of data transfer target, e.g. /home/user/data or s3://bucket/prefix
 	For example:
-	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
-	./s3trans s3://bucket/prefix /home/user/data -from_profile sin 
+	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile from_profile -to_profile to_profile
+	./s3trans s3://bucket/prefix /home/user/data -from_profile from_profile 
 	`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		// args[0] 是 FROM_URL, args[1] 是 TO_URL
 		from.url = args[0]
 		to.url = args[1]
 	},
