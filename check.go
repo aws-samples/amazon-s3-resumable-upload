@@ -184,6 +184,7 @@ func getMultipartUploadList(svc *s3.S3, bucket string, prefix string) ([]*s3.Mul
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("There are %d multipart uploads ID already in target s3://%s\n", len(uploads), path.Join(bucket, prefix))
 
 	return uploads, nil
 }
@@ -197,6 +198,7 @@ func getS3ObjectList(b BInfo) ([]*s3.Object, error) {
 
 	concurrencyListObjects(b.svc, b.bucket, b.prefix, sem, &s3Objects, &mu, &wg)
 	wg.Wait()
+	log.Printf("There are %d objects already in s3://%s\n", len(s3Objects), path.Join(b.bucket, b.prefix))
 
 	return s3Objects, nil
 }

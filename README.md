@@ -15,11 +15,13 @@ English README: [README.en.md](README.en.md)
 
 * 自动对比源/目的桶的文件名和大小，不一致的才传输。默认是一边List，一边传输，即逐个获取目的对象信息对比一个就传输一个，这样使用体验是输入命令之后就立马启动传输（类似AWS CLI）；可以使用时通过 -l 参数设置为全部List目的对象列表之后再进行传输，因为List比逐个Head效率更高，也节省请求次数的费用。本次Version 2支持了并行List，对于对象数量很多的情况，可以更快完成List。例如3千万对象的桶，如果按正常List（例如 aws s3 ls）要起码90分钟，而现在在使用64并发的情况(16vCPU)下缩减到只有1分钟。
 
-* 支持设置目的地的各种对象存储级别，如：标准、S3-IA、Glacier或深度归档。支持指定目的S3的ACL。
+* 支持设置目的地的各种对象存储级别，如：STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE|OUTPOSTS|GLACIER_IR|SNOW
+
+* 支持指定目的S3的ACL: private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
 
 * 支持设置源对象存储是no-sign-request和request-payer的情况
 
-* 支持把源对象存储的 Metadata 也复制到目的对象存储。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
+* 支持把源对象存储的 Metadata 也复制到目的对象存储(--transfer-metadata)。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
 
 ## 使用说明
 
@@ -43,7 +45,7 @@ go build .  # 下载依赖包并编译程序
 
 可使用 ./s3trans -h 获取帮助信息
 
-### 快速使用  
+### 使用  
 
 * 下载S3文件到本地：  
 
@@ -84,7 +86,46 @@ go build .  # 下载依赖包并编译程序
 ./s3trans C:\Users\Administrator\Downloads\test\ s3://huangzb-virginia/win2/ --to-profile sin  -l -n 8 -y
 ```
 
-* 其他使用帮助
+* 支持设置排除列表 (--ignore-list-path) 如果数据源的S3 Key或源本地路径符合排除列表的则不传输
+例如，排除列表路径设置为 --ignore-list-path="./ignore-list.txt" 文件内容为：  
+
+```text
+test2/
+test1
+```
+
+则源数据中遇到这些路径都会被跳过，不传输：test2/abc.zip, test1/abc.zip, test1, test1.zip, test2/cde/efg等...
+而这些路径则会正常传输，因为开头Prefix不一致：test3/test1, test3/test2/ 等...
+
+## 集群模式
+
+### 集群模式的 List 模块使用
+
+对比源Bucket/Prefix和目的Bucket/Prefix，把不一致的对象信息写入SQS队列，以便后续的传输节点使用。  
+需要指定源S3和目的S3的URL，另还需要指定一个SQS用于发送任务列表，包括SQS的url和能访问这个SQS所用的AWS profile。  
+可选：  
+设置把对比扫描出来的任务列表存入文件 --joblist-write-to-filepath；  
+设置把SQS发送的日志存入文件 --sqs-log-to-filename  
+
+```shell
+./s3trans s3://from_bucket/ s3://to_bucket/ --from-profile us --to-profile bjs \
+    --work-mode SQS_SEND
+    --sqs-profile us \
+    --sqs-url "https://sqs.region.amazonaws.com/my_account_number/sq_queue_sname" \
+    --joblist-write-to-filepath "./my_joblist.log" \
+    --sqs-log-to-filename  "./sqssent.log" \
+    -y -l -n 8
+```
+
+### 集群模式的传输节点使用
+
+TODO: 待补充
+
+```shell
+
+```
+
+### 其他使用帮助
   
 ```shell
 ./s3trans -h

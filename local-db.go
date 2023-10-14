@@ -11,7 +11,7 @@ func getDatabase() (*sql.DB, error) {
 	var database *sql.DB
 	var err error
 	err = withRetries(func() error {
-		database, err = sql.Open("sqlite3", dbPath)
+		database, err = sql.Open("sqlite3", cfg.DBPath)
 		if err != nil {
 			fmt.Println("Failed to connect to sqlite3", err)
 			return err

@@ -1,4 +1,12 @@
-// 多线程并发上传/下载/转发S3和各种S3兼容存储，断点续传
+// 多线程并发上传/下载S3，支持断点续传，边List边下载
+// Usage: 在go文件所在的目录下运行
+// sudo yum install -y go
+// go mod init s3trans
+// 在中国区可通过go代理来下载依赖包，则多运行一句：go env -w GOPROXY=https://goproxy.cn,direct
+// go mod tidy
+// go build .
+// ./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
+// 使用 ./s3trans -h 获取更多帮助信息
 
 package main
 
@@ -22,24 +30,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	chunkSize  = 5 * 1024 * 1024   // Multipart 分片大小
-	dbPath     = "./s3download.db" // 自动创建已经下载的分片状态记录数据库
-	RetryDelay = 1 * time.Second   // API 请求重试延迟时间(秒)
-)
-
 type Config struct {
-	ListTarget         bool   `mapstructure:"list-target"`         // 一次性从目标S3获取列表进行对比再开始传输，文件数量大的情况可以节省每次请求之前逐个文件对比的API Call
-	SkipCompare        bool   `mapstructure:"skip-compare"`        // 是否不做目标S3与源文件的对比，即无论是否有重复文件，都直接开始传输并覆盖
-	TransferMetadata   bool   `mapstructure:"transfer-metadata"`   // 是否传输源S3 Object MetaData到目标S3，只在S3toS3模式下可用
-	HttpTimeout        int    `mapstructure:"http-timeout"`        // S3 http 超时时间(秒)
-	MaxRetries         int    `mapstructure:"max-retries"`         // API 请求最大重试次数
-	ResumableThreshold int64  `mapstructure:"resumable-threshold"` // 走断点续传流程的门槛，小于该值则直接并发下载，对于文件不大或不担心中断的情况效率更高（单位MB）
-	NumWorkers         int    `mapstructure:"num-workers"`         // 控制 goroutine 总量
-	WorkMode           string `mapstructure:"work-mode"`           // SQS_SEND | SQS_CONSUME
-	SQSUrl             string `mapstructure:"sqs-url"`             // SQS Queue URL
-	SQSProfile         string `mapstructure:"sqs-profile"`         // SQS Queue Profile
-	YPtr               bool   `mapstructure:"y"`                   // Ignore waiting for confirming command
+	ListTarget         bool   `mapstructure:"list-target"`               // 一次性从目标S3获取列表进行对比再开始传输，文件数量大的情况可以节省每次请求之前逐个文件对比的API Call
+	SkipCompare        bool   `mapstructure:"skip-compare"`              // 是否不做目标S3与源文件的对比，即无论是否有重复文件，都直接开始传输并覆盖
+	TransferMetadata   bool   `mapstructure:"transfer-metadata"`         // 是否传输源S3 Object MetaData到目标S3，只在S3toS3模式下可用
+	HttpTimeout        int    `mapstructure:"http-timeout"`              // S3 http 超时时间(秒)
+	MaxRetries         int    `mapstructure:"max-retries"`               // API 请求最大重试次数
+	ResumableThreshold int64  `mapstructure:"resumable-threshold"`       // 走断点续传流程的门槛，小于该值则直接并发下载，对于文件不大或不担心中断的情况效率更高（单位MB）
+	NumWorkers         int    `mapstructure:"num-workers"`               // 控制 goroutine 总量
+	WorkMode           string `mapstructure:"work-mode"`                 // SQS_SEND | SQS_CONSUME
+	SQSUrl             string `mapstructure:"sqs-url"`                   // SQS Queue URL
+	SQSProfile         string `mapstructure:"sqs-profile"`               // SQS Queue Profile
+	YPtr               bool   `mapstructure:"y"`                         // Ignore waiting for confirming command
+	DBPath             string `mapstructure:"db-location"`               // 自动创建已经下载的分片状态记录数据库
+	ChunkSize          int64  `mapstructure:"chunk-size"`                // Multipart 分片大小
+	RetryDelay         int    `mapstructure:"retry-delay"`               // API 请求重试延迟时间(秒)
+	JobListPath        string `mapstructure:"joblist-write-to-filepath"` // 列出S3传输任务之后，写入到一个文件作为备份
+	SQSSentLogName     string `mapstructure:"sqs-log-to-filename"`       // SQS已发送消息的记录文件名
+	IgnoreListPath     string `mapstructure:"ignore-list-path"`          // List和传输的时候，如果S3源的Key或本地源路径的前缀在Ignore List里面，则跳过。设置的时候注意S3的Key是不带“/”开头的
 }
 
 type BInfo struct {
@@ -89,11 +97,12 @@ var rootCmd = &cobra.Command{
 	FROM_URL: The url of data source, e.g. /home/user/data or s3://bucket/prefix
 	TO_URL: The url of data transfer target, e.g. /home/user/data or s3://bucket/prefix
 	For example:
-	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile from_profile -to_profile to_profile
-	./s3trans s3://bucket/prefix /home/user/data -from_profile from_profile 
+	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
+	./s3trans s3://bucket/prefix /home/user/data -from_profile sin 
 	`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
+		// args[0] 是 FROM_URL, args[1] 是 TO_URL
 		from.url = args[0]
 		to.url = args[1]
 	},
@@ -121,6 +130,8 @@ func init() {
 	viper.BindPFlag("no-sign-request", rootCmd.PersistentFlags().Lookup("no-sign-request"))
 	rootCmd.PersistentFlags().Bool("request-payer", false, "The SOURCE bucket requires requester to pay, set this")
 	viper.BindPFlag("request-payer", rootCmd.PersistentFlags().Lookup("request-payer"))
+	rootCmd.PersistentFlags().String("db-location", "./download-status.db", "local db to record download resumable status")
+	viper.BindPFlag("db-location", rootCmd.PersistentFlags().Lookup("db-location"))
 
 	rootCmd.PersistentFlags().BoolP("list-target", "l", false, "List the TARGET S3 bucket, compare exist objects BEFORE transfer. List is more efficient than head each object to check if it exists, but transfer may start slower because it needs to wait for listing all objects to compare. To mitigate this, this app leverage Concurrency Listing for fast list; If no list-target para, transfer without listing the target S3 bucket, but before transfering each object, head each target object to check, this costs more API call, but start faster.")
 	viper.BindPFlag("list-target", rootCmd.PersistentFlags().Lookup("list-target"))
@@ -133,11 +144,16 @@ func init() {
 	viper.BindPFlag("http-timeout", rootCmd.PersistentFlags().Lookup("http-timeout"))
 	rootCmd.PersistentFlags().Int("max-retries", 5, "API request max retries")
 	viper.BindPFlag("max-retries", rootCmd.PersistentFlags().Lookup("max-retries"))
+	rootCmd.PersistentFlags().Int("retry-delay", 5, "Delay before next retry in secondes")
+	viper.BindPFlag("retry-delay", rootCmd.PersistentFlags().Lookup("retry-delay"))
+	rootCmd.PersistentFlags().Int64("chunk-size", 5, "Multipart part size(MB)")
+	viper.BindPFlag("chunk-size", rootCmd.PersistentFlags().Lookup("chunk-size"))
 	rootCmd.PersistentFlags().Int64("resumable-threshold", 50, "When the file size (MB) is larger than this value, the file will be resumable transfered.")
 	viper.BindPFlag("resumable-threshold", rootCmd.PersistentFlags().Lookup("resumable-threshold"))
-	rootCmd.PersistentFlags().IntP("num-workers", "n", 4, "NumWorkers*1 for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket; Recommend NumWorkers <= vCPU number")
+	rootCmd.PersistentFlags().IntP("num-workers", "n", 4, "Concurrent threads = NumWorkers*NumWorkers (files*parts), recommend NumWorkers <= vCPU number")
 	viper.BindPFlag("num-workers", rootCmd.PersistentFlags().Lookup("num-workers"))
 	rootCmd.PersistentFlags().BoolP("y", "y", false, "Ignore waiting for confirming command")
+	viper.BindPFlag("y", rootCmd.PersistentFlags().Lookup("y"))
 
 	// TODO: WorkMode = "SQS_SEND", "SQS_CONSUME"
 	rootCmd.PersistentFlags().String("work-mode", "", "SQS_SEND | SQS_CONSUME; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3. ")
@@ -146,8 +162,12 @@ func init() {
 	viper.BindPFlag("sqs-url", rootCmd.PersistentFlags().Lookup("sqs-url"))
 	rootCmd.PersistentFlags().String("sqs-profile", "", "The SQS queue leverage which AWS profile in ~/.aws/credentials")
 	viper.BindPFlag("sqs-profile", rootCmd.PersistentFlags().Lookup("sqs-profile"))
-
-	viper.BindPFlag("y", rootCmd.PersistentFlags().Lookup("y"))
+	rootCmd.PersistentFlags().String("joblist-write-to-filepath", "", "After listing source and target S3, compare the delta joblist and write the joblist to this filepath, e.g. ./joblist.txt")
+	viper.BindPFlag("joblist-write-to-filepath", rootCmd.PersistentFlags().Lookup("joblist-write-to-filepath"))
+	rootCmd.PersistentFlags().String("sqs-log-to-filename", "", "After sent joblist to SQS, write the sent messages log to this filepath, e.g. ./sqs-log.txt")
+	viper.BindPFlag("sqs-log-to-filename", rootCmd.PersistentFlags().Lookup("sqs-log-to-filename"))
+	rootCmd.PersistentFlags().String("ignore-list-path", "", "When listing and transfer, if source S3 key or local path matching the prefix in this ignore-list, it will be ignored. This is useful to ignore some objects that are not needed to transfer. The ignore-list is a file path, e.g. ./ignore-list.txt")
+	viper.BindPFlag("ignore-list-path", rootCmd.PersistentFlags().Lookup("ignore-list-path"))
 }
 
 func initConfig() {
@@ -181,6 +201,7 @@ func getConfig() {
 	from.noSignRequest = viper.GetBool("no-sign-request")
 	from.requestPayer = viper.GetBool("request-payer")
 	cfg.ResumableThreshold = cfg.ResumableThreshold * 1024 * 1024
+	cfg.ChunkSize = cfg.ChunkSize * 1024 * 1024
 
 	for i, binfo := range []*BInfo{&from, &to} {
 		if i == 0 {
@@ -201,13 +222,13 @@ func getConfig() {
 			if i == 0 {
 				binfo.downloader = s3manager.NewDownloader(binfo.sess)
 				binfo.downloader.Concurrency = cfg.NumWorkers * 2
-				binfo.downloader.PartSize = chunkSize
+				binfo.downloader.PartSize = cfg.ChunkSize
 			} else {
 				binfo.uploader = s3manager.NewUploader(binfo.sess)
 				binfo.uploader.Concurrency = cfg.NumWorkers * 2
-				binfo.uploader.PartSize = chunkSize
+				binfo.uploader.PartSize = cfg.ChunkSize
 			}
-			fmt.Printf("URL: %s, profile: %s, endpoint: %s, region:%s\n", binfo.url, binfo.profile, binfo.endpoint, binfo.region)
+			fmt.Printf("Bucket: %s, Prefix: %s, Profile: %s, Endpoint-URL: %s, Region:%s\n", binfo.bucket, binfo.prefix, binfo.profile, binfo.endpoint, binfo.region)
 		} else
 
 		// TODO: 不是S3兼容接口又不是本地目录，例如Azure Blog Storage
@@ -237,10 +258,11 @@ func getConfig() {
 func main() {
 	startTime := time.Now()
 	getConfig()
-	fmt.Printf(" Target StorageClass(default: STANDARD): %s\n Target ACL(default: private): %s\n Source noSignRequest: %t\n Source requestPayer: %t", to.storageClass, to.ACL, from.noSignRequest, from.requestPayer)
+	fmt.Printf(" Target StorageClass(default: STANDARD): %s\n Target ACL(default: private): %s\n Source noSignRequest: %t\n Source requestPayer: %t\n", to.storageClass, to.ACL, from.noSignRequest, from.requestPayer)
 	fmt.Printf(" Transfer Metadata: %t\n List Target Before Transfer(Recommended): %t\n Skip Compare Before Transfer: %t\n", cfg.TransferMetadata, cfg.ListTarget, cfg.SkipCompare)
 	fmt.Printf(" NumWorkers: %d for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket\n", cfg.NumWorkers)
 	fmt.Printf(" HttpTimeout: %ds\n MaxRetries: %d\n ResumableThreshold: %s\n", cfg.HttpTimeout, cfg.MaxRetries, ByteCountSI(cfg.ResumableThreshold))
+	fmt.Printf(" ChunkSize: %s\n", ByteCountSI(cfg.ChunkSize))
 	fmt.Printf(" WorkMode: %s\n SQS_PROFILE: %s\n SQS_URL: %s\n", cfg.WorkMode, cfg.SQSProfile, cfg.SQSUrl)
 	fmt.Printf("Start to transfer data? (y/n): \n")
 	if !cfg.YPtr {
@@ -286,9 +308,38 @@ func main() {
 	log.Println("To:", to.url)
 }
 
+type RetryRoundTripper struct {
+	Proxied http.RoundTripper
+	Retries int
+	Delay   time.Duration
+}
+
+func (rrt *RetryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+
+	for i := 0; i <= rrt.Retries; i++ {
+		resp, err = rrt.Proxied.RoundTrip(req)
+		if err != nil {
+			log.Printf("HTTP API Request failed and retry: %s", err)
+			time.Sleep(rrt.Delay)
+			continue
+		}
+		break
+	}
+	return resp, err
+}
 func getSess(bInfo *BInfo) *session.Session {
-	// 创建具有超时的 http 客户端
-	client := &http.Client{Timeout: time.Duration(cfg.HttpTimeout) * time.Second}
+	// 创建具有超时重试的 http 客户端
+	// client := &http.Client{Timeout: time.Duration(cfg.HttpTimeout) * time.Second}
+	client := &http.Client{
+		Timeout: time.Duration(cfg.HttpTimeout) * time.Second,
+		Transport: &RetryRoundTripper{
+			Proxied: http.DefaultTransport,
+			Retries: cfg.MaxRetries,
+			Delay:   time.Duration(cfg.RetryDelay) * time.Second,
+		},
+	}
 	config := aws.Config{
 		MaxRetries: aws.Int(cfg.MaxRetries), // 自定义S3 Client最大重试次数
 		HTTPClient: client,                  // 使用自定义了超时时间的 http 客户端
@@ -341,17 +392,17 @@ func getSess(bInfo *BInfo) *session.Session {
 // 自动完善endpoint url
 func completeEndpointURL(bInfo *BInfo) {
 	switch bInfo.endpoint {
-	case "ali_oss":
+	case "Aliyun_OSS":
 		if bInfo.region == "" {
 			log.Fatalf("No region specified for bucket: %s\n", bInfo.bucket)
 		}
 		bInfo.endpoint = fmt.Sprintf("https://oss-%s.aliyuncs.com", bInfo.region)
-	case "tencent_cos":
+	case "Tencent_COS":
 		if bInfo.region == "" {
 			log.Fatalf("No region specified for bucket:%s\n", bInfo.bucket)
 		}
 		bInfo.endpoint = fmt.Sprintf("https://cos.%s.myqcloud.com", bInfo.region)
-	case "google_gcs":
+	case "Google_GCS":
 		bInfo.endpoint = "https://storage.googleapis.com"
 	}
 	// 都不是以上定义字符串则自直接使用endpoint url的字符串

@@ -20,25 +20,23 @@ import (
 )
 
 func s3tos3(from, to BInfo) error {
+	ignoreList := getIgnoreList()
 	var wg sync.WaitGroup
 	semFile := semaphore.NewWeighted(int64(cfg.NumWorkers)) // 并发量为NumWorkers的信号量 for file
 
 	targetObjectList := make([]*s3.Object, 0)
 	var err error
 	if cfg.ListTarget && !cfg.SkipCompare {
-
 		targetObjectList, err = getS3ObjectList(to) // 获取目标 S3 桶中的文件列表
 		if err != nil {
 			return err
 		}
-		log.Printf("There are %d objects already in target %s\n", len(targetObjectList), to.url)
 	}
 
 	multipartUploadsList, err := getMultipartUploadList(to.svc, to.bucket, to.prefix)
 	if err != nil {
 		return err
 	}
-	log.Printf("There are %d multipart uploads ID already in target s3://%s\n", len(multipartUploadsList), path.Join(to.bucket, to.prefix))
 
 	// 遍历源S3
 	inputListSource := &s3.ListObjectsV2Input{
@@ -55,6 +53,11 @@ func s3tos3(from, to BInfo) error {
 			if strings.HasSuffix(*item.Key, "/") {
 				log.Println("...Skipping directory", *item.Key)
 				continue
+			}
+
+			// Skip if key in ignoreList
+			if isIgnored(*item.Key, ignoreList) {
+				log.Println("...Skiping ignored key in ignoreList", *item.Key)
 			}
 
 			var combinedKey string

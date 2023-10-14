@@ -17,59 +17,14 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-func downloadPartAction(svc *s3.S3, partInfo PartInfo) ([]byte, error) {
-	log.Printf("-->Downloading part s3://%s %d/%d, runningGoroutines: %d\n", path.Join(partInfo.FromBucket, partInfo.FromKey), partInfo.PartNumber, partInfo.TotalParts, runningGoroutines)
-	input := &s3.GetObjectInput{
-		Bucket: &partInfo.FromBucket,
-		Key:    &partInfo.FromKey,
-		Range:  aws.String(fmt.Sprintf("bytes=%d-%d", partInfo.Offset, partInfo.Offset+partInfo.Size-1)),
-	}
-	if from.requestPayer {
-		input.RequestPayer = aws.String("requester")
-	}
-	resp, err := svc.GetObject(input)
-	if err != nil {
-		log.Println("Failed to download part", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	buffer, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Failed to read from response body:", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
-		return nil, err
-	}
-	return buffer, nil
-}
-
-func downloadPart(svc *s3.S3, partInfo PartInfo, file *os.File, wg *sync.WaitGroup, semPart *semaphore.Weighted) error {
-	defer wg.Done()
-	defer semPart.Release(1)
-	defer atomic.AddInt32(&runningGoroutines, -1)
-
-	// Download part S3 API Call
-	buffer, err := downloadPartAction(svc, partInfo)
-	if err != nil {
-		return err
-	}
-	// Write the part to file
-	if _, err := file.WriteAt(buffer, partInfo.Offset); err != nil {
-		log.Println("Failed to write to file", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
-		return err
-	}
-
-	// Record the download part
-	recordDownloadPart(partInfo)
-	log.Printf("===Downloaded part s3://%s part:%d/%d\n", path.Join(partInfo.FromBucket, partInfo.FromKey), partInfo.PartNumber, partInfo.TotalParts)
-	return nil
-}
-
 func startDownload(from, to BInfo) error {
-
 	var wg sync.WaitGroup
+	var err error
 	semFile := semaphore.NewWeighted(int64(cfg.NumWorkers))     // 并发量为NumWorkers的信号量 for file
 	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers * 2)) // 并发量为NumWorkers的信号量 for parts
+	ignoreList := getIgnoreList()
 
-	err := from.svc.ListObjectsV2Pages(&s3.ListObjectsV2Input{
+	err = from.svc.ListObjectsV2Pages(&s3.ListObjectsV2Input{
 		Bucket: aws.String(from.bucket),
 		Prefix: aws.String(from.prefix),
 	}, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
@@ -79,6 +34,11 @@ func startDownload(from, to BInfo) error {
 				log.Println("...Skiping directory", *item.Key)
 				continue
 			}
+			// Skip if key in ignoreList
+			if isIgnored(*item.Key, ignoreList) {
+				log.Println("...Skiping ignored key in ignoreList", *item.Key)
+			}
+			
 			var combinedKey string
 			if *item.Key != from.prefix {
 				// 只带上Prefix以内的目录结构
@@ -169,7 +129,7 @@ func startDownload(from, to BInfo) error {
 						Size:       *item.Size,
 						File:       file,
 					}
-					indexList, chunkSize := split(fileInfo, chunkSize)
+					indexList, chunkSizeAuto := split(fileInfo, cfg.ChunkSize)
 					partnumberList, _ := getDownloadedParts(fileInfo)
 					if len(partnumberList) != 0 {
 						log.Printf("Exist %d/%d parts on local path: %s, %v\n", len(partnumberList), len(indexList), localPath+".s3tmp", partnumberList)
@@ -177,8 +137,8 @@ func startDownload(from, to BInfo) error {
 					var wg2 sync.WaitGroup
 					for i, offset := range indexList {
 						if !contains(partnumberList, i+1) {
-							size := chunkSize
-							if offset+chunkSize > fileInfo.Size {
+							size := chunkSizeAuto
+							if offset+chunkSizeAuto > fileInfo.Size {
 								size = fileInfo.Size - offset
 							}
 							partInfo := PartInfo{
@@ -214,4 +174,50 @@ func startDownload(from, to BInfo) error {
 	}
 	wg.Wait()
 	return err
+}
+
+func downloadPartAction(svc *s3.S3, partInfo PartInfo) ([]byte, error) {
+	log.Printf("-->Downloading part s3://%s %d/%d, runningGoroutines: %d\n", path.Join(partInfo.FromBucket, partInfo.FromKey), partInfo.PartNumber, partInfo.TotalParts, runningGoroutines)
+	input := &s3.GetObjectInput{
+		Bucket: &partInfo.FromBucket,
+		Key:    &partInfo.FromKey,
+		Range:  aws.String(fmt.Sprintf("bytes=%d-%d", partInfo.Offset, partInfo.Offset+partInfo.Size-1)),
+	}
+	if from.requestPayer {
+		input.RequestPayer = aws.String("requester")
+	}
+	resp, err := svc.GetObject(input)
+	if err != nil {
+		log.Println("Failed to download part", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	buffer, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Failed to read from response body:", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
+		return nil, err
+	}
+	return buffer, nil
+}
+
+func downloadPart(svc *s3.S3, partInfo PartInfo, file *os.File, wg *sync.WaitGroup, semPart *semaphore.Weighted) error {
+	defer wg.Done()
+	defer semPart.Release(1)
+	defer atomic.AddInt32(&runningGoroutines, -1)
+
+	// Download part S3 API Call
+	buffer, err := downloadPartAction(svc, partInfo)
+	if err != nil {
+		return err
+	}
+	// Write the part to file
+	if _, err := file.WriteAt(buffer, partInfo.Offset); err != nil {
+		log.Println("Failed to write to file", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
+		return err
+	}
+
+	// Record the download part
+	recordDownloadPart(partInfo)
+	log.Printf("===Downloaded part s3://%s part:%d/%d\n", path.Join(partInfo.FromBucket, partInfo.FromKey), partInfo.PartNumber, partInfo.TotalParts)
+	return nil
 }

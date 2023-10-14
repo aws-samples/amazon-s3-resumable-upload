@@ -23,6 +23,7 @@ import (
 )
 
 func startUpload(from, to BInfo) error {
+	ignoreList := getIgnoreList()
 	var wg sync.WaitGroup
 	semFile := semaphore.NewWeighted(int64(cfg.NumWorkers)) // 并发量为numWorkers的信号量 for file
 
@@ -30,12 +31,10 @@ func startUpload(from, to BInfo) error {
 	targetObjectList := make([]*s3.Object, 0)
 	var err error
 	if cfg.ListTarget && !cfg.SkipCompare {
-		log.Printf("Listing target s3://%s\n", path.Join(to.bucket, to.prefix))
 		targetObjectList, err = getS3ObjectList(to) // 获取目标 S3 桶中的文件列表
 		if err != nil {
 			return err
 		}
-		log.Printf("There are %d objects already in target s3://%s\n", len(targetObjectList), path.Join(to.bucket, to.prefix))
 	}
 
 	// Listing multipart uploads ID
@@ -43,7 +42,6 @@ func startUpload(from, to BInfo) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("There are %d multipart uploads ID already in target s3://%s\n", len(multipartUploadsList), path.Join(to.bucket, to.prefix))
 
 	// Walk through local path for uploading
 	err = filepath.Walk(from.url, func(thispath string, info os.FileInfo, err error) error {
@@ -51,7 +49,10 @@ func startUpload(from, to BInfo) error {
 			log.Println("Failed to access path", thispath, err)
 			return err
 		}
-
+		// Skip if key in ignoreList
+		if isIgnored(thispath, ignoreList) {
+			log.Println("...Skiping ignored key in ignoreList", thispath)
+		}
 		// Skip if the path is a directory
 		if info.IsDir() {
 			return nil
@@ -198,7 +199,7 @@ func transferMultipart(from, to BInfo, uploadId string, fileInfo FileInfo) error
 		}
 	}
 
-	indexList, chunkSizeAuto := split(fileInfo, chunkSize)
+	indexList, chunkSizeAuto := split(fileInfo, cfg.ChunkSize)
 
 	var wg2 sync.WaitGroup
 	for i, offset := range indexList {

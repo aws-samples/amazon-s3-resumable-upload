@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"math"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -55,4 +58,44 @@ func ByteCountSI(b int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f%cBytes", float64(b)/float64(div), "KMGTPE"[exp])
+}
+
+func getIgnoreList() []*string {
+	log.Printf("Checking ignore files list in %s\n", cfg.IgnoreListPath)
+	ignoreList := []*string{}
+
+	_, err := os.Stat(cfg.IgnoreListPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("No ignore list in path %s\n", cfg.IgnoreListPath)
+		} else {
+			log.Println(err)
+		}
+	} else {
+		file, err := os.Open(cfg.IgnoreListPath)
+		if err != nil {
+			log.Println(err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			prefix := strings.TrimPrefix(scanner.Text(), "/")
+			ignoreList = append(ignoreList, &prefix)
+		}
+		if err := scanner.Err(); err != nil {
+			log.Println(err)
+		}
+		log.Printf("Found ignore files list with prefix Length: %d, in %s", len(ignoreList), cfg.IgnoreListPath)
+	}
+	return ignoreList
+}
+
+func isIgnored(key string, ignoreList []*string) bool {
+	for _, prefix := range ignoreList {
+		if strings.HasPrefix(key, *prefix) {
+			return true
+		}
+	}
+	return false
 }
