@@ -1,8 +1,8 @@
-# Amazon S3 Resumable Migration Version 2  (Amazon S3 断点续传迁移 Version 1)
+# S3 Resumable Migration Version 2  ( S3 断点续传迁移 Version 1)
 
 English README: [README.en.md](README.en.md)
 
-多线程断点续传，充分利用带宽，适合批量的大文件S3上传/上载/迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储，即将支持 Azure Blog Storage...
+多线程断点续传，适合批量的大文件S3上传/上载/迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3的对象存储，即将支持 Azure Blog Storage...
 本次 Version 2 主要修改是同一个应用通过配置即可用做单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能。
   
 ## 功能  
@@ -48,9 +48,9 @@ go build .  # 下载依赖包并编译程序
 * 下载S3文件到本地：  
 
 ```shell
-./s3trans s3://bucket-name/prefix /local/path
+./s3trans s3://bucket-name/prefix /local/path --from-region=my_region
 # 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
-./s3trans s3://bucket-name/prefix /local/path --from_profile=source_profile
+./s3trans s3://bucket-name/prefix /local/path --from-profile=source_profile
 ```
 
 * 上传本地文件到S3：  
@@ -58,22 +58,22 @@ go build .  # 下载依赖包并编译程序
 ```shell
 ./s3trans /local/path s3://bucket-name/prefix
 # 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
-./s3trans /local/path s3://bucket-name/prefix --to_profile=dest_profile
+./s3trans /local/path s3://bucket-name/prefix --to-profile=dest_profile
 ```
 
 * 从S3到S3，如不指定region，则程序会先自动查询Bucket的Region：  
 
 ```shell
-./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --to_profile=dest_profile
-# 以上from_profile没填则获取默认的profile或使用EC2 IAM Role。或用以下方式直接指定profile
-./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from_profile=source_profile --to_profile=dest_profile
+./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from-region=my_region --to-profile=dest_profile
+# 以上from-profile没填则获取默认的profile或使用EC2 IAM Role。或用以下方式直接指定profile
+./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from-profile=source_profile --to-profile=dest_profile
 ```
 
 * 对于非AWS的S3兼容存储，则需要指定endpoint
 
 ```shell
-./s3trans s3://bucket-gcs-test s3://bucket-virginia --from_profile=gcs_profile --to_profile=aws_profile --from_endpoint=https://storage.googleapis.com
-# 以上endpoint也可以用简称替换，即：--from_endpoint=google_gcs，还可以是其他简称：ali_oss, tencent_cos, azure_blob(TODO: azure)
+./s3trans s3://bucket-gcs-test s3://bucket-virginia --from-profile=gcs_profile --to-profile=aws_profile --from-endpoint=https://storage.googleapis.com
+# 以上endpoint也可以用简称替换，即：--from-endpoint=google_gcs，还可以是其他简称：ali_oss, tencent_cos, azure_blob(TODO: azure)
 ```
 
 * -l 指定先List再同步数据（节省请求次数费用，但会增加一次List的时间）
