@@ -1,9 +1,9 @@
-# S3 Resumable Migration Version 2  ( S3 断点续传迁移 Version 1)
+# S3 Resumable Migration Version 2  ( S3 断点续传迁移 Version 2)
 
 English README: [README.en.md](README.en.md)
 
 多线程断点续传，适合批量的大文件S3上传/上载/迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3的对象存储，即将支持 Azure Blog Storage...
-本次 Version 2 主要修改是同一个应用通过配置即可用做单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能。
+本次 Version 2 主要修改是同一个应用通过配置即可用做单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能，并支持了一系列扩展功能：排除列表、源no-sign-request、源request-payer、目的storage-class、目的ACL、传输 Metadata 等。
   
 ## 功能  
 

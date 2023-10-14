@@ -1,5 +1,5 @@
 
-# Amazon S3 Resumable Migration Version 2  (Amazon S3 断点续传迁移 Version 1)
+# Amazon S3 Resumable Migration Version 2  (Amazon S3 断点续传迁移 Version 2)
 
 中文 README: [README.md](README.md)
   
