@@ -1,0 +1,3 @@
+*.db
+.DS_Store
+s3trans
