@@ -1,6 +1,8 @@
+.DS_Store
 .*
 __*
 
+*.txt
 *.db
 *.log
 s3trans

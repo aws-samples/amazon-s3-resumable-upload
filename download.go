@@ -38,7 +38,7 @@ func startDownload(from, to BInfo) error {
 			if isIgnored(*item.Key, ignoreList) {
 				log.Println("...Skiping ignored key in ignoreList", *item.Key)
 			}
-			
+
 			var combinedKey string
 			if *item.Key != from.prefix {
 				// 只带上Prefix以内的目录结构
@@ -76,6 +76,7 @@ func startDownload(from, to BInfo) error {
 				defer semFile.Release(1)
 				defer atomic.AddInt32(&runningGoroutines, -1)
 
+				// 小文件
 				if *item.Size < cfg.ResumableThreshold {
 					log.Println("   Start to download (<ResumableThreshold):", localPath, "runningGoroutines:", runningGoroutines)
 					file, err := os.OpenFile(localPath, os.O_CREATE|os.O_WRONLY, 0644)

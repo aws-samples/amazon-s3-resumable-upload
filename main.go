@@ -155,8 +155,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("y", "y", false, "Ignore waiting for confirming command")
 	viper.BindPFlag("y", rootCmd.PersistentFlags().Lookup("y"))
 
-	// TODO: WorkMode = "SQS_CONSUME"
-	rootCmd.PersistentFlags().String("work-mode", "", "SQS_SEND | SQS_CONSUME; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3. ")
+	rootCmd.PersistentFlags().String("work-mode", "", "SQS_SEND | SQS_CONSUME | DRYRUN; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3; DRYRUN means only count the objects and sizes comparing delta list of FROM_URL S3 and TO_URL S3, no transfer.")
 	viper.BindPFlag("work-mode", rootCmd.PersistentFlags().Lookup("work-mode"))
 	rootCmd.PersistentFlags().String("sqs-url", "", "The SQS queue URL to send or consume message from, e.g. https://sqs.us-east-1.amazonaws.com/my_account/my_queue_name")
 	viper.BindPFlag("sqs-url", rootCmd.PersistentFlags().Lookup("sqs-url"))
@@ -273,10 +272,22 @@ func main() {
 		}
 	}
 	switch {
-	case cfg.WorkMode == "SQS_SEND":
-		err := compareBucket(from, to)
+	case cfg.WorkMode == "DRYRUN":
+		err := compareBucket(from, to, nil)
 		if err != nil {
-			log.Println("Failed to send:", err)
+			log.Println("Failed to count:", err)
+			return
+		}
+	case cfg.WorkMode == "SQS_SEND":
+		err := compareBucket(from, to, sqsSvc)
+		if err != nil {
+			log.Println("Failed to send sqs:", err)
+			return
+		}
+	case cfg.WorkMode == "SQS_CONSUME":
+		err := consumeSQS(sqsSvc)
+		if err != nil {
+			log.Println("Failed to consume sqs:", err)
 			return
 		}
 	case strings.HasPrefix(from.url, "s3://") && strings.HasPrefix(to.url, "s3://"):

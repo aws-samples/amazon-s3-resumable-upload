@@ -2,8 +2,8 @@
 
 English README: [README.en.md](README.en.md)
 
-多线程断点续传，适合批量的大文件S3上传/上载/迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3的对象存储，即将支持 Azure Blog Storage...
-本次 Version 2 主要修改是同一个应用通过配置即可用做单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能，并支持了一系列扩展功能：排除列表、源no-sign-request、源request-payer、目的storage-class、目的ACL、传输 Metadata 等。
+多线程断点续传，适合批量的大文件S3上传/下载本地/对象存储迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3 API的对象存储，也将支持 Azure Blog Storage...
+本次 Version 2 在同一个应用通过配置即可用做各种场景：单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能，并支持了一系列扩展功能：排除列表、源no-sign-request、源request-payer、目的storage-class、目的ACL、传输 Metadata 等。
   
 ## 功能  
 
@@ -108,7 +108,7 @@ test1
 设置把SQS发送的日志存入文件 --sqs-log-to-filename  
 
 ```shell
-./s3trans s3://from_bucket/ s3://to_bucket/ --from-profile us --to-profile bjs \
+./s3trans s3://from_bucket/ s3://to_bucket/prefix --from-profile us --to-profile bjs \
     --work-mode SQS_SEND
     --sqs-profile us \
     --sqs-url "https://sqs.region.amazonaws.com/my_account_number/sq_queue_sname" \
@@ -119,10 +119,14 @@ test1
 
 ### 集群模式的传输节点使用
 
-TODO: 待补充
+从SQS队列中获取任务列表，然后传输数据。
 
 ```shell
-
+./s3trans s3://from_bucket/prefix s3://to_bucket/ --from-profile us --to-profile bjs \
+    --work-mode SQS_CONSUME
+    --sqs-profile us \
+    --sqs-url "https://sqs.region.amazonaws.com/my_account_number/sq_queue_sname" \
+    -y -l -n 8
 ```
 
 ### 其他使用帮助
@@ -130,11 +134,11 @@ TODO: 待补充
 ```shell
 ./s3trans -h
 
-s3trans transfers data from source to target.
+s3trans 从源传输数据到目标
 	./s3trans FROM_URL TO_URL [OPTIONS]
-	FROM_URL: The url of data source, e.g. /home/user/data or s3://bucket/prefix
-	TO_URL: The url of data transfer target, e.g. /home/user/data or s3://bucket/prefix
-	For example:
+	FROM_URL: 数据源的URL，例如 /home/user/data or s3://bucket/prefix
+	TO_URL: 传输目标的URL，例如 /home/user/data or s3://bucket/prefix
+	命令举例：
 	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
 	./s3trans s3://bucket/prefix /home/user/data -from_profile sin
 
@@ -142,28 +146,76 @@ Usage:
   s3trans FROM_URL TO_URL [flags]
 
 Flags:
-      --acl string                The TARGET S3 bucket ACL, private means only the object owner can read&write, e.g. private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
-      --from-endpoint string      The endpoint of data source, e.g. https://storage.googleapis.com; https://oss-<region>.aliyuncs.com; https://cos.<region>.myqcloud.com . If AWS s3 or local path, no need to specify this.
-      --from-profile string       The AWS profile in ~/.aws/credentials of data source
-      --from-region string        The region of data transfer source, e.g. cn-north-1. If no specified, the region will be auto detected with the credentials you provided in profile.
-  -h, --help                      help for s3trans
-      --http-timeout int          API request timeout (seconds) (default 30)
-  -l, --list-target               List the TARGET S3 bucket, compare exist objects BEFORE transfer. List is more efficient than head each object to check if it exists, but transfer may start slower because it needs to wait for listing all objects to compare. To mitigate this, this app leverage Concurrency Listing for fast list; If no list-target para, transfer without listing the target S3 bucket, but before transfering each object, head each target object to check, this costs more API call, but start faster.
-      --max-retries int           API request max retries (default 5)
-      --no-sign-request           The SOURCE bucket is not needed to sign the request
-  -n, --num-workers int           NumWorkers*1 for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket; Recommend NumWorkers <= vCPU number (default 4)
-      --request-payer             The SOURCE bucket requires requester to pay, set this
-      --resumable-threshold int   When the file size (MB) is larger than this value, the file will be resumable transfered. (default 50)
-  -s, --skip-compare              If True, skip to compare the name and size between source and target S3 object. Just overwrite all objects. No list target nor head target object to check if it already exists.
-      --sqs-profile string        The SQS queue leverage which AWS profile in ~/.aws/credentials
-      --sqs-url string            The SQS queue URL to send or consume message from, e.g. https://sqs.us-east-1.amazonaws.com/my_account/my_queue_name
-      --storage-class string      The TARGET S3 bucket storage class, e.g. STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE|OUTPOSTS|GLACIER_IR|SNOW or others of S3 compatibale
-      --to-endpoint string        The endpoint of data transfer target, e.g. https://storage.googleapis.com . If AWS s3 or local path, no need to specify this.
-      --to-profile string         The AWS profile in ~/.aws/credentials of data transfer target
-      --to-region string          The region of data transfer target, e.g. us-east-1. If no specified, the region will be auto detected with the credentials you provided in profile.
-      --transfer-metadata         If True, get metadata from source S3 bucket and upload the metadata to target object. This costs more API calls.
-      --work-mode string          SQS_SEND | SQS_CONSUME; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3. 
-  -y, --y                         Ignore waiting for confirming command
+      --acl string                目标S3桶的ACL，private表示只有对象所有者可以读写，例如 private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
+      --from-endpoint string      数据源的 API Endpoint 例如 https://storage.googleapis.com; https://oss-<region>.aliyuncs.com; https://cos.<region>.myqcloud.com 如果是AWS s3或本地路径，无需指定这个 Endpoint
+      --from-profile string       数据源在~/.aws/credentials中的AWS profile
+      --from-region string        数据源的区域，例如 cn-north-1. 如果未指定，则会使用您在profile中提供的credentials指定的区域 
+  -h, --help                      帮助文档
+      --http-timeout int          API请求超时（秒）（默认30）
+  -l, --list-target               列出目标S3桶，传输之前比较现有对象。列表比检查每个对象是否存在更有效，但传输可能会因为需要等待列出所有对象进行比较而开始较慢。为了缓解这个问题，此应用程序利用并行列出进行快速列表；如果没有list-target参数，不列出目标S3桶，但在传输每个对象之前，检查每个目标对象，这会消耗更多API调用，但开始更快。
+      --max-retries int           API请求最大重试次数（默认5）
+      --no-sign-request           源桶不需要请求签名（即允许匿名）
+  -n, --num-workers int           NumWorkers*1 并发文件；NumWorkers*2 每个文件的并发分片；NumWorkers*4 List目标桶的并发数；推荐NumWorkers <= vCPU数量（默认4）
+      --request-payer             源桶要求请求者支付
+      --resumable-threshold int   当文件大小（MB）大于此值时，使用断点续传。（默认50）
+  -s, --skip-compare              跳过比较源和目标S3对象的名称和大小。直接覆盖所有对象。不列出目标也不检查目标对象是否已存在。
+      --sqs-profile string        访问SQS队列使用~/.aws/credentials中的哪个AWS profile
+      --sqs-url string            用于发送或消费消息的SQS队列URL，例如 https://sqs.us-east-1.amazonaws.com/my_account/my_queue_name
+      --storage-class string      目标S3桶的存储类，例如 STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE|OUTPOSTS|GLACIER_IR|SNOW 或其他S3兼容的
+      --to-endpoint string        数据传输目标的端点，例如 https://storage.googleapis.com . 如果是AWS s3或本地路径，无需指定这个
+      --to-profile string         数据传输目标在~/.aws/credentials中的AWS profile
+      --to-region string          数据传输目标的区域，例如 cn-north-1. 如果未指定，则会使用您在profile中提供的credentials指定的区域 
+      --transfer-metadata         如果为真，从源S3桶获取元数据并上传到目标对象。这会消耗更多的API调用。
+      --work-mode string          SQS_SEND | SQS_CONSUME | DRYRUN; SQS_SEND SQS_SEND表示列出源来源_URL S3和目标TO_URL S3进行比较，并发送消息到SQS队列；SQS_CONSUME表示从SQS队列消费消息并从来源_URL S3传输对象到TO_URL S3 
+  -y, --y                         忽略等待确认，直接执行；DRYRUN是只比较源和目的桶，统计数量和Size，不传输数据
+```
+
+## 其他说明
+
+### S3 触发 SQS 的 Policy示例
+
+写入SQS权限："Service": "s3.amazonaws.com"
+读取SQS权限：EC2 Role 或直接填 AWS Account Number
+
+```json
+{
+  "Version": "2008-10-17",
+  "Id": "__default_policy_ID",
+  "Statement": [
+    {
+      "Sid": "__owner_statement",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::my_account_number:root"
+      },
+      "Action": "SQS:*",
+      "Resource": "arn:aws:sqs:us-west-2:my_account_number:s3_migration_file_list"
+    },
+    {
+      "Sid": "__sender_statement",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "s3.amazonaws.com"
+      },
+      "Action": "SQS:SendMessage",
+      "Resource": "arn:aws:sqs:us-west-2:my_account_number:s3_migration_file_list"
+    },
+    {
+      "Sid": "__receiver_statement",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::my_account_number:root"
+      },
+      "Action": [
+        "SQS:ChangeMessageVisibility",
+        "SQS:DeleteMessage",
+        "SQS:ReceiveMessage"
+      ],
+      "Resource": "arn:aws:sqs:us-west-2:my_account_number:s3_migration_file_list"
+    }
+  ]
+}
+
 ```
 
 ## License
@@ -173,4 +225,5 @@ This library is licensed under the MIT-0 License. See the LICENSE file.
   ******
   Author: Huang, Zhuobin (James)
   ******
+  
   

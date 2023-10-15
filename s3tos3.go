@@ -33,10 +33,7 @@ func s3tos3(from, to BInfo) error {
 		}
 	}
 
-	multipartUploadsList, err := getMultipartUploadList(to.svc, to.bucket, to.prefix)
-	if err != nil {
-		return err
-	}
+	multipartUploadsList, _ := getMultipartUploadList(to.svc, to.bucket, to.prefix)
 
 	// 遍历源S3
 	inputListSource := &s3.ListObjectsV2Input{
@@ -76,50 +73,11 @@ func s3tos3(from, to BInfo) error {
 				Size:       *item.Size,
 				Others:     MetaStruct{ContentType: &contentType},
 			}
-			if cfg.TransferMetadata {
-				err = getMetadata(from, &fileInfo)
-				if err != nil {
-					return false
-				}
-			}
-
-			// Check file exist on S3 Bucket and get uploadId
-			uploadId, err := getUploadId(to.svc, fileInfo, multipartUploadsList, targetObjectList)
+			err = s3tos3Action(from, to, fileInfo, semFile, &wg, multipartUploadsList, targetObjectList)
 			if err != nil {
+				log.Println("Failed to s3tos3Action", err)
 				return false
 			}
-			if uploadId == "NEXT" {
-				log.Printf("...File exists and same size. Skipping target. s3://%s\n", path.Join(fileInfo.ToBucket, fileInfo.ToKey))
-				continue
-			}
-
-			semFile.Acquire(context.Background(), 1) //从线程信号池中获取，没有线程可用了就阻塞等待
-			atomic.AddInt32(&runningGoroutines, 1)   //线程计数
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				defer semFile.Release(1)                      //释放线程信号池
-				defer atomic.AddInt32(&runningGoroutines, -1) //线程计数
-
-				if fileInfo.Size < cfg.ResumableThreshold {
-					err := transferSmall(from, to, fileInfo)
-					if err != nil {
-						log.Println("Failed to transferSmall", err)
-						return
-					}
-				} else {
-					// >= ResumableThreshold
-					log.Printf("   Start to transfer (>= ResumableThreshold) s3://%s, runningGoroutines: %d\n", path.Join(fileInfo.ToBucket, fileInfo.ToKey), runningGoroutines)
-					err := transferMultipart(from, to, uploadId, fileInfo)
-					if err != nil {
-						log.Println("Failed to multipartProccess", err)
-						return
-					}
-				}
-				log.Printf("***Successfully transfered s3://%s\n", path.Join(fileInfo.ToBucket, fileInfo.ToKey))
-				atomic.AddInt64(&objectCount, 1)
-				atomic.AddInt64(&sizeCount, fileInfo.Size)
-			}()
 		}
 		return true
 	})
@@ -129,6 +87,54 @@ func s3tos3(from, to BInfo) error {
 	}
 	wg.Wait()
 	return err
+}
+
+func s3tos3Action(from, to BInfo, fileInfo FileInfo, semFile *semaphore.Weighted, wg *sync.WaitGroup, multipartUploadsList []*s3.MultipartUpload, targetObjectList []*s3.Object) error {
+	if cfg.TransferMetadata {
+		err := getMetadata(from, &fileInfo)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check file exist on S3 Bucket and get uploadId
+	uploadId, err := getUploadId(to.svc, fileInfo, multipartUploadsList, targetObjectList)
+	if err != nil {
+		return err
+	}
+	if uploadId == "NEXT" {
+		log.Printf("...File exists and same size. Skipping target. s3://%s\n", path.Join(fileInfo.ToBucket, fileInfo.ToKey))
+		return nil
+	}
+
+	semFile.Acquire(context.Background(), 1) //从线程信号池中获取，没有线程可用了就阻塞等待
+	atomic.AddInt32(&runningGoroutines, 1)   //线程计数
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer semFile.Release(1)                      //释放线程信号池
+		defer atomic.AddInt32(&runningGoroutines, -1) //线程计数
+
+		if fileInfo.Size < cfg.ResumableThreshold {
+			err := transferSmall(from, to, fileInfo)
+			if err != nil {
+				log.Println("Failed to transferSmall", err)
+				return
+			}
+		} else {
+			// >= ResumableThreshold
+			log.Printf("   Start to transfer (>= ResumableThreshold) s3://%s, runningGoroutines: %d\n", path.Join(fileInfo.ToBucket, fileInfo.ToKey), runningGoroutines)
+			err := transferMultipart(from, to, uploadId, fileInfo)
+			if err != nil {
+				log.Println("Failed to multipartProccess", err)
+				return
+			}
+		}
+		log.Printf("***Successfully transfered s3://%s\n", path.Join(fileInfo.ToBucket, fileInfo.ToKey))
+		atomic.AddInt64(&objectCount, 1)
+		atomic.AddInt64(&sizeCount, fileInfo.Size)
+	}()
+	return nil
 }
 
 func transferSmall(from, to BInfo, fileInfo FileInfo) error {
@@ -163,7 +169,7 @@ func transferSmall(from, to BInfo, fileInfo FileInfo) error {
 		inputUpload.ACL = aws.String(to.ACL)
 	}
 
-	if *fileInfo.Others.ContentType != "" {
+	if fileInfo.Others.ContentType != nil && *fileInfo.Others.ContentType != "" {
 		inputUpload.ContentType = fileInfo.Others.ContentType
 	}
 	if cfg.TransferMetadata {

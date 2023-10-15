@@ -171,7 +171,7 @@ func getUploadId(svc *s3.S3, fileInfo FileInfo, multipartUploadsList []*s3.Multi
 }
 
 func getMultipartUploadList(svc *s3.S3, bucket string, prefix string) ([]*s3.MultipartUpload, error) {
-	log.Printf("Listing multipart uploads ID in target s3://%s\n", path.Join(bucket, prefix))
+	// log.Printf("Listing multipart uploads ID in target s3://%s\n", path.Join(bucket, prefix))
 	var uploads []*s3.MultipartUpload
 	err := svc.ListMultipartUploadsPages(&s3.ListMultipartUploadsInput{
 		Bucket: aws.String(bucket),

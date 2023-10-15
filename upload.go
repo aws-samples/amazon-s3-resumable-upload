@@ -144,7 +144,7 @@ func uploadSmall(fileInfo FileInfo, thispath string, info os.FileInfo, uploadId 
 	if to.ACL != "" {
 		inputUpload.ACL = aws.String(to.ACL)
 	}
-	if *fileInfo.Others.ContentType != "" {
+	if fileInfo.Others.ContentType != nil && *fileInfo.Others.ContentType != "" {
 		inputUpload.ContentType = fileInfo.Others.ContentType
 	}
 	_, err = to.uploader.Upload(inputUpload)
@@ -174,7 +174,7 @@ func transferMultipart(from, to BInfo, uploadId string, fileInfo FileInfo) error
 		if to.ACL != "" {
 			inputCreate.ACL = aws.String(to.ACL)
 		}
-		if *fileInfo.Others.ContentType != "" {
+		if fileInfo.Others.ContentType != nil && *fileInfo.Others.ContentType != "" {
 			inputCreate.ContentType = fileInfo.Others.ContentType
 		}
 		if cfg.TransferMetadata {
@@ -262,7 +262,7 @@ func uploadPart(svc *s3.S3, partInfo PartInfo, wg *sync.WaitGroup, sem *semaphor
 	defer wg.Done()
 	defer sem.Release(1)
 	defer atomic.AddInt32(&runningGoroutines, -1)
-	log.Printf("-->Uploading s3://%s, part:%d/%d, runningGoroutines: %d\n", path.Join(partInfo.ToBucket, partInfo.ToKey), partInfo.PartNumber, partInfo.TotalParts, runningGoroutines)
+	// log.Printf("-->Uploading s3://%s, part:%d/%d, runningGoroutines: %d\n", path.Join(partInfo.ToBucket, partInfo.ToKey), partInfo.PartNumber, partInfo.TotalParts, runningGoroutines)
 
 	// 创建一个分片大小的缓冲区
 	fileMutex.Lock()
@@ -284,7 +284,7 @@ func uploadPart(svc *s3.S3, partInfo PartInfo, wg *sync.WaitGroup, sem *semaphor
 }
 
 func uploadPartAction(buff []byte, partInfo PartInfo, svc *s3.S3, uploadId string, partnumberList *[]PartInfo, partnumberListMutex *sync.Mutex) error {
-	log.Printf("-->Uploading s3://%s, part:%d/%d\n", path.Join(partInfo.ToBucket, partInfo.ToKey), partInfo.PartNumber, partInfo.TotalParts)
+	log.Printf("-->Uploading part s3://%s, part:%d/%d, runningGoroutines: %d\n", path.Join(partInfo.ToBucket, partInfo.ToKey), partInfo.PartNumber, partInfo.TotalParts, runningGoroutines)
 	// 计算分片数据的MD5哈希值
 	md5Hash := md5.Sum(buff)
 	md5Str := base64.StdEncoding.EncodeToString(md5Hash[:])
