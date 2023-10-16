@@ -2,18 +2,16 @@
 
 English README: [README.en.md](README.en.md)
 
-多线程断点续传，适合批量的大文件S3上传/下载本地/对象存储迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3 API的对象存储，也将支持 Azure Blog Storage...
-本次 Version 2 在同一个应用通过配置即可用做各种场景：单机的上传，单机的下载，部署为集群版的扫描源文件，或集群版的传输工作节点，用Golang做了重构，提高性能，并支持了一系列扩展功能：排除列表、源no-sign-request、源request-payer、目的storage-class、目的ACL、传输 Metadata 等。
+多线程断点续传，适合批量的大文件S3上传/下载本地/对象存储迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3 API的对象存储，也将支持 Azure Blog Storage...  
+本 Version 2 在同一个应用通过配置即可用做各种场景：单机的上传，单机的下载，部署为集群版的扫描源文件，或作为集群版的分布式传输工作节点；用Golang做了重构，提高性能；支持了一系列扩展功能：排除列表、源no-sign-request、源request-payer、目的storage-class、目的ACL、传输 Metadata 等。
   
 ## 功能  
 
 * 多线程并发传输到多种对象存储，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在典型测试中，迁移1.2TB数据从 us-east-1 S3 到 cn-northwest-1 S3 只用1小时。
 
-* 支持的源和目的地：本地目录/文件, Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储。无需区分工作模式，指定好源和目的URL或本地路径即可自动识别。可以是单个文件或对象，或整个目录，或S3桶/前缀等URL。
+* 支持的源和目的地：本地目录或单个文件, Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储。无需区分工作模式，指定好源和目的URL或本地路径即可自动识别并开始传输。可以是单个文件或对象，或整个目录，或S3桶/前缀等URL。
 
-* 传输数据只以单个分片的形式过中转节点的内存，不落该节点本地盘，节省时间、存储并且数据更安全。可支撑 0 Size 至 TB 级别  
-
-* 自动对比源/目的桶的文件名和大小，不一致的才传输。默认是一边List，一边传输，即逐个获取目的对象信息对比一个就传输一个，这样使用体验是输入命令之后就立马启动传输（类似AWS CLI）；可以使用时通过 -l 参数设置为全部List目的对象列表之后再进行传输，因为List比逐个Head效率更高，也节省请求次数的费用。本次Version 2支持了并行List，对于对象数量很多的情况，可以更快完成List。例如3千万对象的桶，如果按正常List（例如 aws s3 ls）要起码90分钟，而现在在使用64并发的情况(16vCPU)下缩减到只有1分钟。
+* 传输数据只以单个分片的形式过中转节点的内存，不落盘到节点，节省时间且更安全。可支撑 0 Size 至 TB 级别 。  
 
 * 支持设置目的地的各种对象存储级别，如：STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE|OUTPOSTS|GLACIER_IR|SNOW
 
@@ -21,7 +19,15 @@ English README: [README.en.md](README.en.md)
 
 * 支持设置源对象存储是no-sign-request和request-payer的情况
 
-* 支持把源对象存储的 Metadata 也复制到目的对象存储(--transfer-metadata)。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
+* 支持获取源对象存储的 Metadata 也复制到目的对象存储。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
+
+* 自动对比源/目的桶的文件名和大小，不一致的才传输。默认是一边List，一边传输，即逐个获取目的对象信息对比一个就传输一个，这样使用体验是输入命令之后就立马启动传输（类似AWS CLI）；可选设置 -l 参数，为List目的对象列表之后再进行传输，因为List比逐个Head对比效率更高，也节省请求次数的费用。
+
+* 本次 Version 2 支持了多线程并行 List ，对于对象数量很多的情况，可以更快完成List。例如3千万对象的桶，如果按正常 List（例如 aws s3 ls）要90分钟以上，而现在在使用64并发的情况(16vCPU)下缩减到只有 1 到 2 分钟。
+
+* 支持把对比扫描出来的任务列表存入文件；支持把已发送到SQS的日志存入文件；支持设置排除列表，如果数据源Key或源本地路径符合排除列表的则不传输；支持DRYRUN模式，只比较源和目的桶，统计数量和Size，不传输数据；支持不做对比不检查目的对象，直接覆盖的模式。
+
+* 支持设置断点续传阈值；设置并行线程数；设置请求超时时间；设置最大重试次数；支持设置是否忽略确认命令，直接执行；
 
 ## 使用说明
 
@@ -225,5 +231,4 @@ This library is licensed under the MIT-0 License. See the LICENSE file.
   ******
   Author: Huang, Zhuobin (James)
   ******
-  
   

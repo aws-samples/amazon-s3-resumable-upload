@@ -1,13 +1,5 @@
-// 多线程并发上传/下载S3，支持断点续传，边List边下载
-// Usage: 在go文件所在的目录下运行
-// sudo yum install -y go
-// go mod init s3trans
-// 在中国区可通过go代理来下载依赖包，则多运行一句：go env -w GOPROXY=https://goproxy.cn,direct
-// go mod tidy
-// go build .
-// ./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
+// 多线程并发断点续传上传/下载S3，支持支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3 API的对象存储
 // 使用 ./s3trans -h 获取更多帮助信息
-
 package main
 
 import (
