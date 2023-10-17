@@ -37,14 +37,18 @@ English README: [README.en.md](README.en.md)
 
 ```shell
 sudo yum install -y go git -y
-git clone https://github.com/aws-samples/amazon-s3-resumable-upload
 ```
 
-如果在中国区，可通过go代理来下载go依赖包，则多运行一句代理设置：go env -w GOPROXY=https://goproxy.cn,direct   
+如果在中国区，可通过go代理来下载go依赖包，则多运行一句代理设置：
 
-### 编译go代码
+```go
+go env -w GOPROXY=https://goproxy.cn,direct   
+```
+
+### 下载和编译本项目的Go代码
 
 ```shell
+git clone https://github.com/aws-samples/amazon-s3-resumable-upload
 cd amazon-s3-resumable-upload
 go build .  # 下载依赖包并编译程序
 ```
@@ -56,8 +60,10 @@ go build .  # 下载依赖包并编译程序
 * 下载S3文件到本地：  
 
 ```shell
+./s3trans s3://bucket-name/prefix /local/path 
+# 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2且没有配置 profile 而是使用IAM Role，需指定一下 Region
 ./s3trans s3://bucket-name/prefix /local/path --from-region=my_region
-# 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
+# 如果要指定S3的profile则如下：
 ./s3trans s3://bucket-name/prefix /local/path --from-profile=source_profile
 ```
 
@@ -65,16 +71,18 @@ go build .  # 下载依赖包并编译程序
 
 ```shell
 ./s3trans /local/path s3://bucket-name/prefix
-# 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2则使用IAM Role。如果要指定源S3的profile则如下：
+# 以上是使用默认AWS profile in ~/.aws/credentials，如果是EC2且没有配置 profile 而是使用IAM Role，需指定一下 Region
+./s3trans /local/path s3://bucket-name/prefix  --to-region=my_region
+# 如果要指定S3的profile则如下：
 ./s3trans /local/path s3://bucket-name/prefix --to-profile=dest_profile
 ```
 
 * 从S3到S3，如不指定region，则程序会先自动查询Bucket的Region：  
 
 ```shell
-./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from-region=my_region --to-profile=dest_profile
-# 以上from-profile没填则获取默认的profile或使用EC2 IAM Role。或用以下方式直接指定profile
 ./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from-profile=source_profile --to-profile=dest_profile
+# 如果from-profile不填则获取默认的profile或使用EC2 IAM Role，需指定一下region
+./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from-region=my_region --to-profile=dest_profile
 ```
 
 * 对于非AWS的S3兼容存储，则需要指定endpoint
