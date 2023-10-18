@@ -157,7 +157,7 @@ func uploadSmall(fileInfo FileInfo, thispath string, info os.FileInfo, uploadId 
 }
 
 func transferMultipart(from, to BInfo, uploadId string, fileInfo FileInfo) error {
-	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers * 2)) // 并发量为numWorkers的信号量 for parts
+	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers * 4)) // 并发量为numWorkers的信号量 for parts
 	var partnumberList []PartInfo
 	var partnumberListMutex sync.Mutex
 	var fileMutex sync.Mutex

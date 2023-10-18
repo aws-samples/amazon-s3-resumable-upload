@@ -2,6 +2,7 @@
 .*
 __*
 
+*.yaml
 *.txt
 *.db
 *.log

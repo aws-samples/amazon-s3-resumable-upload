@@ -21,7 +21,7 @@ func startDownload(from, to BInfo) error {
 	var wg sync.WaitGroup
 	var err error
 	semFile := semaphore.NewWeighted(int64(cfg.NumWorkers))     // 并发量为NumWorkers的信号量 for file
-	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers * 2)) // 并发量为NumWorkers的信号量 for parts
+	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers * 4)) // 并发量为NumWorkers的信号量 for parts
 	ignoreList := getIgnoreList()
 
 	err = from.svc.ListObjectsV2Pages(&s3.ListObjectsV2Input{

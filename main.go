@@ -142,7 +142,7 @@ func init() {
 	viper.BindPFlag("chunk-size", rootCmd.PersistentFlags().Lookup("chunk-size"))
 	rootCmd.PersistentFlags().Int64("resumable-threshold", 50, "When the file size (MB) is larger than this value, the file will be resumable transfered.")
 	viper.BindPFlag("resumable-threshold", rootCmd.PersistentFlags().Lookup("resumable-threshold"))
-	rootCmd.PersistentFlags().IntP("num-workers", "n", 4, "Concurrent threads = NumWorkers*NumWorkers (files*parts), recommend NumWorkers <= vCPU number")
+	rootCmd.PersistentFlags().IntP("num-workers", "n", 4, "Max concurrent threads = NumWorkers*NumWorkers*4 (files*parts*4), recommend NumWorkers <= vCPU number")
 	viper.BindPFlag("num-workers", rootCmd.PersistentFlags().Lookup("num-workers"))
 	rootCmd.PersistentFlags().BoolP("y", "y", false, "Ignore waiting for confirming command")
 	viper.BindPFlag("y", rootCmd.PersistentFlags().Lookup("y"))
@@ -212,11 +212,11 @@ func getConfig() {
 			binfo.svc = s3.New(binfo.sess)
 			if i == 0 {
 				binfo.downloader = s3manager.NewDownloader(binfo.sess)
-				binfo.downloader.Concurrency = cfg.NumWorkers * 2
+				binfo.downloader.Concurrency = cfg.NumWorkers * 4
 				binfo.downloader.PartSize = cfg.ChunkSize
 			} else {
 				binfo.uploader = s3manager.NewUploader(binfo.sess)
-				binfo.uploader.Concurrency = cfg.NumWorkers * 2
+				binfo.uploader.Concurrency = cfg.NumWorkers * 4
 				binfo.uploader.PartSize = cfg.ChunkSize
 			}
 			fmt.Printf("Bucket: %s, Prefix: %s, Profile: %s, Endpoint-URL: %s, Region:%s\n", binfo.bucket, binfo.prefix, binfo.profile, binfo.endpoint, binfo.region)
@@ -251,7 +251,7 @@ func main() {
 	getConfig()
 	fmt.Printf(" Target StorageClass(default: STANDARD): %s\n Target ACL(default: private): %s\n Source noSignRequest: %t\n Source requestPayer: %t\n", to.storageClass, to.ACL, from.noSignRequest, from.requestPayer)
 	fmt.Printf(" Transfer Metadata: %t\n List Target Before Transfer(Recommended): %t\n Skip Compare Before Transfer: %t\n", cfg.TransferMetadata, cfg.ListTarget, cfg.SkipCompare)
-	fmt.Printf(" NumWorkers: %d for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket\n", cfg.NumWorkers)
+	fmt.Printf(" NumWorkers: %d for concurrency files; NumWorkers*4 for parts of each file and for listing target bucket\n", cfg.NumWorkers)
 	fmt.Printf(" HttpTimeout: %ds\n MaxRetries: %d\n ResumableThreshold: %s\n", cfg.HttpTimeout, cfg.MaxRetries, ByteCountSI(cfg.ResumableThreshold))
 	fmt.Printf(" ChunkSize: %s\n", ByteCountSI(cfg.ChunkSize))
 	fmt.Printf(" WorkMode: %s\n SQS_PROFILE: %s\n SQS_URL: %s\n", cfg.WorkMode, cfg.SQSProfile, cfg.SQSUrl)
@@ -334,7 +334,6 @@ func (rrt *RetryRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 }
 func getSess(bInfo *BInfo) *session.Session {
 	// 创建具有超时重试的 http 客户端
-	// client := &http.Client{Timeout: time.Duration(cfg.HttpTimeout) * time.Second}
 	client := &http.Client{
 		Timeout: time.Duration(cfg.HttpTimeout) * time.Second,
 		Transport: &RetryRoundTripper{

@@ -79,7 +79,7 @@ Use ./s3trans -h to see help
 ```
 
 * -l to list target before transfer (less API calls but slower start)
-* -n (n is NumWorkers) to specify concurrency for listing and transfers. Max concurrent objects is n, max concurrent parts per object is 2n, max concurrent listing is 4n. Recommend n <= vCPU number 
+* -n (n is NumWorkers) to specify concurrency for listing and transfers. Max concurrent objects is n, max concurrent parts per object is 4n, max concurrent listing is 4n. Recommend n <= vCPU number 
 * -y to auto confirm prompt
 
 ```shell
@@ -112,7 +112,7 @@ Flags:
   -l, --list-target               List the TARGET S3 bucket, compare exist objects BEFORE transfer. List is more efficient than head each object to check if it exists, but transfer may start slower because it needs to wait for listing all objects to compare. To mitigate this, this app leverage Concurrency Listing for fast list; If no list-target para, transfer without listing the target S3 bucket, but before transfering each object, head each target object to check, this costs more API call, but start faster.
       --max-retries int           API request max retries (default 5)
       --no-sign-request           The SOURCE bucket is not needed to sign the request
-  -n, --num-workers int           NumWorkers*1 for concurrency files; NumWorkers*2 for parts of each file; NumWorkers*4 for listing target bucket; Recommend NumWorkers <= vCPU number (default 4)
+  -n, --num-workers int           NumWorkers*1 for concurrency files; NumWorkers*4 for parts of each file and for listing target bucket; Recommend NumWorkers <= vCPU number (default 4)
       --request-payer             The SOURCE bucket requires requester to pay, set this
       --resumable-threshold int   When the file size (MB) is larger than this value, the file will be resumable transfered. (default 50)
   -s, --skip-compare              If True, skip to compare the name and size between source and target S3 object. Just overwrite all objects. No list target nor head target object to check if it already exists.
