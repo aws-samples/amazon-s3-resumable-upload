@@ -40,6 +40,7 @@ type Config struct {
 	JobListPath        string `mapstructure:"joblist-write-to-filepath"` // 列出S3传输任务之后，写入到一个文件作为备份
 	SQSSentLogName     string `mapstructure:"sqs-log-to-filename"`       // SQS已发送消息的记录文件名
 	IgnoreListPath     string `mapstructure:"ignore-list-path"`          // List和传输的时候，如果S3源的Key或本地源路径的前缀在Ignore List里面，则跳过。设置的时候注意S3的Key是不带“/”开头的
+	ForcePathStyle     bool   `mapstructure:"force-path-style"`          // 强制使用路径方式访问S3，而不是域名方式
 }
 
 type BInfo struct {
@@ -104,6 +105,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().String("from-profile", "", "The AWS profile in ~/.aws/credentials of data source")
 	viper.BindPFlag("from-profile", rootCmd.PersistentFlags().Lookup("from-profile"))
+	rootCmd.PersistentFlags().Bool("force-path-style", false, "Set this to `true` to force the request to use path-style addressing See http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html")
+	viper.BindPFlag("force-path-style", rootCmd.PersistentFlags().Lookup("force-path-style"))
 	rootCmd.PersistentFlags().String("to-profile", "", "The AWS profile in ~/.aws/credentials of data transfer target")
 	viper.BindPFlag("to-profile", rootCmd.PersistentFlags().Lookup("to-profile"))
 	rootCmd.PersistentFlags().String("from-endpoint", "", "The endpoint of data source, e.g. https://storage.googleapis.com; https://oss-<region>.aliyuncs.com; https://cos.<region>.myqcloud.com . If AWS s3 or local path, no need to specify this.")
@@ -343,8 +346,11 @@ func getSess(bInfo *BInfo) *session.Session {
 		},
 	}
 	config := aws.Config{
-		MaxRetries: aws.Int(cfg.MaxRetries), // 自定义S3 Client最大重试次数
-		HTTPClient: client,                  // 使用自定义了超时时间的 http 客户端
+		MaxRetries:       aws.Int(cfg.MaxRetries), // 自定义S3 Client最大重试次数
+		HTTPClient:       client,                  // 使用自定义了超时时间的 http 客户端
+	}
+	if cfg.ForcePathStyle {
+		config.S3ForcePathStyle = aws.Bool(true) // 以路径方式访问 而不是域名
 	}
 	if bInfo.endpoint != "" {
 		completeEndpointURL(bInfo) // 自动完善endpoint url
