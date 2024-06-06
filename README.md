@@ -159,6 +159,7 @@ Flags:
       --acl string                目标S3桶的ACL，private表示只有对象所有者可以读写，例如 private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control ，不设置则默认根据S3的默认设置，通常是 private 模式 
       --from-endpoint string      数据源的 API Endpoint 例如 https://storage.googleapis.com; https://oss-shenzhen.aliyuncs.com; https://cos.<region>.myqcloud.com 如果是AWS S3或本地路径，无需指定这个 Endpoint  
       --from-profile string       数据源在~/.aws/credentials中的AWS profile，如果不指定profile则用default profile，如果没有default profile，则需指定region  
+      --force-path-style          设置为true时，可强制请求使用路径样式寻址，而不是域名。参考：http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
       --from-region string        数据源的区域，例如 cn-north-1. 如果未指定，但有设置 profile 则会自动找S3的所在 Region  
   -h, --help                      帮助文档  
       --http-timeout int          API请求超时（秒）（默认30）  
