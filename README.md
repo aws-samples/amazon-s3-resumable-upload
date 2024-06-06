@@ -7,7 +7,7 @@ English README: [README.en.md](README.en.md)
   
 ## 功能  
 
-* 多线程并发传输到多种对象存储，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在典型测试中，迁移1.2TB数据从 us-east-1 S3 到 cn-northwest-1 S3 只用1小时。
+* 多线程并发传输到多种对象存储，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在一次集群测试中(10台m5.large)，迁移1.2TB数据从 us-east-1 到 cn-northwest-1 只用1小时。在另一个单机带宽的测试中，同 Region 的两个 S3 用 m6i.8xlarge EC2 传输 (num-workers 16)，跑出了单机持续 16Gbps 的传输速度。
 
 * 支持的源和目的地：本地目录或单个文件, Amazon S3, Ali OSS, Tencent COS, Google GCS 等对象存储。无需区分工作模式，指定好源和目的URL或本地路径即可自动识别并开始传输。可以是单个文件或对象，或整个目录，或S3桶/前缀等URL。
 
