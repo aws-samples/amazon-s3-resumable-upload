@@ -17,7 +17,7 @@ English README: [README.en.md](README.en.md)
 
 * 支持指定目的S3的ACL: private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
 
-* 支持设置源对象存储是no-sign-request和request-payer的情况
+* 支持设置源对象存储是no-sign-request和request-payer；支持源对象是Presign URL（注意生成Presign URL的时候指定 Bucket 正确的 Region）
 
 * 支持获取源对象存储的 Metadata 也复制到目的对象存储。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
 

@@ -18,7 +18,7 @@ The main change in Version 2 is that the same application can be used for single
 
 * Support setting various storage classes for destination objects, e.g. STANDARD, S3-IA, Glacier or Deep Archive. Support specifying ACL for destination S3.
 
-* Support source S3 buckets with no-sign-request or request-payer configurations.
+* Support setting the source object storage to no-sign-request and request-payer; support the source object being a Presigned URL (note that when generating the Presigned URL, specify the correct Region for the Bucket).
 
 * Support copying metadata from source to destination S3 objects. Note this requires a Head call per object, impacting performance and API call costs.
 

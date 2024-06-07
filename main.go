@@ -70,6 +70,7 @@ type PartInfo struct {
 	FromKey, FromBucket, ToKey, ToBucket, Etag string
 	Size, Offset                               int64
 	PartNumber, TotalParts                     int64
+	URL                                        string
 }
 
 type RetryFunc func() error
@@ -208,6 +209,7 @@ func getConfig() {
 			URL, err := url.Parse(binfo.url)
 			if err != nil {
 				log.Fatalf("Invalid S3 URL: %s, %v\n", binfo.url, err)
+				os.Exit(1)
 			}
 			binfo.bucket = URL.Host
 			binfo.prefix = strings.TrimSuffix(strings.TrimPrefix(URL.Path, "/"), "/")
@@ -227,7 +229,12 @@ func getConfig() {
 
 		// TODO: Azure Blog Storage
 
-		{
+		{ // TODO: Support presign url
+			if strings.HasPrefix(binfo.url, "https://") {
+				fmt.Printf("Presign URL: %s\n", binfo.url)
+				continue
+			}
+
 			// Verify the local path
 			urlInfo, err := os.Stat(binfo.url)
 			if err != nil {
@@ -258,14 +265,14 @@ func main() {
 	fmt.Printf(" HttpTimeout: %ds\n MaxRetries: %d\n ResumableThreshold: %s\n", cfg.HttpTimeout, cfg.MaxRetries, ByteCountSI(cfg.ResumableThreshold))
 	fmt.Printf(" ChunkSize: %s\n", ByteCountSI(cfg.ChunkSize))
 	fmt.Printf(" WorkMode: %s\n SQS_PROFILE: %s\n SQS_URL: %s\n", cfg.WorkMode, cfg.SQSProfile, cfg.SQSUrl)
-	fmt.Printf("Start to transfer data? (y/n): \n")
-	if !cfg.YPtr {
-		var answer string
-		fmt.Scanln(&answer)
-		if answer != "y" {
-			log.Fatalln("Exit app with n command.")
-		}
-	}
+	// fmt.Printf("Start to transfer data? (y/n): \n")
+	// if !cfg.YPtr {
+	// 	var answer string
+	// 	fmt.Scanln(&answer)
+	// 	if answer != "y" {
+	// 		log.Fatalln("Exit app with n command.")
+	// 	}
+	// }
 	switch {
 	case cfg.WorkMode == "DRYRUN":
 		err := compareBucket(from, to, nil)
@@ -304,6 +311,13 @@ func main() {
 		err := startUpload(from, to)
 		if err != nil {
 			log.Println("Failed to upload:", err)
+			return
+		}
+	case strings.HasPrefix(from.url, "https://"):
+		cfg.WorkMode = "HTTP_GET"
+		err := startHttpDownload(from, to)
+		if err != nil {
+			log.Println("Failed to download:", err)
 			return
 		}
 	default:
@@ -346,8 +360,8 @@ func getSess(bInfo *BInfo) *session.Session {
 		},
 	}
 	config := aws.Config{
-		MaxRetries:       aws.Int(cfg.MaxRetries), // 自定义S3 Client最大重试次数
-		HTTPClient:       client,                  // 使用自定义了超时时间的 http 客户端
+		MaxRetries: aws.Int(cfg.MaxRetries), // 自定义S3 Client最大重试次数
+		HTTPClient: client,                  // 使用自定义了超时时间的 http 客户端
 	}
 	if cfg.ForcePathStyle {
 		config.S3ForcePathStyle = aws.Bool(true) // 以路径方式访问 而不是域名
