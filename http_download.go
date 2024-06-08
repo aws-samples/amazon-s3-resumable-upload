@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -20,19 +21,75 @@ import (
 )
 
 func startHttpDownload(from, to BInfo) error {
-	var err error
-	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers)) // 并发量为NumWorkers的信号量 for parts
+	var wg sync.WaitGroup
+	semFile := semaphore.NewWeighted(int64(cfg.NumWorkers)) // 并发量为NumWorkers的信号量 for file
+	var httpList []string
 
-	URL, err := url.Parse(from.url)
+	switch cfg.WorkMode {
+	case "HTTP_DOWNLOAD":
+		httpList = append(httpList, from.url)
+	case "HTTP_DOWNLOAD_LIST":
+		// Read localfile of presign url lines as list from from.url
+		file, err := os.Open(from.url)
+		if err != nil {
+			log.Println("Failed to open file of HTTP_DOWNLOAD_LIST", err)
+			return err
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			httpList = append(httpList, scanner.Text())
+		}
+		log.Println("Read local file of HTTP_DOWNLOAD_LIST, total:", len(httpList))
+	}
+
+	for _, thisUrl := range httpList {
+		semFile.Acquire(context.Background(), 1) //从线程信号池中获取，没有线程可用了就阻塞等待
+		atomic.AddInt32(&runningGoroutines, 1)   //线程计数
+		wg.Add(1)
+		go downloadHTTPFile(thisUrl, &wg, semFile)
+	}
+	wg.Wait()
+	return nil
+}
+
+func downloadHTTPFile(thisUrl string, wg *sync.WaitGroup, semFile *semaphore.Weighted) error {
+	defer wg.Done()
+	defer semFile.Release(1)
+	defer atomic.AddInt32(&runningGoroutines, -1)
+
+	// Download each object
+	URL, err := url.Parse(thisUrl)
 	if err != nil {
-		log.Fatalf("Invalid HTTP URL: %s, %v\n", from.url, err)
+		log.Printf("Invalid HTTP URL: %s, %v\n", thisUrl, err)
 		return err
 	}
 	from.bucket = strings.Split(URL.Host, ".")[0]
 	fullPrefix := strings.TrimSuffix(strings.TrimPrefix(URL.Path, "/"), "/")
 	fileName := filepath.Base(fullPrefix)
 	localPath := filepath.Join(to.url, fileName)
-	log.Println("   Start to https download", localPath)
+
+	// Get the file size
+	fileSize, err := getHTTPFileSize(thisUrl)
+	if err != nil {
+		log.Println("Failed to get file size:", thisUrl, err)
+		return err
+	}
+
+	// Check if file already exists and is the same size
+	info, err := os.Stat(localPath)
+	if !cfg.SkipCompare {
+		if err == nil && info.Size() == fileSize {
+			log.Println("...File exists and same size, skipping", localPath)
+			return nil
+		} else if err != nil && !os.IsNotExist(err) {
+			log.Println("Failed to stat file", localPath, err)
+			return err
+		}
+	}
+
+	log.Println("   Start to https download:", localPath)
 	multipart_download_finished := false
 
 	// Create necessary directories
@@ -44,7 +101,7 @@ func startHttpDownload(from, to BInfo) error {
 
 	file, err := os.OpenFile(localPath+".s3tmp", os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("Failed to create s3tmp file", localPath, err)
+		log.Println("Failed to create s3tmp file:", localPath, err)
 		return err
 	}
 	defer func() {
@@ -62,34 +119,6 @@ func startHttpDownload(from, to BInfo) error {
 		}
 	}()
 
-	// Get the file size
-	req, err := http.NewRequest("GET", from.url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Range", "bytes=0-0")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusPartialContent {
-		return fmt.Errorf("unexpected status code while GET file size: %d", resp.StatusCode)
-	}
-	fileSizeStr := resp.Header.Get("Content-Range")
-	if fileSizeStr == "" {
-		return fmt.Errorf("missing Content-Range header while GET file size")
-	}
-	parts := strings.Split(fileSizeStr, "/")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid Content-Range header format while GET file size")
-	}
-
-	fileSize, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		return err
-	}
-
 	// list parts numbers
 	fileInfo := FileInfo{
 		FromKey:    fullPrefix,
@@ -105,6 +134,8 @@ func startHttpDownload(from, to BInfo) error {
 
 	// Follow indexList to download parts
 	var wg2 sync.WaitGroup
+	semPart := semaphore.NewWeighted(int64(cfg.NumWorkers * 4)) // 并发量为NumWorkers的信号量 for parts
+
 	for i, offset := range indexList {
 		if !contains(partnumberList, i+1) {
 			size := chunkSizeAuto
@@ -114,7 +145,7 @@ func startHttpDownload(from, to BInfo) error {
 			partInfo := PartInfo{
 				FromBucket: from.bucket,
 				FromKey:    fullPrefix,
-				URL:        from.url,
+				URL:        thisUrl,
 				PartNumber: int64(i + 1),
 				Size:       size,
 				Offset:     offset,
@@ -131,7 +162,9 @@ func startHttpDownload(from, to BInfo) error {
 	wg2.Wait()
 	deleteDownloadParts(fileInfo)
 	multipart_download_finished = true
-
+	log.Println("   Finish https download:", localPath)
+	atomic.AddInt64(&objectCount, 1)
+	atomic.AddInt64(&sizeCount, fileSize)
 	return nil
 }
 
@@ -141,13 +174,13 @@ func downloadHttpChunk(partInfo PartInfo, file *os.File, wg *sync.WaitGroup, sem
 	defer atomic.AddInt32(&runningGoroutines, -1)
 
 	// Download part HTTP API Call
-	buffer, err := downloadHttpChunkAction(partInfo)
+	buffer, err := getHTTPFileBody(partInfo)
 	if err != nil {
 		return err
 	}
 	// Write the part to file
 	if _, err := file.WriteAt(buffer, partInfo.Offset); err != nil {
-		log.Println("Failed to write to file", partInfo.FromBucket, partInfo.FromKey, partInfo.PartNumber, err)
+		log.Printf("Failed to write part s3://%s part:%d/%d, err: %v\n", path.Join(partInfo.FromBucket, partInfo.FromKey), partInfo.PartNumber, partInfo.TotalParts, err)
 		return err
 	}
 
@@ -158,10 +191,10 @@ func downloadHttpChunk(partInfo PartInfo, file *os.File, wg *sync.WaitGroup, sem
 
 }
 
-func downloadHttpChunkAction(partInfo PartInfo) ([]byte, error) {
+func getHTTPFileBody(partInfo PartInfo) ([]byte, error) {
 	log.Printf("-->Downloading part s3://%s %d/%d, runningGoroutines: %d\n", path.Join(partInfo.FromBucket, partInfo.FromKey), partInfo.PartNumber, partInfo.TotalParts, runningGoroutines)
 
-	req, err := http.NewRequest("GET", from.url, nil)
+	req, err := http.NewRequest("GET", partInfo.URL, nil)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return nil, err
@@ -193,4 +226,50 @@ func downloadHttpChunkAction(partInfo PartInfo) ([]byte, error) {
 	}
 
 	return buffer, nil
+}
+
+func getHTTPFileSize(thisUrl string) (int64, error) {
+	req, err := http.NewRequest("GET", thisUrl, nil)
+	if err != nil {
+		log.Println("Failed to create request for:", thisUrl, err)
+		return 0, err
+	}
+	req.Header.Set("Range", "bytes=0-0")
+
+	retryRoundTripper := &RetryRoundTripper{
+		Proxied: http.DefaultTransport,
+		Retries: 3,               // Set the desired number of retries
+		Delay:   time.Second * 5, // Set the desired delay between retries
+	}
+	client := &http.Client{
+		Transport: retryRoundTripper,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Failed to GET file size for:", thisUrl, err)
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusPartialContent {
+		log.Println("unexpected status code while GET file size:", resp.StatusCode, thisUrl)
+		return 0, err
+	}
+	fileSizeStr := resp.Header.Get("Content-Range")
+	if fileSizeStr == "" {
+		log.Println("missing Content-Range header while GET file size for:", thisUrl)
+		return 0, err
+	}
+	parts := strings.Split(fileSizeStr, "/")
+	if len(parts) != 2 {
+		log.Println("invalid Content-Range header format while GET file size for:", thisUrl)
+		return 0, err
+	}
+
+	fileSize, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		log.Println("Failed to parse file size for:", thisUrl, err)
+		return 0, err
+	}
+	return fileSize, nil
 }

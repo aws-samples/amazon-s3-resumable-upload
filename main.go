@@ -151,7 +151,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("y", "y", false, "Ignore waiting for confirming command")
 	viper.BindPFlag("y", rootCmd.PersistentFlags().Lookup("y"))
 
-	rootCmd.PersistentFlags().String("work-mode", "", "SQS_SEND | SQS_CONSUME | DRYRUN; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3; DRYRUN means only count the objects and sizes comparing delta list of FROM_URL S3 and TO_URL S3, no transfer.")
+	rootCmd.PersistentFlags().String("work-mode", "", "SQS_SEND | SQS_CONSUME | DRYRUN | HTTP_DOWNLOAD_LIST; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3; DRYRUN means only count the objects and sizes comparing delta list of FROM_URL S3 and TO_URL S3, no transfer; HTTP_DOWNLOAD_LIST, from a list file with lines of presign url;")
 	viper.BindPFlag("work-mode", rootCmd.PersistentFlags().Lookup("work-mode"))
 	rootCmd.PersistentFlags().String("sqs-url", "", "The SQS queue URL to send or consume message from, e.g. https://sqs.us-east-1.amazonaws.com/my_account/my_queue_name")
 	viper.BindPFlag("sqs-url", rootCmd.PersistentFlags().Lookup("sqs-url"))
@@ -229,7 +229,7 @@ func getConfig() {
 
 		// TODO: Azure Blog Storage
 
-		{ // TODO: Support presign url
+		{ // Support presign url
 			if strings.HasPrefix(binfo.url, "https://") {
 				fmt.Printf("Presign URL: %s\n", binfo.url)
 				continue
@@ -253,7 +253,6 @@ func getConfig() {
 	if cfg.WorkMode == "SQS_SEND" || cfg.WorkMode == "SQS_CONSUME" {
 		sqsSvc = getSQSsess()
 	}
-
 }
 
 func main() {
@@ -274,19 +273,19 @@ func main() {
 	// 	}
 	// }
 	switch {
-	case cfg.WorkMode == "DRYRUN":
+	case strings.ToUpper(cfg.WorkMode) == "DRYRUN":
 		err := compareBucket(from, to, nil)
 		if err != nil {
 			log.Println("Failed to count:", err)
 			return
 		}
-	case cfg.WorkMode == "SQS_SEND":
+	case strings.ToUpper(cfg.WorkMode) == "SQS_SEND":
 		err := compareBucket(from, to, sqsSvc)
 		if err != nil {
 			log.Println("Failed to send sqs:", err)
 			return
 		}
-	case cfg.WorkMode == "SQS_CONSUME":
+	case strings.ToUpper(cfg.WorkMode) == "SQS_CONSUME":
 		err := consumeSQS(sqsSvc)
 		if err != nil {
 			log.Println("Failed to consume sqs:", err)
@@ -314,10 +313,16 @@ func main() {
 			return
 		}
 	case strings.HasPrefix(from.url, "https://"):
-		cfg.WorkMode = "HTTP_GET"
+		cfg.WorkMode = "HTTP_DOWNLOAD"
 		err := startHttpDownload(from, to)
 		if err != nil {
 			log.Println("Failed to download:", err)
+			return
+		}
+	case strings.ToUpper(cfg.WorkMode) == "HTTP_DOWNLOAD_LIST":
+		err := startHttpDownload(from, to)
+		if err != nil {
+			log.Println("Failed to download from list:", err)
 			return
 		}
 	default:
