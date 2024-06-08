@@ -8,7 +8,7 @@ The main change in Version 2 is that the same application can be used for single
 
 ## Features
 
-* Multi-threaded concurrent transfers to multiple object storage, resumable upload, auto retry on failure. Concurrent transfers of multiple files, fully utilize bandwidth. Optimized flow control. In typical tests, migrating 1.2TB data from us-east-1 S3 to cn-northwest-1 S3 only takes 1 hour. 
+* Multi-threaded concurrent transfers to multiple object storage, resumable upload, auto retry on failure. Concurrent transfers of multiple files, fully utilize bandwidth. Optimized flow control. In typical tests, migrating 1.2TB data from us-east-1 S3 to cn-northwest-1 S3 only takes 1 hour.  
 
 * Supported sources and destinations: local directory/file, Amazon S3, Ali OSS, Tencent COS, Google GCS and other object storage. No need to differentiate work modes, just specify source and destination URLs or local paths and it will automatically detect. Can be a single file/object, entire directory, S3 bucket/prefix, etc.
 
@@ -18,13 +18,15 @@ The main change in Version 2 is that the same application can be used for single
 
 * Support setting various storage classes for destination objects, e.g. STANDARD, S3-IA, Glacier or Deep Archive. Support specifying ACL for destination S3.
 
-* Support setting the source object storage to no-sign-request and request-payer; support the source object being a Presigned URL (note that when generating the Presigned URL, specify the correct Region for the Bucket).
+* Support setting the source object storage to no-sign-request and request-payer  
+
+* Support the source object being a Presigned URL or URL list (note that when generating the Presigned URL, specify the correct Region for the Bucket).  
 
 * Support copying metadata from source to destination S3 objects. Note this requires a Head call per object, impacting performance and API call costs.
 
 ## Usage
 
-### Install Go Runtime 
+### Install Go Runtime  
 
 For first time use, install Golang runtime, example for Linux:
 
@@ -33,8 +35,11 @@ sudo yum install -y go git -y
 git clone https://github.com/aws-samples/amazon-s3-resumable-upload
 ```
 
-For China regions, use go proxy to speed up downloading go packages, add: 
-go env -w GOPROXY=https://goproxy.cn,direct
+For China regions, use go proxy to speed up downloading go packages, add:  
+
+```go
+go env -w GOPROXY=https://goproxy.cn,direct   
+```
 
 ### Compile Go Code
 
@@ -49,7 +54,7 @@ Use ./s3trans -h to see help
 
 * Download S3 file to local:
 
-```shell 
+```shell
 ./s3trans s3://bucket-name/prefix /local/path
 # Above uses default AWS profile in ~/.aws/credentials, or IAM Role if on EC2. To specify profile for source S3:  
 ./s3trans s3://bucket-name/prefix /local/path --from_profile=source_profile
@@ -65,13 +70,13 @@ Use ./s3trans -h to see help
 
 * S3 to S3, region is auto detected if not specified:
 
-```shell 
+```shell
 ./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --to_profile=dest_profile
 # Above from_profile not set uses default or EC2 IAM Role. Can also specify both:
 ./s3trans s3://bucket-name/prefix s3://bucket-name/prefix --from_profile=source_profile --to_profile=dest_profile 
 ```
 
-* For non-AWS S3 compatible storage, specify endpoint: 
+* For non-AWS S3 compatible storage, specify endpoint:
 
 ```shell
 ./s3trans s3://bucket-gcs-test s3://bucket-virginia --from_profile=gcs_profile --to_profile=aws_profile --from_endpoint=https://storage.googleapis.com
@@ -79,25 +84,40 @@ Use ./s3trans -h to see help
 ```
 
 * -l to list target before transfer (less API calls but slower start)
-* -n (n is NumWorkers) to specify concurrency for listing and transfers. Max concurrent objects is n, max concurrent parts per object is 4n, max concurrent listing is 4n. Recommend n <= vCPU number 
+* -n (n is NumWorkers) to specify concurrency for listing and transfers. Max concurrent objects is n, max concurrent parts per object is 4n, max concurrent listing is 4n. Recommend n <= vCPU number  
 * -y to auto confirm prompt
 
 ```shell
 ./s3trans C:\Users\Administrator\Downloads\test\ s3://huangzb-virginia/win2/ --to-profile sin  -l -n 8 -y 
 ```
 
-* More usage help:
+## Download from Presign URL or URL list
+
+Download a single presigned URL (presigned URL) concurrently:
+
+```shell
+./s3trans "https://your_bucket.s3.region.amazonaws.com/prefix/filename?X-Amz-Algorithm=xxxx&&X-Amz-Credential=xxxx&&X-Amz-Date=xxxx&&X-Amz-Expires=xxxx&X-Amz-SignedHeaders=host&X-Amz-Signature=xxxx" /localpath_download_to/
+```
+
+Download from a list of URLs. In the example below, the URL list file is named list_file.txt, with each line containing a presigned URL:
+
+```shell
+./s3trans /mypath/list_file.txt /localpath_download_to/
+    --work-mode HTTP_DOWNLOAD_LIST
+```
+
+## More usage help
 
 ```shell
 ./s3trans -h
 
 s3trans transfers data from source to target.
-	./s3trans FROM_URL TO_URL [OPTIONS]
-	FROM_URL: The url of data source, e.g. /home/user/data or s3://bucket/prefix
-	TO_URL: The url of data transfer target, e.g. /home/user/data or s3://bucket/prefix
-	For example:
-	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
-	./s3trans s3://bucket/prefix /home/user/data -from_profile sin
+    ./s3trans FROM_URL TO_URL [OPTIONS]
+    FROM_URL: The url of data source, e.g. /home/user/data or s3://bucket/prefix
+    TO_URL: The url of data transfer target, e.g. /home/user/data or s3://bucket/prefix
+    For example:
+    ./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
+    ./s3trans s3://bucket/prefix /home/user/data -from_profile sin
 
 Usage:
   s3trans FROM_URL TO_URL [flags]
@@ -124,7 +144,7 @@ Flags:
       --to-profile string         The AWS profile in ~/.aws/credentials of data transfer target
       --to-region string          The region of data transfer target, e.g. us-east-1. If no specified, the region will be auto detected with the credentials you provided in profile.
       --transfer-metadata         If True, get metadata from source S3 bucket and upload the metadata to target object. This costs more API calls.
-      --work-mode string          SQS_SEND | SQS_CONSUME; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3. 
+      --work-mode string          SQS_SEND | SQS_CONSUME | DRYRUN | HTTP_DOWNLOAD_LIST; SQS_SEND means listing source FROM_URL S3 and target TO_URL S3 to compare and send message to SQS queue, SQS_CONSUME means consume message from SQS queue and transfer objects from FROM_URL S3 to TO_URL S3; DRYRUN means only count the objects and sizes comparing delta list of FROM_URL S3 and TO_URL S3, no transfer; HTTP_DOWNLOAD_LIST, from a list file with lines of presign url
   -y, --y                         Ignore waiting for confirming command
 ```
 

@@ -230,7 +230,7 @@ func getConfig() {
 		// TODO: Azure Blog Storage
 
 		{ // Support presign url
-			if strings.HasPrefix(binfo.url, "https://") {
+			if strings.HasPrefix(binfo.url, "http") {
 				fmt.Printf("Presign URL: %s\n", binfo.url)
 				continue
 			}
@@ -312,7 +312,7 @@ func main() {
 			log.Println("Failed to upload:", err)
 			return
 		}
-	case strings.HasPrefix(from.url, "https://"):
+	case strings.HasPrefix(from.url, "http"):
 		cfg.WorkMode = "HTTP_DOWNLOAD"
 		err := startHttpDownload(from, to)
 		if err != nil {

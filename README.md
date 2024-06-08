@@ -17,7 +17,9 @@ English README: [README.en.md](README.en.md)
 
 * 支持指定目的S3的ACL: private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
 
-* 支持设置源对象存储是no-sign-request和request-payer；支持源对象是Presign URL（注意生成Presign URL的时候指定 Bucket 正确的 Region）
+* 支持设置源对象存储是no-sign-request和request-payer
+
+* 支持源对象是 Presign URL 或 URL 列表（注意生成Presign URL的时候指定 Bucket 正确的 Region）
 
 * 支持获取源对象存储的 Metadata 也复制到目的对象存储。但要注意这个需要每个对象都Head去获取一次，会影响性能和增加对源S3的请求次数费用。
 
@@ -143,17 +145,33 @@ test1
     -y -l -n 8
 ```
 
-### 其他使用帮助
-   
+## 下载从 Presign URL 或 URL 列表
+
+多线程并发下载单一个 URL (presign url)
+
+```shell
+./s3trans "https://your_bucket.s3.region.amazonaws.com/prefix/filename?X-Amz-Algorithm=xxxx&&X-Amz-Credential=xxxx&&X-Amz-Date=xxxx&&X-Amz-Expires=xxxx&X-Amz-SignedHeaders=host&X-Amz-Signature=xxxx" /localpath_download_to/
+```
+
+多线程并发按照 URL 列表下载，下例子中 URL 列表文件名为 list_file.txt，文件中每行为一个 presign URL
+
+```shell
+./s3trans /mypath/list_file.txt /localpath_download_to/
+    --work-mode HTTP_DOWNLOAD_LIST
+```
+
+## 其他使用帮助
+
 ./s3trans -h  
   
 s3trans 从源传输数据到目标  
-	./s3trans FROM_URL TO_URL [OPTIONS]  
-	FROM_URL: 数据源的URL，例如 /home/user/data or s3://bucket/prefix  
-	TO_URL: 传输目标的URL，例如 /home/user/data or s3://bucket/prefix  
+  ./s3trans FROM_URL TO_URL [OPTIONS]  
+  FROM_URL: 数据源的URL，例如 /home/user/data or s3://bucket/prefix  
+  TO_URL: 传输目标的URL，例如 /home/user/data or s3://bucket/prefix  
   
 Usage:  
   s3trans FROM_URL TO_URL [flags]  
+  
 ```shell
 Flags:  
       --acl string                目标S3桶的ACL，private表示只有对象所有者可以读写，例如 private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control ，不设置则默认根据S3的默认设置，通常是 private 模式 
@@ -177,7 +195,7 @@ Flags:
       --to-profile string         数据传输目标在~/.aws/credentials中的AWS profile，如果不指定profile则用default profile，如果没有default profile，则需指定region    
       --to-region string          数据传输目标的区域，例如 cn-north-1. 如果未指定，但有设置 profile 则会自动找S3的所在 Region  
       --transfer-metadata         从源S3桶获取元数据并上传到目标对象。这需要每传输一个对象都通过API调用获取源文件元数据。  
-      --work-mode string          SQS_SEND | SQS_CONSUME | DRYRUN; SQS_SEND：扫描节点，表示列出源S3和目标S3进行比较，并发送传输任务消息到SQS队列；SQS_CONSUME： 工作节点，表示从SQS队列获取任务消息并从来源S3传输对象到S3  
+      --work-mode string          SQS_SEND | SQS_CONSUME | DRYRUN | HTTP_DOWNLOAD_LIST; SQS_SEND：扫描节点，表示列出源S3和目标S3进行比较，并发送传输任务消息到SQS队列；SQS_CONSUME： 工作节点，表示从SQS队列获取任务消息并从来源S3传输对象到S3; HTTP_DOWNLOAD_LIST：从一个文件中的 presign url 列表（即一个http列表）下载；  
   -y, --y                         忽略等待确认，直接执行；DRYRUN是只比较源和目的桶，统计数量和Size，不传输数据  
 ```
 
