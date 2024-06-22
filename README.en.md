@@ -1,10 +1,9 @@
 
-# Amazon S3 Resumable Migration Version 2  (Amazon S3 断点续传迁移 Version 2)
+# Amazon S3 Resumable Transfer V2  (Amazon S3 断点续传传输 V2)
 
 中文 README: [README.md](README.md)
   
-Multi-threaded resumable upload, fully utilize bandwidth, suitable for bulk large file S3 upload/migration, support Amazon S3, Ali OSS, Tencent COS, Google GCS, HuaweiCloud and other S3 API object storage.  
-The main change in Version 2 is that the same application can be used for single machine upload, single machine download, deployed as a cluster for scanning source files, or as worker nodes for transfers, rewritten in Golang for better performance.
+Multi-threaded breakpoint resumption, suitable for batch uploading/downloading large files to/from S3 and local/cross-object storage migration. It supports Amazon S3, Alibaba Cloud OSS, Tencent Cloud COS, Google Cloud Storage, Huawei Cloud OBS, and other object storage services compatible with the S3 API. In Version 2, the same application can be configured for various scenarios through configuration: single-machine uploading, single-machine downloading, deployed as a cluster version for scanning source files, or as a distributed transmission worker node in a cluster. It has been refactored with Go for improved performance and supports a range of extended features: exclusion list, source no-sign-request, source request-payer, destination storage-class, destination ACL, and metadata transfer.
 
 ![img](./img/arch-en.png)
 
