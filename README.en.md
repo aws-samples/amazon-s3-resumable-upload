@@ -3,8 +3,10 @@
 
 中文 README: [README.md](README.md)
   
-Multi-threaded resumable upload, fully utilize bandwidth, suitable for bulk large file S3 upload/migration, support Amazon S3, Ali OSS, Tencent COS, Google GCS and other object storage, Azure Blob Storage support coming soon...
+Multi-threaded resumable upload, fully utilize bandwidth, suitable for bulk large file S3 upload/migration, support Amazon S3, Ali OSS, Tencent COS, Google GCS, HuaweiCloud and other S3 API object storage.  
 The main change in Version 2 is that the same application can be used for single machine upload, single machine download, deployed as a cluster for scanning source files, or as worker nodes for transfers, rewritten in Golang for better performance.
+
+![img](./img/arch-en.png)
 
 ## Features
 

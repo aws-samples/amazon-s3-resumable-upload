@@ -2,9 +2,11 @@
 
 English README: [README.en.md](README.en.md)
 
-多线程断点续传，适合批量的大文件S3上传/下载本地/对象存储迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS 等兼容S3 API的对象存储，也将支持 Azure Blog Storage...  
+多线程断点续传，适合批量的大文件S3上传/下载本地/对象存储迁移，支持Amazon S3, Ali OSS, Tencent COS, Google GCS, HuaweiCloud 等兼容S3 API的对象存储
 本 Version 2 在同一个应用通过配置即可用做各种场景：单机的上传，单机的下载，部署为集群版的扫描源文件，或作为集群版的分布式传输工作节点；用Golang做了重构，提高性能；支持了一系列扩展功能：排除列表、源no-sign-request、源request-payer、目的storage-class、目的ACL、传输 Metadata 等。
-  
+
+![img](./img/arch-cn.png)
+
 ## 功能  
 
 * 多线程并发传输到多种对象存储，断点续传，自动重传。多文件任务并发，充分利用带宽。优化的流控机制。在一次集群测试中(10台m5.large)，迁移1.2TB数据从 us-east-1 到 cn-northwest-1 只用1小时。在另一个单机带宽的测试中，同 Region 的两个 S3 用 m6i.8xlarge EC2 传输 (num-workers 16)，跑出了单机持续 16Gbps 的传输速度。
