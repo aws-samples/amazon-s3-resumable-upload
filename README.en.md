@@ -5,25 +5,34 @@
   
 Multi-threaded breakpoint resumption, suitable for batch uploading/downloading large files to/from S3 and local/cross-object storage migration. It supports Amazon S3, Alibaba Cloud OSS, Tencent Cloud COS, Google Cloud Storage, Huawei Cloud OBS, and other object storage services compatible with the S3 API. In Version 2, the same application can be configured for various scenarios through configuration: single-machine uploading, single-machine downloading, deployed as a cluster version for scanning source files, or as a distributed transmission worker node in a cluster. It has been refactored with Go for improved performance and supports a range of extended features: exclusion list, source no-sign-request, source request-payer, destination storage-class, destination ACL, and metadata transfer.
 
-![img](./img/arch-en.png)
+![img](./img/arch-en1.png)
+![img](./img/arch-en2.png)
 
 ## Features
 
-* Multi-threaded concurrent transfers to multiple object storage, resumable upload, auto retry on failure. Concurrent transfers of multiple files, fully utilize bandwidth. Optimized flow control. In typical tests, migrating 1.2TB data from us-east-1 S3 to cn-northwest-1 S3 only takes 1 hour.  
+* Supports multi-threaded concurrent transfers to multiple object storage systems, with resumable transfers, automatic retries, and concurrent multi-file tasks to fully utilize bandwidth. An optimized flow control mechanism is implemented. In a cluster test (10*m5.large instances), 1.2TB of data was migrated from us-east-1 to cn-northwest-1 in just 1 hour. In another single-machine bandwidth test, using an m6i.8xlarge EC2 instance (num-workers 16), a sustained transfer speed of 12Gbps was achieved between two S3 buckets in the same region.
 
-* Supported sources and destinations: local directory/file, Amazon S3, Ali OSS, Tencent COS, Google GCS and other object storage. No need to differentiate work modes, just specify source and destination URLs or local paths and it will automatically detect. Can be a single file/object, entire directory, S3 bucket/prefix, etc.
+* Supports sources and destinations including local directories or files, Amazon S3, Alibaba OSS, Tencent COS, Google GCS, and other object storage systems. No need to distinguish between work modes; simply specify the source and destination URLs or local paths, and the transfer will automatically start. Can handle single files or objects, entire directories, S3 buckets/prefixes, etc.
 
-* Data is transferred via memory in single shard form through transit nodes, not saved on local disk, saving time, storage and more secure. Support sizes from 0 Bytes to TBs.
+* Data is transferred through intermediate nodes in single chunk form without being written to disk, saving time and improving security. Supports transfers from 0 bytes up to TB-level sizes.
 
-* Automatically compare filenames and sizes between source and destination buckets, only transfer inconsistencies. Default is to list and transfer concurrently, i.e. get destination object info one by one and transfer if not exists, so transfer starts immediately after command like AWS CLI. Use -l option to list all destination objects first before transferring, list is more efficient than head each, also saves API call costs. Version 2 supports parallel listing, for buckets with large number of objects, listing is much faster, e.g. 30 million objects bucket normally takes 90 mins to list, now only takes 1 min with 64 concurrency (16 vCPU).  
+* Allows setting various object storage classes for the destination, such as STANDARD|REDUCED_REDUNDANCY|STANDARD_IA|ONEZONE_IA|INTELLIGENT_TIERING|GLACIER|DEEP_ARCHIVE|OUTPOSTS|GLACIER_IR|SNOW
 
-* Support setting various storage classes for destination objects, e.g. STANDARD, S3-IA, Glacier or Deep Archive. Support specifying ACL for destination S3.
+* Supports specifying the destination S3 ACL: private|public-read|public-read-write|authenticated-read|aws-exec-read|bucket-owner-read|bucket-owner-full-control
 
-* Support setting the source object storage to no-sign-request and request-payer  
+* Supports setting the source object storage as no-sign-request and request-payer.
 
-* Support the source object being a Presigned URL or URL list (note that when generating the Presigned URL, specify the correct Region for the Bucket).  
+* Supports source objects as Presigned URLs or URL lists (please ensure the correct Region is specified when generating Presigned URLs).
 
-* Support copying metadata from source to destination S3 objects. Note this requires a Head call per object, impacting performance and API call costs.
+* Supports retrieving and copying metadata from the source object storage to the destination.
+
+* Automatically compares file names and sizes between source and destination buckets, transferring only mismatched files. By default, it lists and transfers simultaneously, fetching destination object information and transferring one by one, providing an immediate transfer start after entering the command (similar to AWS CLI). Optionally, the -l parameter can be used to list all destination objects before transferring, which is more efficient and reduces request costs.
+
+* Version 2 now supports multi-threaded parallel listing, significantly speeding up the listing process for buckets with large numbers of objects. For example, a bucket with 30 million objects that would normally take over 90 minutes to list (e.g., with aws s3 ls) can now be listed in just 1-2 minutes using 64 concurrent threads (16 vCPU).
+
+* Supports saving the compared task list to a file, saving logs of tasks sent to SQS to a file, setting an exclusion list to skip transferring keys or local paths matching the list, a DRYRUN mode to compare sources and destinations without transferring data, and a mode to overwrite destinations without comparison.
+
+* Supports setting a resumable transfer threshold, parallel thread count, request timeout, maximum retry count, and an option to ignore confirmation prompts and execute directly.
 
 ## Usage
 
