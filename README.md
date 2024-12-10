@@ -41,7 +41,7 @@ English README: [README.en.md](README.en.md)
 首次使用需要安装Golang运行环境，以Linux为例：
 
 ```shell
-sudo yum install -y go git -y
+sudo yum install go git -y
 ```
 
 如果在中国区，可通过go代理来下载go依赖包，则多运行一句代理设置：

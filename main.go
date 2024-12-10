@@ -94,7 +94,7 @@ var rootCmd = &cobra.Command{
 	./s3trans s3://bucket/prefix s3://bucket/prefix -from_profile sin -to_profile bjs
 	./s3trans s3://bucket/prefix /home/user/data -from_profile sin 
 	`,
-	Args: cobra.MinimumNArgs(2),
+	Args: cobra.ExactArgs(2), // 要求必须提供2个参数
 	Run: func(cmd *cobra.Command, args []string) {
 		// args[0] 是 FROM_URL, args[1] 是 TO_URL
 		from.url = args[0]
@@ -103,6 +103,10 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		fmt.Print(cmd.Long)
+		os.Exit(0)
+	})
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().String("from-profile", "", "The AWS profile in ~/.aws/credentials of data source")
 	viper.BindPFlag("from-profile", rootCmd.PersistentFlags().Lookup("from-profile"))

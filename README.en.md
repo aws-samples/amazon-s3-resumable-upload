@@ -41,7 +41,7 @@ Multi-threaded breakpoint resumption, suitable for batch uploading/downloading l
 For first time use, install Golang runtime, example for Linux:
 
 ```shell
-sudo yum install -y go git -y
+sudo yum install go git -y
 git clone https://github.com/aws-samples/amazon-s3-resumable-upload
 ```
 
